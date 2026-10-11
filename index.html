@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>스타 스웜</title>
+<style>
+  html, body {
+    margin: 0; height: 100%; background: #000; overflow: hidden;
+    overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  body { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #wrap { position: relative; }
+  canvas { display: block; }
+  #menu {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px;
+    background: rgba(0, 0, 0, 0.6); color: #fff; text-align: center;
+    font-family: system-ui, sans-serif;
+  }
+  #menu[hidden], #pause[hidden] { display: none; }
+  #menu h1 { margin: 0 0 4px; font-size: 32px; letter-spacing: 2px; }
+  #menu p { margin: 0 0 12px; opacity: 0.8; font-size: 16px; }
+  #menu button {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 240px; min-height: 48px; padding: 0 16px;
+    font: 600 17px system-ui, sans-serif; color: #fff;
+    background: #14213d; border: 2px solid #4dd6ff; border-radius: 12px;
+  }
+  #menu button.center { justify-content: center; }
+  #menu button:disabled { opacity: 0.35; border-color: #666; }
+  #menu .badge { font-size: 13px; color: #7dff9b; }
+  #menu .badge.lock { color: #aaa; }
+  #pause {
+    position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
+    width: 44px; height: 44px; padding: 0; border: none; background: none;
+    color: #fff; font: bold 18px system-ui, sans-serif; opacity: 0.8;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" role="img" aria-label="스타 스웜 게임 화면. 화면을 좌우로 끌어 비행기를 움직입니다."></canvas>
+  <button id="pause" aria-label="일시정지" hidden>❚❚</button>
+  <div id="menu" hidden></div>
+</div>
+<script type="module">
+import { W, H, STAGE_COUNT, createState, update, setTarget, recordClear, isUnlocked } from './game.js';
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const menu = document.getElementById('menu');
+const pauseBtn = document.getElementById('pause');
+const ENEMY_COLORS = ['#ff4d6d', '#c77dff', '#ffd23f', '#ffd23f'];
+const PROGRESS_KEY = 'starSwarm.progress';
+const stars = Array.from({ length: 60 }, () => ({ x: Math.random() * W, y: Math.random() * H, v: 20 + Math.random() * 60 }));
+let s = null, playing = false, scale = 1;
+let progress = loadProgress();
+
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {}; } catch { return {}; }
+}
+function saveProgress() {
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch { /* 저장 불가 환경: 이번 실행 동안만 유지 */ }
+}
+
+function resize() {
+  const dpr = devicePixelRatio || 1;
+  scale = Math.min(innerWidth / W, innerHeight / H);
+  canvas.style.width = W * scale + 'px';
+  canvas.style.height = H * scale + 'px';
+  canvas.width = Math.round(W * scale * dpr);
+  canvas.height = Math.round(H * scale * dpr);
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+}
+addEventListener('resize', resize);
+resize();
+
+// ── 화면 전환 ──
+// items: { label, badge?, onClick, disabled? }
+function showMenu(title, subtitle, items) {
+  playing = false;
+  pauseBtn.hidden = true;
+  const h = document.createElement('h1');
+  h.textContent = title;
+  menu.replaceChildren(h);
+  if (subtitle) {
+    const p = document.createElement('p');
+    p.textContent = subtitle;
+    menu.append(p);
+  }
+  for (const it of items) {
+    const b = document.createElement('button');
+    b.textContent = it.label;
+    b.disabled = !!it.disabled;
+    b.onclick = it.onClick;
+    if (it.badge) {
+      const span = document.createElement('span');
+      span.className = it.disabled ? 'badge lock' : 'badge';
+      span.textContent = it.badge;
+      b.append(span);
+    } else b.className = 'center';
+    menu.append(b);
+  }
+  menu.hidden = false;
+}
+
+function startStage(n) {
+  s = createState(Math.random, n);
+  resume();
+}
+
+function resume() {
+  menu.hidden = true;
+  pauseBtn.hidden = false;
+  playing = true;
+}
+
+function titleScreen() {
+  s = null;
+  showMenu('STAR SWARM', '', [{ label: '게임 시작', onClick: stageSelect }]);
+}
+
+function stageSelect() {
+  s = null;
+  const items = [];
+  for (let n = 1; n <= STAGE_COUNT; n++) {
+    const open = isUnlocked(progress, n);
+    const badge = n in progress ? `CLEAR · ${progress[n]}` : open ? '' : '잠김';
+    items.push({ label: `STAGE ${n}`, badge, onClick: () => startStage(n), disabled: !open });
+  }
+  items.push({ label: '메인 화면', onClick: titleScreen });
+  showMenu('스테이지 선택', '', items);
+}
+
+function pauseMenu() {
+  if (!playing) return;
+  const stage = s.stage;
+  showMenu('일시정지', `STAGE ${stage}`, [
+    { label: '계속하기', onClick: resume },
+    { label: '다시 시작', onClick: () => startStage(stage) },
+    { label: '스테이지 선택', onClick: stageSelect },
+  ]);
+}
+
+function gameOver() {
+  const stage = s.stage;
+  showMenu('GAME OVER', `STAGE ${stage} · 점수 ${s.score}`, [
+    { label: '다시 시작', onClick: () => startStage(stage) },
+    { label: '스테이지 선택', onClick: stageSelect },
+  ]);
+}
+
+function stageClear() {
+  const stage = s.stage, next = stage + 1;
+  progress = recordClear(progress, stage, s.score);
+  saveProgress();
+  const items = next <= STAGE_COUNT ? [{ label: '다음 스테이지', onClick: () => startStage(next) }] : [];
+  items.push({ label: '스테이지 선택', onClick: stageSelect });
+  showMenu(next <= STAGE_COUNT ? 'STAGE CLEAR' : 'ALL CLEAR!', `STAGE ${stage} · 점수 ${s.score}`, items);
+}
+
+pauseBtn.onclick = pauseMenu;
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseMenu(); });
+
+// ── 입력: 화면 어디를 끌어도 손가락이 움직인 만큼 비행기가 움직인다 (손가락이 비행기를 가리지 않게) ──
+let dragId = null, lastX = 0;
+addEventListener('pointerdown', e => {
+  if (dragId !== null) return;
+  dragId = e.pointerId;
+  lastX = e.clientX;
+});
+addEventListener('pointermove', e => {
+  if (e.pointerId !== dragId) return;
+  if (playing) setTarget(s, s.player.targetX + (e.clientX - lastX) / scale);
+  lastX = e.clientX;
+});
+const endDrag = e => { if (e.pointerId === dragId) dragId = null; };
+addEventListener('pointerup', endDrag);
+addEventListener('pointercancel', endDrag);
+// iOS Safari는 touch-action만으로는 고무줄 스크롤과 확대를 다 막지 못한다
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+// ── 그리기 ──
+function ship(x, y, color, k = 1) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 10 * k);
+  ctx.lineTo(x + 14 * k, y + 10 * k);
+  ctx.lineTo(x - 14 * k, y + 10 * k);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function bug(e) {
+  ctx.fillStyle = ENEMY_COLORS[e.row];
+  ctx.fillRect(e.x - 5, e.y - 8, 10, 16);
+  ctx.fillRect(e.x - 11, e.y - 4, 22, 7);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(e.x - 3, e.y - 4, 2, 2);
+  ctx.fillRect(e.x + 1, e.y - 4, 2, 2);
+}
+
+function draw() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  for (const st of stars) ctx.fillRect(st.x, st.y, 1.5, 1.5);
+  if (!s) return;
+
+  for (const e of s.enemies) bug(e);
+  ctx.fillStyle = '#fff';
+  for (const b of s.bullets) ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
+  ctx.fillStyle = '#ff8c42';
+  for (const b of s.enemyBullets) ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
+
+  const p = s.player;
+  const blink = s.invuln > 0 && Math.floor(s.invuln * 10) % 2;
+  if (!s.over && !blink) ship(p.x, p.y, '#4dd6ff');
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${s.score}`, 12, 26);
+  for (let i = 0; i < s.lives; i++) ship(W - 16 - i * 22, 18, '#4dd6ff', 0.6);
+}
+
+let last = null;
+function frame(now) {
+  const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
+  last = now;
+  if (playing) {
+    update(s, dt);
+    if (s.over) gameOver();
+    else if (s.cleared) stageClear();
+  }
+  for (const st of stars) { st.y += st.v * dt; if (st.y > H) st.y -= H; }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+titleScreen();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
