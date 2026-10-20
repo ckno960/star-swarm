@@ -52,6 +52,19 @@
   #stageGrid button.next { border-color: var(--accent); }
 
   .lineup { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; width: 100%; }
+  /* 전투 준비: 종류가 많아도 전투 시작 버튼이 보이게 작은 아이콘으로, 목록만 스크롤 */
+  #prepScroll { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; width: 100%; }
+  .chip { position: relative; display: flex; flex-direction: column; align-items: center; padding: 4px 0 2px; min-height: 0; background: var(--panel); border: 2px solid var(--line); box-shadow: 2px 2px 0 #000; font-size: 11px; font-weight: 700; }
+  .chip canvas { width: 36px; height: 36px; }
+  .chip.boss { border-color: var(--gold); }
+  .chip.necro { border-color: var(--purple); }
+  .bottomBar { display: flex; gap: 8px; width: 100%; padding-top: 6px; }
+  .bottomBar button { flex: 1; min-height: 56px; }
+  #infoBox { display: flex; gap: 12px; align-items: center; text-align: left; }
+  #infoBox canvas { width: 72px; height: 72px; flex: none; }
+  .stats { display: grid; grid-template-columns: auto auto; gap: 2px 10px; font-size: 13px; margin-top: 4px; }
+  .stats b { color: var(--gold); }
   .mini { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 74px; padding: 6px 2px; background: var(--panel); border: 3px solid var(--line); font-size: 12px; text-align: center; }
   .mini canvas { width: 48px; height: 48px; }
   .label { font-weight: 700; margin-top: 4px; }
@@ -73,7 +86,10 @@
 
   #tameCards { display: flex; gap: 8px; width: 100%; }
   .card { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; background: var(--panel); border: 3px solid var(--line); font-size: 12px; text-align: center; box-shadow: 3px 3px 0 #000; }
-  .card canvas { width: 56px; height: 56px; }
+  .card .pic { padding: 0; min-height: 0; background: #000; border: 2px solid var(--line); box-shadow: none; position: relative; }
+  .card .pic canvas { width: 56px; height: 56px; }
+  .card .pic::after { content: 'i'; position: absolute; right: -6px; top: -6px; width: 16px; height: 16px; font-size: 11px; line-height: 16px; background: var(--purple); color: #000; border-radius: 50%; }
+  .card .pick { width: 100%; min-height: 36px; font-size: 14px; margin-top: 2px; }
   .card .name { font-weight: 700; font-size: 14px; }
   .card .chance { font-size: 20px; font-weight: 900; color: var(--accent); }
   .card .amount { font-size: 14px; font-weight: 900; color: var(--gold); }
@@ -81,6 +97,7 @@
   .card.boss { border-color: var(--gold); }
   .card.dim { opacity: 0.25; }
   .card.taming canvas { animation: wobble 0.6s ease-in-out 3; }
+  .card.dim .pick { visibility: hidden; }
   @keyframes wobble { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
   #tameResult { min-height: 48px; text-align: center; font-size: 20px; font-weight: 900; }
   #tameResult.ok { color: var(--accent); }
@@ -139,17 +156,22 @@
     <div id="regionTabs"></div>
     <div id="regionInfo"></div>
     <div id="stageGrid"></div>
-    <p class="muted">빨간 테두리는 보스 스테이지. 보스를 쓰러뜨리면 룰렛을 돌리고 다음 지역이 열려요.</p>
+    <p class="muted">빨간 테두리는 보스 스테이지. 보스를 처음 쓰러뜨리면 룰렛을 한 번 돌리고 다음 지역이 열려요.</p>
   </section>
 
   <section id="prep" class="panel" hidden>
     <div class="topbar"><button id="prepBack">← 지도</button><h2 id="prepTitle"></h2><span class="spacer"></span></div>
-    <div class="label" id="prepEnemyLabel">적</div>
-    <div class="lineup" id="prepEnemies"></div>
-    <div class="label" id="prepArmyLabel">내 군단</div>
-    <div class="lineup" id="prepParty"></div>
-    <button id="prepEdit">소환수 키우기</button>
-    <button id="prepStart" class="big primary">전투 시작</button>
+    <div class="scroll" id="prepScroll">
+      <div class="label" id="prepEnemyLabel">적</div>
+      <div class="chips" id="prepEnemies"></div>
+      <div class="label" id="prepArmyLabel">내 군단</div>
+      <div class="chips" id="prepParty"></div>
+      <p class="muted">아이콘을 누르면 능력치를 볼 수 있어요</p>
+    </div>
+    <div class="bottomBar">
+      <button id="prepEdit">소환수 키우기</button>
+      <button id="prepStart" class="primary">전투 시작</button>
+    </div>
   </section>
 
   <section id="battle" class="panel" hidden>
@@ -172,6 +194,7 @@
   <section id="tame" class="panel" hidden>
     <h2 id="tameTitle" style="margin-top:12px">길들이기!</h2>
     <p class="sub" id="tameSub"></p>
+    <p class="muted">그림을 누르면 능력치, [선택]을 누르면 길들이기 시작</p>
     <div id="tameCards"></div>
     <div id="tameResult"></div>
     <button id="rouletteGo" class="big primary" hidden>보스 보상 룰렛!</button>
@@ -232,13 +255,13 @@ setTimeout(() => {
 </script>
 <script type="module">
 // 배포할 때마다 ?v= 숫자를 올린다 (GitHub Pages 캐시 때문)
-import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, EVO_LEVEL, MAX_EVO, unitStats, tameChance, displayName } from './data.js?v=4';
-import { createBattle, stepBattle, useSkill, canUse, aliveCount, killsByType, SKILLS, NECRO_D, ROAD_W } from './battle.js?v=4';
+import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, EVO_LEVEL, MAX_EVO, unitStats, tameChance, displayName } from './data.js?v=5';
+import { createBattle, stepBattle, useSkill, canUse, aliveCount, killsByType, SKILLS, NECRO_D, ROAD_W } from './battle.js?v=5';
 import {
-  loadSave, partyUnits, enemyUnits, stageEnemies, groupEnemies, tameOptions, tameAmount, tame, recordWin, recordLoss,
+  necroUnit, loadSave, partyUnits, enemyUnits, stageEnemies, groupEnemies, tameOptions, tameAmount, tame, recordWin, recordLoss,
   stageOf, globalStage, isUnlocked, isBossStage, regionProgress, STAGE_COUNT, armySize, necroLevel,
-  levelUp, levelUpCost, evolve, evolveCost, canEvolve, ROULETTE, rollRoulette, applyRoulette,
-} from './progress.js?v=4';
+  levelUp, levelUpCost, evolve, evolveCost, canEvolve, ROULETTE, rollRoulette, applyRoulette, rouletteAvailable,
+} from './progress.js?v=5';
 
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'necromancer.save';
@@ -289,16 +312,35 @@ function drawCrown(c, color, x, y, s) {
   for (const [cx, cy] of [[5, 0], [7, 0], [9, 0], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1]]) px(c, x + cx * s, y + cy * s, color, s, s);
 }
 
-// 미리보기용 16×16 캔버스에 몬스터 하나 (진화했으면 머리 위에 점)
+const OUTLINE = '#120a1a';
+// 도트 그림에 1픽셀 어두운 테두리를 둘러서 배경 위에서도 또렷하게 (2.5D 도트 느낌)
+function drawOutlined(c, art, colors, x, y) {
+  art.forEach((row, r) => {
+    for (let col = 0; col < row.length; col++) {
+      if (row[col] === '.' || !colors[row[col]]) continue;
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) px(c, x + col + dx, y + r + dy, OUTLINE);
+    }
+  });
+  // 아래쪽은 살짝 어둡게, 위쪽은 살짝 밝게 해서 입체감
+  drawArt(c, art, colors, x, y);
+  c.fillStyle = 'rgba(0, 0, 0, 0.18)';
+  art.forEach((row, r) => { if (r >= art.length * 0.7) for (let col = 0; col < row.length; col++) if (row[col] !== '.') c.fillRect(x + col, y + r, 1, 1); });
+  c.fillStyle = 'rgba(255, 255, 255, 0.16)';
+  art.forEach((row, r) => { if (r <= art.length * 0.25) for (let col = 0; col < row.length; col++) if (row[col] !== '.') c.fillRect(x + col, y + r, 1, 1); });
+}
+
+// 미리보기용 18×18 캔버스에 몬스터 하나 (진화했으면 머리 위에 점)
 function portrait(typeId, evo = 0) {
   const cv = document.createElement('canvas');
-  cv.width = cv.height = 16;
+  cv.width = cv.height = 18;
   const c = cv.getContext('2d');
   const { art, colors } = artFor(typeId);
-  const off = Math.floor((16 - art[0].length) / 2);
-  drawArt(c, art, colors, off, off + 1);
-  if (MONSTERS[typeId]?.tier === 'boss') drawCrown(c, MONSTERS[typeId].colors.c, 0, 0, 1);
-  for (let i = 0; i < evo; i++) px(c, 6 + i * 3, 0, EVO_MARK[evo], 2, 2);
+  const off = Math.floor((18 - art[0].length) / 2);
+  c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+  c.beginPath(); c.ellipse(9, off + art.length + 1, art[0].length * 0.4, 1.6, 0, 0, Math.PI * 2); c.fill();
+  drawOutlined(c, art, colors, off, off + 1);
+  if (MONSTERS[typeId]?.tier === 'boss') drawCrown(c, MONSTERS[typeId].colors.c, 1, 0, 1);
+  for (let i = 0; i < evo; i++) px(c, 7 + i * 3, 0, EVO_MARK[evo], 2, 2);
   return cv;
 }
 
@@ -418,7 +460,10 @@ function openPrep(g) {
   $('prepEnemyLabel').textContent = `적 ${fmt(prepEnemies.length)}마리`;
   const enemies = $('prepEnemies');
   enemies.innerHTML = '';
-  for (const e of groupEnemies(prepEnemies)) enemies.append(miniCard(e.type, 0, MONSTERS[e.type].name, `Lv.${e.level} ×${fmt(e.count)}`));
+  for (const e of groupEnemies(prepEnemies)) {
+    const st = enemyUnits([e])[0];
+    enemies.append(chip(e.type, 0, e.count, () => showInfo({ typeId: e.type, evo: 0, level: e.level, count: e.count, stats: st, note: '적' })));
+  }
   renderPrepParty();
 }
 
@@ -427,22 +472,41 @@ function renderPrepParty() {
   party.innerHTML = '';
   $('prepArmyLabel').textContent = `내 군단 ${fmt(armySize(save))}마리`;
   const list = [...save.roster].sort((a, b) => b.count - a.count);
-  for (const r of list) party.append(miniCard(r.type, r.evo, displayName(r.type, r.evo), `Lv.${r.level} ×${fmt(r.count)}`));
-  party.append(miniCard('necro', 0, '네크로맨서', `Lv.${necroLevel(save)}`));
+  for (const r of list) party.append(chip(r.type, r.evo, r.count, () => showInfo({ typeId: r.type, evo: r.evo, level: r.level, count: r.count, stats: unitStats(r.type, r.level, r.evo) })));
+  const n = necroUnit(save);
+  party.append(chip('necro', 0, null, () => showInfo({ typeId: 'necro', evo: 0, level: n.level, stats: n, note: '쓰러지면 패배! 가장 가까이 온 적에게 암흑 화살' })));
 }
 
-function miniCard(typeId, evo, name, sub) {
-  const d = document.createElement('div');
-  d.className = 'mini';
-  d.append(portrait(typeId, evo));
-  const n = document.createElement('div');
-  n.textContent = name;
-  const s = document.createElement('div');
-  s.textContent = sub;
-  s.style.opacity = 0.7;
-  d.append(n, s);
-  return d;
+// 작은 아이콘 + 마리 수. 누르면 정보
+function chip(typeId, evo, count, onClick) {
+  const b = document.createElement('button');
+  b.className = `chip${MONSTERS[typeId]?.tier === 'boss' ? ' boss' : ''}${typeId === 'necro' ? ' necro' : ''}`;
+  b.append(portrait(typeId, evo));
+  const t = document.createElement('span');
+  t.textContent = count === null ? 'Lv.' + necroLevel(save) : `×${fmt(count)}`;
+  b.append(t);
+  b.onclick = onClick;
+  return b;
 }
+
+// 몬스터 정보 창: 이름, 등급, 체력, 공격력, 공격 간격, 이동 속도, 특성
+function showInfo({ typeId, evo, level, count, stats, note }) {
+  const necroInfo = typeId === 'necro';
+  const name = necroInfo ? '네크로맨서' : displayName(typeId, evo);
+  const trait = TRAITS[stats.trait];
+  const dps = stats.atk / stats.interval;
+  const cv = portrait(typeId, evo);
+  openModal(`<div id="infoBox"><div id="infoPic"></div><div><strong style="font-size:18px">${name}</strong><br>`
+    + `${necroInfo ? '' : tierText(typeId) + ' · '}Lv.${level}${count ? ` · ${fmt(count)}마리` : ''}`
+    + `<div class="stats"><span>체력</span><b>${fmt(stats.hp)}</b><span>공격력</span><b>${fmt(stats.atk)}</b>`
+    + `<span>공격 간격</span><b>${stats.interval}초</b><span>초당 피해</span><b>${fmt(dps)}</b>`
+    + `${necroInfo ? '' : `<span>이동 속도</span><b>${stats.speed}</b>`}</div></div></div>`
+    + `<p class="muted" style="text-align:left"><span style="color:var(--accent)">${trait.name}</span>: ${trait.desc}${necroInfo || !MONSTERS[typeId] ? '' : `<br>출신: ${REGIONS[MONSTERS[typeId].region].name} · 길들이기 ${Math.round(tameChance(typeId) * 100)}%`}${note ? `<br>${note}` : ''}</p>`, [
+    ['닫기', closeModal, 'primary'],
+  ]);
+  $('infoPic').replaceWith(cv);
+}
+
 
 // ---------- 전투 ----------
 
@@ -473,7 +537,7 @@ function startBattle() {
   const total = battle.allies.length + battle.enemies.length;
   view = {
     floats: [], bolts: [], fx: [], puffs: [], endAt: 0, destroyAt: 0, shakeAt: 0, countsAt: 0,
-    deco: makeDeco(stageOf(battleStage).region),
+    deco: makeDeco(stageOf(battleStage).region), base: makeBase(stageOf(battleStage).region),
     // 군단이 클수록 작게 그린다. 작은 전투에서만 피해 숫자와 체력바를 모두 보여 준다
     scale: total <= 60 ? 1 : 0.5, detail: total <= 40,
   };
@@ -591,80 +655,183 @@ function finishBattle() {
   openTame(g, win, kills);
 }
 
-// ---------- 전장 그리기 ----------
+// ---------- 전장 그리기 (도트 2.5D) ----------
 
 const GROUNDS = {
-  village: { bg: '#4a6a3a', bg2: '#56783f', road: '#8a7a5a', road2: '#7a6a4a', tree: '#2f6a2a', tree2: '#4a8a3a', stone: '#c8c8c0' },
-  city: { bg: '#5a5a62', bg2: '#66666e', road: '#3a3a42', road2: '#46464e', tree: '#2f5a3a', tree2: '#3f7a4a', stone: '#d8d8d0' },
-  kingdom: { bg: '#5a6a3a', bg2: '#667846', road: '#9a8a6a', road2: '#8a7a5a', tree: '#2a5a2a', tree2: '#3a7a3a', stone: '#b8b8c0' },
-  planet: { bg: '#5a3a4a', bg2: '#684456', road: '#8a5a3a', road2: '#7a4a2a', tree: '#3a8a6a', tree2: '#5aaa8a', stone: '#a87ad8' },
-  cosmos: { bg: '#0c0a1e', bg2: '#141030', road: '#2a2050', road2: '#342a60', tree: '#6040a0', tree2: '#8a60d0', stone: '#a0a0ff' },
+  village: { bg: '#4a7038', bg2: '#557c40', road: '#a08c62', road2: '#8e7a52', side: '#5e4c30', tree: ['#265a22', '#3a7a30', '#5aa043'], stone: ['#d8d6c8', '#b0ae9e', '#88867a'], body: ['#c49a6a', '#9a744c', '#7a5a3a'], roof: ['#c04a32', '#9a3424', '#7a2618'] },
+  city: { bg: '#585a66', bg2: '#62646f', road: '#3e3f48', road2: '#4a4b55', side: '#26272e', tree: ['#24502e', '#346a3e', '#4e8c56'], stone: ['#e0e0d8', '#b8b8b0', '#90908a'], body: ['#5a6078', '#424860', '#30344a'], roof: ['#ffd23f', '#c9a020', '#9a7810'] },
+  kingdom: { bg: '#5a6c3a', bg2: '#657844', road: '#a89870', road2: '#968660', side: '#625438', tree: ['#224e22', '#336e33', '#4f9040'], stone: ['#c8c8d0', '#a0a0aa', '#7c7c86'], body: ['#9a9aa8', '#7a7a88', '#5c5c6a'], roof: ['#c82828', '#9a1c1c', '#701414'] },
+  planet: { bg: '#5a3a4c', bg2: '#664458', road: '#94603c', road2: '#82522e', side: '#4e2c18', tree: ['#2a7a60', '#3a9a7a', '#62c8a0'], stone: ['#b890e0', '#9070c0', '#6c50a0'], body: ['#3a6a5a', '#2c5246', '#1e3c32'], roof: ['#b0ff30', '#80c020', '#5a9010'] },
+  cosmos: { bg: '#0e0c22', bg2: '#151232', road: '#2c2254', road2: '#382c66', side: '#140e2a', tree: ['#4a2e8a', '#6a44b0', '#9a70e0'], stone: ['#b0b0ff', '#8080d8', '#5c5cb0'], body: ['#4a6ac0', '#3a52a0', '#2a3c80'], roof: ['#c06a40', '#9a5030', '#703a20'] },
 };
+
+function poly(c, color, pts) {
+  c.fillStyle = color;
+  c.beginPath();
+  pts.forEach(([x, y], i) => (i ? c.lineTo(Math.round(x), Math.round(y)) : c.moveTo(Math.round(x), Math.round(y))));
+  c.closePath();
+  c.fill();
+}
+
+// 쿼터뷰 상자: (x, y)는 바닥 앞 꼭짓점, hw는 가로 반폭(세로는 그 절반), h는 높이. [윗면, 왼쪽 면, 오른쪽 면] 색
+function isoBox(c, x, y, hw, h, [top, left, right]) {
+  const hd = hw / 2;
+  poly(c, left, [[x, y], [x - hw, y - hd], [x - hw, y - hd - h], [x, y - h]]);
+  poly(c, right, [[x, y], [x + hw, y - hd], [x + hw, y - hd - h], [x, y - h]]);
+  poly(c, top, [[x, y - h], [x + hw, y - hd - h], [x, y - 2 * hd - h], [x - hw, y - hd - h]]);
+}
+
+function groundShadow(c, x, y, rx, ry, a = 0.28) {
+  c.fillStyle = `rgba(0, 0, 0, ${a})`;
+  c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); c.fill();
+}
 
 // 길 바깥 장식(나무, 무너진 벽, 건물). 파괴 연출 때 무너진다
 function makeDeco(region) {
   const r = (a, b) => a + Math.random() * (b - a);
   const kind = REGIONS[region].bg, list = [];
-  for (let i = 0; i < 14; i++) {
-    const t = r(0.05, 0.95), side = i % 2 ? 1 : -1;
-    const p = roadPoint(t * NECRO_D, side * r(ROAD_HALF + 10, ROAD_HALF + 46));
-    list.push({ type: 'tree', x: p.x, y: p.y, s: r(8, 14) });
+  for (let i = 0; i < 16; i++) {
+    const t = r(0.03, 0.97), side = i % 2 ? 1 : -1;
+    const p = roadPoint(t * NECRO_D, side * r(ROAD_HALF + 10, ROAD_HALF + 50));
+    list.push({ type: 'tree', x: p.x, y: p.y, s: r(7, 12) });
   }
-  for (let i = 0; i < 4; i++) {
-    const t = r(0.2, 0.8), side = i % 2 ? 1 : -1;
-    const p = roadPoint(t * NECRO_D, side * (ROAD_HALF + 4));
-    list.push({ type: 'wall', x: p.x, y: p.y, w: r(10, 18) });
+  for (let i = 0; i < 5; i++) {
+    const t = r(0.15, 0.85), side = i % 2 ? 1 : -1;
+    const p = roadPoint(t * NECRO_D, side * (ROAD_HALF + 5));
+    list.push({ type: 'wall', x: p.x, y: p.y, n: Math.round(r(2, 4)), seed: i });
   }
   const building = { village: 'house', city: 'tower', kingdom: 'castle', planet: 'spire', cosmos: 'planet' }[kind];
   for (let i = 0; i < 3; i++) {
-    const t = [0.25, 0.55, 0.8][i], side = i % 2 ? -1 : 1;
-    const p = roadPoint(t * NECRO_D, side * (ROAD_HALF + 28));
-    list.push({ type: building, x: p.x, y: p.y, w: r(16, 24), h: Math.round(r(14, 26)) });
+    const t = [0.22, 0.52, 0.8][i], side = i % 2 ? -1 : 1;
+    const p = roadPoint(t * NECRO_D, side * (ROAD_HALF + 30));
+    list.push({ type: building, x: p.x, y: p.y, w: r(9, 13), h: Math.round(r(12, 24)), seed: i });
   }
   return list.sort((a, b) => a.y - b.y);
 }
 
-function drawField(c, region, now, destroyT) {
+// 바닥(쿼터뷰 타일), 솟은 길, 네크로맨서 제단은 전투마다 한 번만 그려 두고 매 프레임 그대로 쓴다
+function makeBase(region) {
   const kind = REGIONS[region].bg, G = GROUNDS[kind];
+  const cv = document.createElement('canvas');
+  cv.width = CW; cv.height = CH;
+  const c = cv.getContext('2d');
   px(c, 0, 0, G.bg, CW, CH);
-  for (let i = 0; i < 60; i++) px(c, (i * 47) % CW, (i * 83) % CH, G.bg2, 6, 3);
-  if (kind === 'cosmos') for (let i = 0; i < 50; i++) px(c, (i * 53) % CW, (i * 31) % CH, i % 3 ? '#ffffff' : '#b0b0ff');
-  // 길
-  const corners = [roadPoint(-8, -ROAD_HALF), roadPoint(-8, ROAD_HALF), roadPoint(NECRO_D + 6, ROAD_HALF), roadPoint(NECRO_D + 6, -ROAD_HALF)];
-  c.fillStyle = G.road;
-  c.beginPath(); corners.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y))); c.closePath(); c.fill();
-  for (let i = 0; i < 40; i++) { const p = roadPoint((i * 37) % 100, ((i * 19) % 50) - 25); px(c, p.x, p.y, G.road2, 4, 2); }
-  // 장식 (파괴 중엔 흔들리며 가라앉는다)
-  for (const s of view.deco) {
-    const sink = destroyT ? Math.min(1, destroyT * (0.7 + (Math.round(s.x) % 5) / 10)) : 0;
-    const shake = destroyT && destroyT < 1 ? Math.round(Math.sin(now / 30 + s.x) * 1.5) : 0;
-    const x = Math.round(s.x + shake), y = Math.round(s.y);
-    if (s.type === 'tree') {
-      const h = Math.round(s.s * (1 - sink));
-      if (h <= 0) continue;
-      px(c, x - 1, y - 3, '#5a3a22', 2, 3);
-      c.fillStyle = G.tree;
-      c.beginPath(); c.arc(x, y - 3 - h * 0.6, h * 0.6, 0, Math.PI * 2); c.fill();
-      c.fillStyle = G.tree2;
-      c.beginPath(); c.arc(x - h * 0.2, y - 3 - h * 0.75, h * 0.35, 0, Math.PI * 2); c.fill();
-    } else if (s.type === 'wall') {
-      const h = Math.round(6 * (1 - sink));
-      for (let k = 0; k < s.w; k += 4) px(c, x + k - s.w / 2, y - h - (k % 8 ? 0 : 2), G.stone, 4, h + (k % 8 ? 0 : 2));
-    } else if (s.type === 'planet') {
-      c.fillStyle = s.h % 2 ? '#c06a40' : '#4a6ac0';
-      c.beginPath(); c.arc(x, y - 10, Math.max(0, (s.w / 2) * (1 - sink * 0.7)), 0, Math.PI * 2); c.fill();
-    } else {
-      const h = Math.round(s.h * (1 - sink));
-      if (h <= 0) continue;
-      const color = { house: '#7a5a3a', tower: '#3a3f55', castle: '#6a6a7a', spire: '#3a6a5a' }[s.type];
-      px(c, x - s.w / 2, y - h, color, s.w, h);
-      if (s.type === 'house' || s.type === 'castle') for (let i = 0; i < 5; i++) px(c, x - s.w / 2 - 2 + i, y - h - 5 + i, s.type === 'house' ? '#a83a2a' : '#c02020', s.w + 4 - i * 2, 1);
-      if (s.type === 'tower' || s.type === 'spire') for (let wy = y - h + 3; wy < y - 3; wy += 5) for (let wx = x - s.w / 2 + 2; wx < x + s.w / 2 - 2; wx += 4) px(c, wx, wy, s.type === 'tower' ? '#ffd23f' : '#b0ff30');
+  const TW = 16, TH = 8;
+  for (let row = -1; row < CH / (TH / 2) + 2; row++)
+    for (let col = -1; col < CW / TW + 2; col++) {
+      const x = col * TW + (row % 2 ? TW / 2 : 0), y = row * (TH / 2);
+      if ((row + col) % 3 === 0) poly(c, G.bg2, [[x, y - TH / 2], [x + TW / 2, y], [x, y + TH / 2], [x - TW / 2, y]]);
+    }
+  for (let i = 0; i < 80; i++) px(c, (i * 47 + 13) % CW, (i * 83 + 7) % CH, i % 2 ? G.bg2 : 'rgba(0,0,0,0.12)', 2, 1);
+  if (kind === 'cosmos') for (let i = 0; i < 70; i++) px(c, (i * 53) % CW, (i * 31) % CH, i % 3 ? '#ffffff' : '#b0b0ff');
+  // 길: 아래로 두께(옆면)를 먼저 그리고 그 위에 윗면을 그려서 솟아 보이게
+  const corners = off => [roadPoint(-10, -ROAD_HALF), roadPoint(-10, ROAD_HALF), roadPoint(NECRO_D + 8, ROAD_HALF), roadPoint(NECRO_D + 8, -ROAD_HALF)].map(p => [p.x, p.y + off]);
+  poly(c, 'rgba(0,0,0,0.3)', corners(7));
+  poly(c, G.side, corners(4));
+  poly(c, G.road, corners(0));
+  // 길 가장자리 돌, 바닥 무늬
+  for (let d = -6; d < NECRO_D + 6; d += 4)
+    for (const side of [-1, 1]) {
+      const p = roadPoint(d, side * (ROAD_HALF - 1));
+      px(c, Math.round(p.x) - 1, Math.round(p.y) - 1, G.stone[d % 8 ? 1 : 0], 3, 2);
+      px(c, Math.round(p.x) - 1, Math.round(p.y) + 1, G.stone[2], 3, 1);
+    }
+  for (let i = 0; i < 70; i++) {
+    const p = roadPoint((i * 37) % 104 - 2, ((i * 19) % 52) - 26);
+    px(c, Math.round(p.x), Math.round(p.y), i % 3 ? G.road2 : 'rgba(255,255,255,0.08)', 3 + (i % 3), 1);
+  }
+  // 네크로맨서의 제단: 두 단짜리 받침
+  const ax = NECRO_POS.x, ay = NECRO_POS.y + 30;
+  groundShadow(c, ax, ay - 2, 22, 7, 0.35);
+  isoBox(c, ax, ay, 18, 5, ['#4a2a6a', '#2a1640', '#1c0e2c']);
+  isoBox(c, ax, ay - 5, 12, 3, ['#6a3a92', '#3c2058', '#2a1440']);
+  return cv;
+}
+
+// 화면 가장자리를 어둡게 (한 번만 만들어 둔다)
+let vignette = null;
+function getVignette() {
+  if (vignette) return vignette;
+  vignette = document.createElement('canvas');
+  vignette.width = CW; vignette.height = CH;
+  const c = vignette.getContext('2d');
+  const g = c.createRadialGradient(CW * 0.55, CH * 0.45, CH * 0.35, CW / 2, CH / 2, CH * 0.85);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,10,0.55)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, CW, CH);
+  return vignette;
+}
+
+function drawDeco(c, s, G, now, destroyT) {
+  const sink = destroyT ? Math.min(1, destroyT * (0.7 + (Math.round(s.x) % 5) / 10)) : 0;
+  const shake = destroyT && destroyT < 1 ? Math.round(Math.sin(now / 30 + s.x) * 1.5) : 0;
+  const x = Math.round(s.x + shake), y = Math.round(s.y);
+  if (s.type === 'tree') {
+    const h = s.s * (1 - sink);
+    if (h <= 1) return;
+    groundShadow(c, x + 2, y, h * 0.7, h * 0.28);
+    px(c, x - 1, y - 4, '#4a2e18', 3, 4);
+    px(c, x + 1, y - 4, '#2e1c0e', 1, 4);
+    const cy = y - 4 - h * 0.55;
+    // 어두운 아래층 → 밝은 위층 → 하이라이트 순으로 겹쳐 둥근 덩어리처럼
+    c.fillStyle = G.tree[0]; c.beginPath(); c.arc(x, cy + 1, h * 0.62, 0, Math.PI * 2); c.fill();
+    c.fillStyle = G.tree[1]; c.beginPath(); c.arc(x - h * 0.08, cy - h * 0.1, h * 0.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = G.tree[2]; c.beginPath(); c.arc(x - h * 0.22, cy - h * 0.28, h * 0.22, 0, Math.PI * 2); c.fill();
+  } else if (s.type === 'wall') {
+    // 무너진 돌담: 높이가 들쭉날쭉한 돌 블록들
+    for (let k = 0; k < s.n; k++) {
+      const hh = Math.round((3 + ((s.seed + k) % 3) * 2) * (1 - sink));
+      if (hh <= 0) continue;
+      const bx = x + k * 5 - s.n * 2.5, by = y - k * 3 + s.n * 1.5;
+      isoBox(c, bx, by, 3, hh, G.stone);
+    }
+  } else if (s.type === 'planet') {
+    const r = s.w * (1 - sink * 0.7);
+    if (r <= 1) return;
+    groundShadow(c, x, y, r * 0.8, r * 0.25, 0.4);
+    const cy = y - 14 - Math.sin(now / 900 + s.seed) * 2;
+    const g = c.createRadialGradient(x - r * 0.4, cy - r * 0.4, 1, x, cy, r);
+    g.addColorStop(0, G.body[0]); g.addColorStop(0.7, G.body[1]); g.addColorStop(1, G.body[2]);
+    c.fillStyle = g; c.beginPath(); c.arc(x, cy, r, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = G.roof[0]; c.lineWidth = 1;
+    c.beginPath(); c.ellipse(x, cy, r * 1.5, r * 0.35, -0.3, 0, Math.PI * 2); c.stroke();
+  } else {
+    const h = Math.round(s.h * (1 - sink));
+    if (h <= 0) return;
+    groundShadow(c, x + 3, y - 1, s.w * 1.3, s.w * 0.5, 0.3);
+    isoBox(c, x, y, s.w, h, G.body);
+    if (s.type === 'house') isoBox(c, x, y - h, s.w + 1, 4, G.roof);
+    if (s.type === 'castle') {
+      isoBox(c, x - s.w, y - s.w / 2, 4, h + 8, G.body);
+      isoBox(c, x + s.w, y - s.w / 2, 4, h + 8, G.body);
+      isoBox(c, x - s.w, y - s.w / 2 - h - 8, 5, 3, G.roof);
+      isoBox(c, x + s.w, y - s.w / 2 - h - 8, 5, 3, G.roof);
+    }
+    if (s.type === 'tower' || s.type === 'spire') {
+      // 옆면 창문
+      for (let wy = 4; wy < h - 2; wy += 4)
+        for (let k = 2; k < s.w - 1; k += 3) {
+          const lit = (wy + k + s.seed) % 3 ? G.roof[0] : '#00000066';
+          px(c, x + k, y - k / 2 - wy, lit);
+          px(c, x - k - 1, y - k / 2 - wy, (wy + k) % 2 ? G.roof[1] : '#00000066');
+        }
+      if (s.type === 'spire') { px(c, x - 1, y - h - s.w / 2 - 4, G.roof[0], 2, 4); }
     }
   }
-  // 네크로맨서의 제단
-  px(c, NECRO_POS.x - 14, NECRO_POS.y + 23, '#2a1a3a', 28, 6);
-  px(c, NECRO_POS.x - 12, NECRO_POS.y + 21, '#4a2a6a', 24, 3);
+}
+
+function drawField(c, region, now, destroyT) {
+  const G = GROUNDS[REGIONS[region].bg];
+  c.drawImage(view.base, 0, 0);
+  // 제단 위 룬이 은은하게 빛난다
+  const ax = NECRO_POS.x, ay = NECRO_POS.y + 22;
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2 + now / 1500;
+    const glow = 0.5 + 0.5 * Math.sin(now / 300 + i);
+    px(c, Math.round(ax + Math.cos(a) * 10), Math.round(ay + Math.sin(a) * 4), `rgba(125, 255, 106, ${0.4 + glow * 0.6})`);
+  }
+  for (const s of view.deco) drawDeco(c, s, G, now, destroyT);
   if (destroyT) {
     for (let i = 0; i < 50; i++) {
       const fx = (i * 37 + now / 20) % CW, fy = CH - ((now / 12 + i * 23) % CH);
@@ -673,6 +840,18 @@ function drawField(c, region, now, destroyT) {
     c.fillStyle = `rgba(255, 60, 20, ${0.25 * Math.min(1, destroyT)})`;
     c.fillRect(0, 0, CW, CH);
   }
+}
+
+// 떠다니는 빛 알갱이와 화면 가장자리 어둡게
+function drawAtmosphere(c, region, now) {
+  const kind = REGIONS[region].bg;
+  const color = { village: '255, 240, 180', city: '255, 210, 120', kingdom: '255, 220, 160', planet: '180, 255, 120', cosmos: '180, 160, 255' }[kind];
+  for (let i = 0; i < 18; i++) {
+    const x = (i * 67 + now / (60 + i * 3)) % CW, y = CH - ((i * 41 + now / (40 + i * 2)) % CH);
+    c.fillStyle = `rgba(${color}, ${0.25 + 0.25 * Math.sin(now / 400 + i)})`;
+    c.fillRect(Math.round(x), Math.round(y), 1, 1);
+  }
+  c.drawImage(getVignette(), 0, 0);
 }
 
 function renderBattle(now) {
@@ -719,6 +898,7 @@ function renderBattle(now) {
       for (let i = 0; i < 6; i++) px(c, x - 6 + i * 2, y + 6 - t * 24 - (i % 2) * 4, '#7dff6a', 2, 2);
     }
   }
+  drawAtmosphere(c, region, now);
   view.floats = view.floats.filter(f => now - f.born < 700);
   c.font = 'bold 8px monospace';
   c.textAlign = 'center';
@@ -739,7 +919,7 @@ function renderBattle(now) {
   c.restore();
 }
 
-// 몬스터 그림을 한 번만 그려 두고 재사용한다 (수천 마리를 매 프레임 픽셀 단위로 그리면 느리다)
+// 몬스터 그림(테두리 포함)을 한 번만 그려 두고 재사용한다 (수천 마리를 매 프레임 픽셀 단위로 그리면 느리다)
 const spriteCache = new Map();
 function sprite(typeId, white) {
   const key = `${typeId}|${white}`;
@@ -747,11 +927,24 @@ function sprite(typeId, white) {
   if (cv) return cv;
   const { art, colors } = artFor(typeId);
   cv = document.createElement('canvas');
-  cv.width = art[0].length;
-  cv.height = art.length;
-  drawArt(cv.getContext('2d'), art, white ? WHITE : colors, 0, 0);
+  cv.width = art[0].length + 2;
+  cv.height = art.length + 2;
+  const c = cv.getContext('2d');
+  if (white) drawArt(c, art, WHITE, 1, 1); else drawOutlined(c, art, colors, 1, 1);
   spriteCache.set(key, cv);
   return cv;
+}
+
+// 발밑 그림자 (작은 타원을 한 번 그려 두고 늘려 쓴다)
+let shadowSprite = null;
+function getShadow() {
+  if (shadowSprite) return shadowSprite;
+  shadowSprite = document.createElement('canvas');
+  shadowSprite.width = 12; shadowSprite.height = 4;
+  const c = shadowSprite.getContext('2d');
+  c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+  c.fillRect(2, 0, 8, 4); c.fillRect(0, 1, 12, 2);
+  return shadowSprite;
 }
 
 function drawUnit(c, u, p, now) {
@@ -761,23 +954,28 @@ function drawUnit(c, u, p, now) {
   // 적은 오른쪽 위(네크로맨서)로, 소환수는 왼쪽 아래(적)로 덤벼든다
   const lunge = a.lungeAt && now - a.lungeAt < 160 ? Math.sin(((now - a.lungeAt) / 160) * Math.PI) * 2 * scale : 0;
   const dir = u.side === 'enemy' ? 1 : -1;
-  const bob = MONSTERS[u.typeId]?.shape === 'flyer' ? Math.round(Math.sin(now / 200 + u.uid) * 1.5 * scale) - 2 * scale : 0;
+  const flyer = MONSTERS[u.typeId]?.shape === 'flyer';
+  const bob = flyer ? Math.round(Math.sin(now / 200 + u.uid) * 1.5 * scale) - 3 * scale : 0;
   const dying = !u.alive ? Math.min(1, (now - a.deadAt) / 300) : 0;
   const x = Math.round(p.x - w / 2 + lunge * dir * 0.8), y = Math.round(p.y - h + bob - lunge * dir * 0.6 + dying * 3);
   c.globalAlpha = 1 - dying;
+  // 그림자는 땅에 붙어 있고, 나는 몬스터는 그림자와 몸 사이가 떠 보인다
+  const sw = w * (flyer ? 0.6 : 0.8);
+  c.drawImage(getShadow(), Math.round(p.x - sw / 2), Math.round(p.y - 2 * Math.max(1, scale * 0.6)), Math.round(sw), Math.max(2, Math.round(3 * Math.max(0.6, scale * 0.6))));
   if (u.necro) {
-    c.fillStyle = `rgba(125, 255, 106, ${0.15 + 0.1 * Math.sin(now / 300)})`;
-    c.beginPath(); c.arc(p.x, p.y - h / 2, 18, 0, Math.PI * 2); c.fill();
+    c.fillStyle = `rgba(125, 255, 106, ${0.12 + 0.08 * Math.sin(now / 300)})`;
+    c.beginPath(); c.arc(p.x, p.y - h / 2, 20, 0, Math.PI * 2); c.fill();
   }
   // 그림은 오른쪽을 본다. 소환수와 네크로맨서는 왼쪽 아래(적이 오는 쪽)를 보게 뒤집는다
   if (u.side === 'ally') { c.save(); c.translate(x + w, y); c.scale(-1, 1); c.drawImage(img, 0, 0, w, h); c.restore(); }
   else c.drawImage(img, x, y, w, h);
   c.globalAlpha = 1;
-  if (big && u.alive) drawCrown(c, MONSTERS[u.typeId].colors.c, x, y - 2 * scale, scale);
+  if (big && u.alive) drawCrown(c, MONSTERS[u.typeId].colors.c, x + scale, y - scale, scale);
   if (u.evo && u.alive && scale >= 1) px(c, Math.round(p.x) - 1, y - 2, EVO_MARK[u.evo], 2, 2);
   if (!u.alive || !(view.detail || big || u.necro)) return;
-  const bw = Math.max(8, w - 2), bx = Math.round(p.x - bw / 2), by = y - (big ? 6 * scale : 4);
-  px(c, bx, by, '#000', bw, 2);
+  const bw = Math.max(8, w - 4), bx = Math.round(p.x - bw / 2), by = y - (big ? 5 * scale : 4);
+  px(c, bx - 1, by - 1, OUTLINE, bw + 2, 4);
+  px(c, bx, by, '#3a1a1a', bw, 2);
   px(c, bx, by, u.side === 'ally' ? (u.necro ? '#b07aff' : '#7dff6a') : '#ff5c5c', Math.max(1, Math.round(bw * u.hp / u.maxHp)), 2);
 }
 
@@ -795,11 +993,12 @@ let tameState = null;
 function openTame(g, win, kills) {
   const { region, stage } = stageOf(g);
   // 이번 전투에서 실제로 만난 적들 중에서만 후보가 나온다
-  const options = tameOptions(battleEnemies, Math.random);
+  const options = tameOptions(battleEnemies, Math.random, save);
   tameState = { g, done: false, kills };
   show('tame');
   $('tameTitle').textContent = isBossStage(stage) ? `${REGIONS[region].name} 멸망!` : '길들이기!';
-  $('tameSub').innerHTML = `보상 <span class="souls">영혼 +${fmt(win.souls)}</span>${win.first ? ' (첫 클리어 2배)' : ''}<br>이번 전투에서 만난 몬스터 중 하나를 길들여 보세요`;
+  const bossNote = isBossStage(stage) && save.roster.some(r => r.type === REGIONS[region].boss) ? '<br>보스는 이미 길들여서 후보에서 빠졌어요' : '';
+  $('tameSub').innerHTML = `보상 <span class="souls">영혼 +${fmt(win.souls)}</span>${win.first ? ' (첫 클리어 2배)' : ''}<br>이번 전투에서 만난 몬스터 중 하나를 길들여 보세요${bossNote}`;
   $('tameResult').textContent = '';
   $('tameResult').className = '';
   for (const id of ['tameNext', 'tameMap', 'tameRetry', 'retryAsk', 'rouletteGo']) $(id).hidden = true;
@@ -808,14 +1007,24 @@ function openTame(g, win, kills) {
   for (const type of options) {
     const t = MONSTERS[type], owned = save.roster.find(r => r.type === type);
     const amount = tameAmount(type, kills);
-    const card = document.createElement('button');
+    const card = document.createElement('div');
     card.className = `card${t.tier === 'boss' ? ' boss' : ''}`;
-    card.append(portrait(type));
-    const gain = t.tier === 'boss' && owned ? '레벨 +2' : `+${fmt(amount)}마리`;
+    // 그림을 누르면 정보, [선택]을 눌러야 길들이기 시작
+    const pic = document.createElement('button');
+    pic.className = 'pic';
+    pic.setAttribute('aria-label', `${t.name} 정보`);
+    pic.append(portrait(type));
+    const level = owned ? owned.level : stage, evo = owned ? owned.evo : 0;
+    pic.onclick = () => showInfo({ typeId: type, evo, level, count: owned?.count, stats: unitStats(type, level, evo), note: owned ? '이미 보유한 종류예요. 길들이면 마리 수가 늘어나요' : `길들이면 Lv.${stage}로 합류해요` });
+    card.append(pic);
     card.insertAdjacentHTML('beforeend', `<div class="name">${t.name}</div><div>${tierText(type)}</div>`
-      + `<div class="chance">${Math.round(tameChance(type) * 100)}%</div><div class="amount">${gain}</div>`
+      + `<div class="chance">${Math.round(tameChance(type) * 100)}%</div><div class="amount">+${fmt(amount)}마리</div>`
       + `<div class="owned">${owned ? `보유 ${fmt(owned.count)}마리` : '새 소환수!'}</div>`);
-    card.onclick = () => tryTame(card, type, stage);
+    const pick = document.createElement('button');
+    pick.className = 'pick primary';
+    pick.textContent = '선택';
+    pick.onclick = () => tryTame(card, type, stage);
+    card.append(pick);
     cards.append(card);
   }
 }
@@ -833,15 +1042,13 @@ function tryTame(card, type, stage) {
     const name = MONSTERS[type].name;
     if (result.success) {
       $('tameResult').className = 'ok';
-      $('tameResult').innerHTML = result.levelUp
-        ? `길들이기 성공!<br><small>${name} 레벨 +${result.levelUp} → Lv.${result.unit.level}</small>`
-        : `길들이기 성공!<br><small>${josa(name, '이', '가')} ${fmt(result.amount)}마리 합류 (군단 ${fmt(armySize(save))}마리)</small>`;
+      $('tameResult').innerHTML = `길들이기 성공!<br><small>${josa(name, '이', '가')} ${fmt(result.amount)}마리 합류 (군단 ${fmt(armySize(save))}마리)</small>`;
     } else {
       $('tameResult').className = 'fail';
       $('tameResult').innerHTML = `실패...<br><small>${josa(name, '이', '가')} 도망쳤다</small>`;
       card.classList.add('dim');
     }
-    if (isBossStage(stage)) $('rouletteGo').hidden = false; // 보스를 깼으면 룰렛부터
+    if (rouletteAvailable(save, tameState.g)) $('rouletteGo').hidden = false; // 보스를 처음 깼으면 룰렛부터
     else showAfterStage();
   }, 1900);
 }

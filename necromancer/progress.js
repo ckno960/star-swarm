@@ -37,6 +37,7 @@ export function defaultSave() {
     roster: [{ id: 1, type: 'slime', level: 1, evo: 0, count: 1 }], // 길들인 종류와 마리 수
     nextId: 2,
     souls: 0,
+    roulettes: {}, // 룰렛을 이미 돌린 보스 스테이지 (보스마다 한 번)
     settings: { speed: 1, autoSkill: false },
     ended: false,
   };
@@ -54,6 +55,7 @@ export function loadSave(raw) {
     }
     for (const k of ['army', 'autoArmy', 'party']) delete save[k];
     save.souls ??= 0;
+    save.roulettes ??= {};
     return save;
   } catch {
     return base;
@@ -148,11 +150,12 @@ export function groupEnemies(list) {
   return [...map.values()];
 }
 
-// 길들이기 후보: 이번 전투에서 만난 적 종류 중 최대 3가지. 보스가 있었으면 반드시 넣는다
-export function tameOptions(enemyList, rand) {
+// 길들이기 후보: 이번 전투에서 만난 적 종류 중 최대 3가지. 보스가 있었으면 반드시 넣되, 이미 길들인 보스는 빼고
+export function tameOptions(enemyList, rand, save = null) {
   const types = [...new Set(enemyList.map(e => e.type))];
-  const boss = types.find(t => MONSTERS[t].tier === 'boss');
-  const pool = types.filter(t => t !== boss);
+  const owned = t => save?.roster.some(r => r.type === t);
+  const boss = types.find(t => MONSTERS[t].tier === 'boss' && !owned(t));
+  const pool = types.filter(t => MONSTERS[t].tier !== 'boss');
   const picks = boss ? [boss] : [];
   while (picks.length < 3 && pool.length) picks.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
   return picks;
@@ -164,16 +167,13 @@ export function tameAmount(type, kills) {
   return Math.max(TAME_MIN, Math.round((kills[type] ?? 0) * TAME_SHARE));
 }
 
-// 길들이기를 시도한다. 성공하면 그만큼 군단에 더한다. 보스를 이미 가졌으면 대신 레벨이 2 오른다
+// 길들이기를 시도한다. 성공하면 그만큼 군단에 더한다. 보스는 종류마다 한 번만 길들일 수 있다
 export function tame(save, type, stage, kills, rand) {
   const chance = tameChance(type);
+  const owned = save.roster.find(r => r.type === type);
+  if (owned && MONSTERS[type].tier === 'boss') return { success: false, chance, already: true };
   if (rand() >= chance) return { success: false, chance };
   const amount = tameAmount(type, kills);
-  const owned = save.roster.find(r => r.type === type);
-  if (owned && MONSTERS[type].tier === 'boss') {
-    owned.level = Math.min(MAX_LEVEL, owned.level + 2);
-    return { success: true, chance, unit: owned, levelUp: 2, amount: 0 };
-  }
   if (owned) {
     owned.count += amount;
     return { success: true, chance, unit: owned, amount };
@@ -240,14 +240,20 @@ export function evolve(save, id, free = false) {
 
 // ---------- 보스 룰렛 ----------
 
+// 룰렛은 보스 스테이지마다 처음 깰 때 한 번만 돌린다
+export function rouletteAvailable(save, g) {
+  return isBossStage(stageOf(g).stage) && !save.roulettes[g];
+}
+
 // weight: 나올 비중. 칸 크기도 비중에 맞춘다
+// 보스마다 한 번뿐이라 한 번에 크게 준다
 export const ROULETTE = [
-  { kind: 'souls', mult: 2, label: '영혼 ×2', weight: 5 },
+  { kind: 'souls', mult: 3, label: '영혼 ×3', weight: 5 },
   { kind: 'copies', label: '군단 증원', weight: 4 },
-  { kind: 'souls', mult: 5, label: '영혼 ×5', weight: 3 },
-  { kind: 'levels', label: '레벨 +3', weight: 4 },
+  { kind: 'souls', mult: 8, label: '영혼 ×8', weight: 3 },
+  { kind: 'levels', label: '레벨 +5', weight: 4 },
   { kind: 'evolve', label: '무료 진화', weight: 1.5 },
-  { kind: 'souls', mult: 15, label: '잭팟 영혼 ×15', weight: 0.8 },
+  { kind: 'souls', mult: 20, label: '잭팟 영혼 ×20', weight: 0.8 },
 ];
 
 export function rollRoulette(rand) {
@@ -262,29 +268,30 @@ export function rollRoulette(rand) {
 
 // 뽑힌 칸의 상을 준다. 무슨 일이 일어났는지 글로 돌려준다
 export function applyRoulette(save, index, g, rand) {
+  save.roulettes[g] = true;
   const seg = ROULETTE[index];
   const base = stageSouls(g, false);
   const souls = n => { save.souls += n; return `영혼 +${n}`; };
   if (seg.kind === 'souls') return souls(base * seg.mult);
   const pick = list => list[Math.floor(rand() * list.length)];
   if (seg.kind === 'copies') {
-    // 가장 많은 종류를 30% 늘린다
+    // 가장 많은 종류를 50% 늘린다
     const r = [...save.roster].filter(o => MONSTERS[o.type].tier !== 'boss').sort((a, b) => b.count - a.count)[0];
-    if (!r) return souls(base * 3);
-    const add = Math.max(1, Math.round(r.count * 0.3));
+    if (!r) return souls(base * 5);
+    const add = Math.max(2, Math.round(r.count * 0.5));
     r.count += add;
     return `${displayName(r.type, r.evo)} +${add}마리`;
   }
   if (seg.kind === 'levels') {
     const list = save.roster.filter(o => o.level < MAX_LEVEL);
-    if (!list.length) return souls(base * 3);
+    if (!list.length) return souls(base * 5);
     const r = pick(list);
-    r.level = Math.min(MAX_LEVEL, r.level + 3);
+    r.level = Math.min(MAX_LEVEL, r.level + 5);
     return `${displayName(r.type, r.evo)} Lv.${r.level}`;
   }
   // 무료 진화: 진화할 수 있는 종류가 없으면 영혼으로
   const ready = save.roster.filter(canEvolve);
-  if (!ready.length) return `진화할 소환수가 없어 ${souls(base * 6)}`;
+  if (!ready.length) return `진화할 소환수가 없어 ${souls(base * 10)}`;
   const r = pick(ready);
   evolve(save, r.id, true);
   return `${displayName(r.type, r.evo)}(으)로 진화!`;
