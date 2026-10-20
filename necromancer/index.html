@@ -15,10 +15,9 @@
   [hidden] { display: none !important; } /* 버튼 등에 준 display 스타일이 hidden을 덮어쓰지 않게 */
   main { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 480px; padding: 12px 16px; box-sizing: border-box; height: 100%; }
   .panel { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; min-height: 0; flex: 1; }
-  .panel[hidden] { display: none; }
   h1 { margin: 40px 0 0; font-size: 32px; letter-spacing: 3px; color: var(--accent); text-shadow: 3px 3px 0 #000, 0 0 12px rgba(125, 255, 106, 0.4); text-align: center; line-height: 1.2; }
   h2 { margin: 0; font-size: 22px; color: var(--accent); text-shadow: 2px 2px 0 #000; }
-  .sub { margin: 0; opacity: 0.75; text-align: center; font-size: 14px; }
+  .sub { margin: 0; opacity: 0.8; text-align: center; font-size: 14px; line-height: 1.5; }
   button {
     font: 700 16px system-ui, sans-serif; color: var(--text); background: var(--panel);
     border: 3px solid var(--line); border-radius: 0; min-height: 44px; padding: 0 14px; box-shadow: 3px 3px 0 #000;
@@ -27,7 +26,7 @@
   button:disabled { opacity: 0.35; }
   button.primary { border-color: var(--accent); }
   button.danger { border-color: var(--red); color: var(--red); }
-  button.big { width: 260px; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 20px; }
+  button.big { width: 260px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 19px; }
   button.big small { font-size: 12px; font-weight: 400; opacity: 0.8; }
   .iconBtn { position: absolute; top: 12px; right: 16px; width: 44px; padding: 0; font-size: 22px; }
   .topbar { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
@@ -38,6 +37,7 @@
   #homeArt { width: 240px; height: 160px; margin: 10px 0; }
   .muted { font-size: 13px; opacity: 0.7; text-align: center; margin: 0; line-height: 1.5; }
   .scroll { overflow-y: auto; width: 100%; min-height: 0; flex: 1; }
+  .souls { color: var(--purple); font-weight: 700; }
 
   #regionTabs { display: flex; gap: 6px; width: 100%; }
   #regionTabs button { flex: 1; padding: 0; min-height: 40px; font-size: 14px; }
@@ -54,14 +54,16 @@
   .lineup { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; width: 100%; }
   .mini { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 74px; padding: 6px 2px; background: var(--panel); border: 3px solid var(--line); font-size: 12px; text-align: center; }
   .mini canvas { width: 48px; height: 48px; }
-  .mini.empty { opacity: 0.4; justify-content: center; min-height: 84px; }
   .label { font-weight: 700; margin-top: 4px; }
 
   #battleHud { display: flex; justify-content: space-between; align-items: center; width: 100%; }
   #battleHud button { min-height: 38px; font-size: 14px; padding: 0 10px; }
   #battleCanvas { width: 100%; border: 3px solid #000; box-sizing: border-box; }
+  #armyCounts { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; width: 100%; }
+  #armyCounts .a { color: var(--accent); }
+  #armyCounts .e { color: var(--red); }
   #skills { display: flex; gap: 10px; width: 100%; }
-  .skill { position: relative; flex: 1; min-height: 64px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .skill { position: relative; flex: 1; min-height: 60px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
   .skill small { font-size: 11px; font-weight: 400; opacity: 0.8; }
   .skill .cd { position: absolute; left: 0; bottom: 0; height: 100%; background: rgba(0, 0, 0, 0.6); pointer-events: none; }
   .skill.ready { border-color: var(--purple); }
@@ -70,43 +72,37 @@
   #battleToggles button.on { border-color: var(--accent); color: var(--accent); }
 
   #tameCards { display: flex; gap: 8px; width: 100%; }
-  .card { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; background: var(--panel); border: 3px solid var(--line); font-size: 13px; text-align: center; box-shadow: 3px 3px 0 #000; }
-  .card canvas { width: 64px; height: 64px; }
+  .card { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; background: var(--panel); border: 3px solid var(--line); font-size: 12px; text-align: center; box-shadow: 3px 3px 0 #000; }
+  .card canvas { width: 56px; height: 56px; }
   .card .name { font-weight: 700; font-size: 14px; }
   .card .chance { font-size: 20px; font-weight: 900; color: var(--accent); }
-  .card .owned { font-size: 11px; color: var(--gold); min-height: 14px; }
+  .card .amount { font-size: 14px; font-weight: 900; color: var(--gold); }
+  .card .owned { font-size: 11px; opacity: 0.8; min-height: 14px; }
   .card.boss { border-color: var(--gold); }
-  .card:active { transform: translate(2px, 2px); }
   .card.dim { opacity: 0.25; }
   .card.taming canvas { animation: wobble 0.6s ease-in-out 3; }
   @keyframes wobble { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
-  #tameResult { min-height: 52px; text-align: center; font-size: 20px; font-weight: 900; }
+  #tameResult { min-height: 48px; text-align: center; font-size: 20px; font-weight: 900; }
   #tameResult.ok { color: var(--accent); }
   #tameResult.fail { color: var(--red); }
-
-  #detail { width: 100%; padding: 10px; background: var(--panel); border: 3px solid var(--line); box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  #detail[hidden] { display: none; }
-  #detail canvas { width: 64px; height: 64px; flex: none; }
-  #detail .info { flex: 1; font-size: 13px; line-height: 1.5; }
-  #detail button { min-height: 40px; font-size: 14px; width: 100%; }
-  .xp { height: 6px; background: #000; margin-top: 2px; }
-  .xp > div { height: 100%; background: var(--accent); }
-
-  #starBox { width: 100%; padding: 10px; background: var(--panel); border: 3px solid var(--line); box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
-  .starLine { display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; }
-  .starBar > div { background: var(--gold); }
-  #autoArmyBtn.on { border-color: var(--accent); color: var(--accent); }
-  #armyList { display: flex; flex-direction: column; gap: 6px; }
-  .armyRow { display: flex; align-items: center; gap: 6px; padding: 6px; background: var(--panel); border: 3px solid var(--line); }
-  .armyRow.sel { border-color: var(--gold); }
-  .armyRow canvas { width: 40px; height: 40px; flex: none; }
-  .armyRow .info { flex: 1; font-size: 13px; line-height: 1.35; min-width: 0; }
-  .armyRow .cnt { min-width: 40px; text-align: center; font-weight: 900; font-size: 15px; }
-  .armyRow button { min-height: 36px; min-width: 34px; padding: 0 6px; font-size: 15px; box-shadow: 2px 2px 0 #000; }
-  #armyCounts { font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; width: 100%; }
-  #armyCounts .a { color: var(--accent); }
-  #armyCounts .e { color: var(--red); }
   #retryAsk { margin: 0; font-weight: 700; }
+
+  #wheel { width: 260px; height: 260px; }
+  #rouletteResult { min-height: 52px; text-align: center; font-size: 20px; font-weight: 900; color: var(--gold); }
+
+  #soulBox { width: 100%; padding: 10px; background: var(--panel); border: 3px solid var(--line); box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+  #armyList { display: flex; flex-direction: column; gap: 6px; }
+  .armyRow { display: flex; align-items: center; gap: 8px; padding: 6px; background: var(--panel); border: 3px solid var(--line); flex-wrap: wrap; }
+  .armyRow.sel { border-color: var(--gold); }
+  .armyRow canvas { width: 44px; height: 44px; flex: none; }
+  .armyRow .info { flex: 1; font-size: 13px; line-height: 1.4; min-width: 0; }
+  .armyRow .btns { display: flex; flex-direction: column; gap: 4px; }
+  .armyRow button { min-height: 34px; padding: 0 8px; font-size: 13px; box-shadow: 2px 2px 0 #000; }
+  .armyRow button.evo { border-color: var(--gold); color: var(--gold); }
+  .armyRow .detail { width: 100%; font-size: 12px; line-height: 1.5; opacity: 0.9; }
+  .evo1 { color: var(--gold); }
+  .evo2 { color: #ff7ad9; }
+
   .setting { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 10px; background: var(--panel); border: 3px solid var(--line); box-sizing: border-box; }
   .setting .desc { font-size: 12px; opacity: 0.7; }
   .choices { display: flex; gap: 6px; }
@@ -114,7 +110,6 @@
   .choices button.on { border-color: var(--accent); color: var(--accent); }
 
   #modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.75); z-index: 5; }
-  #modal[hidden] { display: none; }
   #modal .box { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; background: var(--bg); border: 3px solid var(--accent); box-shadow: 4px 4px 0 #000; max-width: 300px; text-align: center; }
   #modal .box p { margin: 0; line-height: 1.5; }
   #modal .box button { width: 220px; }
@@ -144,7 +139,7 @@
     <div id="regionTabs"></div>
     <div id="regionInfo"></div>
     <div id="stageGrid"></div>
-    <p class="muted">빨간 테두리는 보스 스테이지. 보스를 쓰러뜨리면 다음 지역이 열려요.</p>
+    <p class="muted">빨간 테두리는 보스 스테이지. 보스를 쓰러뜨리면 룰렛을 돌리고 다음 지역이 열려요.</p>
   </section>
 
   <section id="prep" class="panel" hidden>
@@ -153,7 +148,7 @@
     <div class="lineup" id="prepEnemies"></div>
     <div class="label" id="prepArmyLabel">내 군단</div>
     <div class="lineup" id="prepParty"></div>
-    <button id="prepEdit">편성 바꾸기</button>
+    <button id="prepEdit">소환수 키우기</button>
     <button id="prepStart" class="big primary">전투 시작</button>
   </section>
 
@@ -166,36 +161,40 @@
         <button id="autoBtn">자동 스킬</button>
       </div>
     </div>
-    <canvas id="battleCanvas" width="192" height="112" role="img" aria-label="전투 화면. 왼쪽이 내 군단, 오른쪽이 적입니다."></canvas>
+    <canvas id="battleCanvas" width="240" height="200" role="img" aria-label="전투 화면. 왼쪽 아래에서 적이 몰려오고 오른쪽 위에 네크로맨서가 있습니다."></canvas>
     <div id="armyCounts"><span class="a" id="allyCount"></span><span class="e" id="enemyCount"></span></div>
     <div id="skills">
-      <button class="skill" id="blastBtn"><span>영혼 폭발</span><small>모든 적에게 큰 피해</small><div class="cd"></div></button>
-      <button class="skill" id="reviveBtn"><span>되살리기</span><small>쓰러진 소환수 10마리 부활</small><div class="cd"></div></button>
+      <button class="skill" id="blastBtn"><span>영혼 폭발</span><small>나와 있는 모든 적에게 피해</small><div class="cd"></div></button>
+      <button class="skill" id="reviveBtn"><span>되살리기</span><small>쓰러진 소환수 부활</small><div class="cd"></div></button>
     </div>
-    <p class="muted">소환수는 알아서 싸워요. 네크로맨서가 쓰러지면 패배!</p>
   </section>
 
   <section id="tame" class="panel" hidden>
     <h2 id="tameTitle" style="margin-top:12px">길들이기!</h2>
-    <p class="sub" id="tameSub">한 마리를 골라 길들여 보세요</p>
+    <p class="sub" id="tameSub"></p>
     <div id="tameCards"></div>
     <div id="tameResult"></div>
+    <button id="rouletteGo" class="big primary" hidden>보스 보상 룰렛!</button>
     <p id="retryAsk" hidden>이 스테이지를 다시 할까요?</p>
     <button id="tameRetry" class="big primary" hidden>다시 하기</button>
     <button id="tameNext" class="big" hidden>계속</button>
     <button id="tameMap" hidden>지도로</button>
   </section>
 
+  <section id="roulette" class="panel" hidden>
+    <h2 style="margin-top:12px">보스 보상 룰렛</h2>
+    <p class="sub">돌려서 멈춘 칸의 보상을 받아요</p>
+    <canvas id="wheel" width="260" height="260" role="img" aria-label="룰렛"></canvas>
+    <div id="rouletteResult"></div>
+    <button id="spinBtn" class="big primary">돌리기!</button>
+    <button id="rouletteDone" class="big" hidden>계속</button>
+  </section>
+
   <section id="roster" class="panel" hidden>
     <div class="topbar"><button id="rosterBack">← 돌아가기</button><h2>소환수</h2><span class="spacer"></span></div>
-    <div id="starBox">
-      <div class="starLine"><span id="starText"></span><span id="sizeText"></span></div>
-      <div class="bar starBar"><div id="starFill"></div></div>
-      <div class="choices"><button id="autoArmyBtn">자동 편성</button><button id="clearArmyBtn">모두 빼기</button></div>
-    </div>
-    <div id="detail" hidden></div>
+    <div id="soulBox"><span class="souls" id="soulText"></span><span id="armyText"></span></div>
     <div class="scroll"><div id="armyList"></div></div>
-    <p class="muted">별 한도는 네크로맨서 레벨(처음 깬 스테이지 수)이 오를수록 늘어나요.<br>이름을 누르면 자세한 능력치를 볼 수 있어요.</p>
+    <p class="muted">길들인 수만큼 모두 전투에 나가요. 영혼으로 레벨을 올리고,<br>레벨 10이 되면 진화(레벨 1부터 다시, 훨씬 강해짐)할 수 있어요.</p>
   </section>
 
   <section id="settings" class="panel" hidden>
@@ -233,20 +232,20 @@ setTimeout(() => {
 </script>
 <script type="module">
 // 배포할 때마다 ?v= 숫자를 올린다 (GitHub Pages 캐시 때문)
-import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, unitStats, tameChance, starsOf } from './data.js?v=2';
-import { createBattle, stepBattle, useSkill, canUse, aliveCount, SKILLS } from './battle.js?v=2';
+import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, EVO_LEVEL, MAX_EVO, unitStats, tameChance, displayName } from './data.js?v=3';
+import { createBattle, stepBattle, useSkill, canUse, aliveCount, killsByType, SKILLS, LANES, NECRO_D } from './battle.js?v=3';
 import {
-  loadSave, partyUnits, enemyUnits, stageEnemies, groupEnemies, tameOptions, tame, grantXp, recordWin,
-  stageOf, globalStage, isUnlocked, isBossStage, regionProgress, xpNeed, STAGE_COUNT,
-  starCap, armyStars, armySize, setCount, autoArmy, necroLevel,
-} from './progress.js?v=2';
+  loadSave, partyUnits, enemyUnits, stageEnemies, groupEnemies, tameOptions, tameAmount, tame, recordWin, recordLoss,
+  stageOf, globalStage, isUnlocked, isBossStage, regionProgress, STAGE_COUNT, armySize, necroLevel,
+  levelUp, levelUpCost, evolve, evolveCost, canEvolve, ROULETTE, rollRoulette, applyRoulette,
+} from './progress.js?v=3';
 
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'necromancer.save';
-const fmt = n => n.toLocaleString('ko-KR');
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
 
 // ---------- 픽셀 그림 ----------
-// 몸 모양별 12×12 그림(오른쪽을 봄). 적은 좌우를 뒤집어 왼쪽을 보게 그린다
+// 몸 모양별 12×12 그림(오른쪽을 봄)
 const SHAPE_ART = {
   blob: ['............', '............', '............', '....mmmm....', '..mmmmmmmm..', '.mmmmmmmmmm.', '.mmmmwkmwkm.', 'mmmmmkkmkkmm', 'mmmmmmmmmmmm', 'mmmmmmmddmmm', '.mmmmmmmmmm.', '..dddddddd..'],
   beast: ['............', '............', '.........mm.', '........mmmm', '........mwkd', '.mmmmmmmmmmm', 'mmmmmmmmmmm.', 'dmmmmmmmmmm.', '.mmmmmmmmmm.', '.mm.mm.mm.m.', '.mm.mm.mm.m.', '.dd.dd.dd.d.'],
@@ -262,6 +261,7 @@ const SHAPE_ART = {
 const NECRO_ART = ['....pppp..g.', '...pppppp.y.', '...pkgkgp.y.', '...pkkkkp.y.', '....pppp..y.', '..ppppppwwy.', '.pppdpppp.y.', '.pppdpppp.y.', '.ppppdppp.y.', '.pppppppp.y.', '.pppppppp.y.', 'pppppppppp..'];
 const NECRO_COLORS = { p: '#4a2a6a', d: '#8a5ac0', k: '#0a0a14', g: '#7dff6a', y: '#8a6a3a', w: '#e8e6dc' };
 const WHITE = new Proxy({}, { get: () => '#ffffff' });
+const EVO_MARK = ['', '#ffd23f', '#ff7ad9']; // 진화한 소환수 머리 위 표시 색
 
 function px(c, x, y, color, w = 1, h = 1) {
   c.fillStyle = color;
@@ -285,23 +285,23 @@ function artFor(typeId) {
   return { art: SHAPE_ART[t.shape], colors: t.colors };
 }
 
-// 미리보기용 16×16 캔버스에 몬스터 하나
-function portrait(typeId, size = 16) {
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = size;
-  const c = cv.getContext('2d');
-  const { art, colors } = artFor(typeId);
-  const off = Math.floor((size - art[0].length) / 2);
-  drawArt(c, art, colors, off, off);
-  if (MONSTERS[typeId]?.tier === 'boss') drawCrown(c, MONSTERS[typeId].colors.c, 0, 0, 1);
-  return cv;
-}
-
 function drawCrown(c, color, x, y, s) {
   for (const [cx, cy] of [[5, 0], [7, 0], [9, 0], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1]]) px(c, x + cx * s, y + cy * s, color, s, s);
 }
 
-// 이름 끝 글자에 받침이 있으면 '이', 없으면 '가'
+// 미리보기용 16×16 캔버스에 몬스터 하나 (진화했으면 머리 위에 점)
+function portrait(typeId, evo = 0) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 16;
+  const c = cv.getContext('2d');
+  const { art, colors } = artFor(typeId);
+  const off = Math.floor((16 - art[0].length) / 2);
+  drawArt(c, art, colors, off, off + 1);
+  if (MONSTERS[typeId]?.tier === 'boss') drawCrown(c, MONSTERS[typeId].colors.c, 0, 0, 1);
+  for (let i = 0; i < evo; i++) px(c, 6 + i * 3, 0, EVO_MARK[evo], 2, 2);
+  return cv;
+}
+
 function josa(word, withFinal, without) {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
   return word + (code >= 0 && code <= 11171 && code % 28 ? withFinal : without);
@@ -312,6 +312,11 @@ function tierText(typeId) {
   return t === 'boss' ? '👑 보스' : '★'.repeat(t) + '☆'.repeat(5 - t);
 }
 
+function nameHtml(r) {
+  const n = displayName(r.type, r.evo);
+  return r.evo ? `<span class="evo${r.evo}">${n}</span>` : n;
+}
+
 // ---------- 저장, 화면 전환 ----------
 
 const save = loadSave((() => { try { return localStorage.getItem(SAVE_KEY); } catch { return null; } })());
@@ -319,7 +324,7 @@ function persist() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch {}
 }
 
-const PANELS = ['home', 'map', 'prep', 'battle', 'tame', 'roster', 'settings', 'ending'];
+const PANELS = ['home', 'map', 'prep', 'battle', 'tame', 'roulette', 'roster', 'settings', 'ending'];
 function show(id) {
   for (const p of PANELS) $(p).hidden = p !== id;
 }
@@ -358,9 +363,10 @@ function goHome() {
   battle = null;
   show('home');
   const next = Math.min(save.cleared + 1, STAGE_COUNT);
-  $('homeSub').textContent = save.ended ? `네크로맨서 Lv.${necroLevel(save)} · 우주를 멸망시켰다. 아직도 부족한가?` : `네크로맨서 Lv.${necroLevel(save)} · 파괴한 스테이지 ${save.cleared} / ${STAGE_COUNT}`;
+  $('homeSub').innerHTML = `네크로맨서 Lv.${necroLevel(save)} · <span class="souls">영혼 ${fmt(save.souls)}</span><br>`
+    + (save.ended ? '우주를 멸망시켰다. 아직도 부족한가?' : `파괴한 스테이지 ${save.cleared} / ${STAGE_COUNT}`);
   $('adventureSub').textContent = save.ended ? '어느 곳이든 다시 파괴하기' : `다음: ${stageName(next)}`;
-  $('rosterSub').textContent = `${save.roster.length}종 · 군단 ${fmt(armySize(save))}마리 · ★${fmt(armyStars(save))}/${fmt(starCap(save))}`;
+  $('rosterSub').textContent = `${save.roster.length}종 · 군단 ${fmt(armySize(save))}마리`;
 }
 
 // ---------- 지도 ----------
@@ -407,37 +413,28 @@ function openPrep(g) {
   prepStage = g;
   const { region, stage } = stageOf(g);
   prepEnemies = stageEnemies(region, stage, Math.random);
-  if (save.autoArmy) { autoArmy(save); persist(); }
   show('prep');
   $('prepTitle').textContent = stageName(g);
   $('prepEnemyLabel').textContent = `적 ${fmt(prepEnemies.length)}마리`;
   const enemies = $('prepEnemies');
   enemies.innerHTML = '';
-  for (const e of groupEnemies(prepEnemies)) enemies.append(miniCard(e.type, MONSTERS[e.type].name, `Lv.${e.level} ×${fmt(e.count)}`));
+  for (const e of groupEnemies(prepEnemies)) enemies.append(miniCard(e.type, 0, MONSTERS[e.type].name, `Lv.${e.level} ×${fmt(e.count)}`));
   renderPrepParty();
-}
-
-function armyEntries() {
-  return Object.entries(save.army)
-    .map(([id, n]) => [save.roster.find(r => r.id === Number(id)), n])
-    .filter(([r, n]) => r && n > 0)
-    .sort(([a, n], [b, m]) => m * starsOf(b.type) - n * starsOf(a.type));
 }
 
 function renderPrepParty() {
   const party = $('prepParty');
   party.innerHTML = '';
-  $('prepArmyLabel').textContent = `내 군단 ${fmt(armySize(save))}마리 · ★${fmt(armyStars(save))}/${fmt(starCap(save))}${save.autoArmy ? ' (자동 편성)' : ''}`;
-  const entries = armyEntries();
-  if (!entries.length) { const d = document.createElement('div'); d.className = 'mini empty'; d.textContent = '소환수 없음'; party.append(d); }
-  for (const [r, n] of entries) party.append(miniCard(r.type, MONSTERS[r.type].name, `Lv.${r.level} ×${fmt(n)}`));
-  party.append(miniCard('necro', '네크로맨서', `Lv.${necroLevel(save)}`));
+  $('prepArmyLabel').textContent = `내 군단 ${fmt(armySize(save))}마리`;
+  const list = [...save.roster].sort((a, b) => b.count - a.count);
+  for (const r of list) party.append(miniCard(r.type, r.evo, displayName(r.type, r.evo), `Lv.${r.level} ×${fmt(r.count)}`));
+  party.append(miniCard('necro', 0, '네크로맨서', `Lv.${necroLevel(save)}`));
 }
 
-function miniCard(typeId, name, sub) {
+function miniCard(typeId, evo, name, sub) {
   const d = document.createElement('div');
   d.className = 'mini';
-  d.append(portrait(typeId));
+  d.append(portrait(typeId, evo));
   const n = document.createElement('div');
   n.textContent = name;
   const s = document.createElement('div');
@@ -452,6 +449,19 @@ function miniCard(typeId, name, sub) {
 let battle = null, battleStage = 0, battleEnemies = [], paused = false, view = null;
 const bctx = $('battleCanvas').getContext('2d');
 bctx.imageSmoothingEnabled = false;
+const CW = 240, CH = 200;
+// 길: 왼쪽 아래(적 출발)에서 오른쪽 위(네크로맨서)로 대각선
+const ROAD_A = { x: 18, y: 186 }, ROAD_B = { x: 196, y: 52 };
+const ROAD_DIR = { x: ROAD_B.x - ROAD_A.x, y: ROAD_B.y - ROAD_A.y };
+const ROAD_LEN = Math.hypot(ROAD_DIR.x, ROAD_DIR.y);
+const PERP = { x: -ROAD_DIR.y / ROAD_LEN, y: ROAD_DIR.x / ROAD_LEN }; // 길에 수직 방향
+const LANE_GAP = 8, ROAD_HALF = 30;
+const NECRO_POS = { x: 202, y: 22 };
+
+function roadPoint(d, off) {
+  const t = d / NECRO_D;
+  return { x: ROAD_A.x + ROAD_DIR.x * t + PERP.x * off, y: ROAD_A.y + ROAD_DIR.y * t + PERP.y * off };
+}
 
 function startBattle() {
   battleStage = prepStage;
@@ -459,55 +469,30 @@ function startBattle() {
   battle = createBattle(partyUnits(save), enemyUnits(prepEnemies), Math.random);
   battle.auto = save.settings.autoSkill;
   paused = false;
-  view = { floats: [], bolts: [], fx: [], puffs: [], endAt: 0, destroyAt: 0, shakeAt: 0, countsAt: 0, structures: makeStructures(stageOf(battleStage).region) };
-  view.scale = { ally: crowdScale(battle.allies.length - 1), enemy: crowdScale(battle.enemies.length) };
-  // 작은 전투에서만 피해 숫자와 체력바를 모두 보여 준다. 수천 마리면 화면이 숫자로 뒤덮인다
-  view.detail = battle.allies.length + battle.enemies.length <= 40;
-  placeCrowd(true);
+  const total = battle.allies.length + battle.enemies.length;
+  view = {
+    floats: [], bolts: [], fx: [], puffs: [], endAt: 0, destroyAt: 0, shakeAt: 0, countsAt: 0,
+    deco: makeDeco(stageOf(battleStage).region),
+    // 군단이 클수록 작게 그린다. 작은 전투에서만 피해 숫자와 체력바를 모두 보여 준다
+    scale: total <= 60 ? 1 : 0.5, detail: total <= 40,
+  };
   show('battle');
   $('battleTitle').textContent = stageName(battleStage);
   updateToggles();
   updateCounts(0);
 }
 
-// 군단이 클수록 작게 그린다
-function crowdScale(n) {
-  return n <= 8 ? 2 : n <= 60 ? 1 : 0.5;
-}
 const isBoss = u => MONSTERS[u.typeId]?.tier === 'boss';
 function unitScale(u) {
-  if (u.necro) return 2;
-  return isBoss(u) ? Math.max(2, view.scale[u.side] * 1.5) : view.scale[u.side];
-}
-function unitSize(u) {
-  return (isBoss(u) ? 16 : 12) * unitScale(u);
+  if (u.necro || isBoss(u)) return 2;
+  return view.scale * (u.evo ? 1.25 : 1);
 }
 
-// 살아 있는 유닛을 앞에서부터 줄지어 세운다. 앞줄이 쓰러지면 뒤에서 앞으로 밀려 나온다
-const FIELD_TOP = 34, FIELD_BOTTOM = 86, ALLY_FRONT = 94, ENEMY_FRONT = 98, NECRO_X = 1;
-function placeCrowd(instant) {
-  for (const side of ['ally', 'enemy']) {
-    const list = side === 'ally' ? battle.allies : battle.enemies;
-    const size = 12 * view.scale[side], gap = size * 0.8;
-    const rows = Math.max(1, Math.floor((FIELD_BOTTOM - FIELD_TOP - size) / gap) + 1);
-    let k = 0;
-    for (const u of list) {
-      u.anim ??= {};
-      const sz = unitSize(u);
-      if (u.necro) { u.tx = NECRO_X; u.ty = FIELD_BOTTOM - sz; }
-      else if (u.alive) {
-        const col = Math.floor(k / rows), row = k % rows;
-        // 열마다 반 칸씩 어긋나게 세워 덜 겹쳐 보이게
-        u.ty = isBoss(u) ? FIELD_BOTTOM - sz : Math.min(FIELD_BOTTOM - sz, FIELD_TOP + row * gap + (col % 2) * gap / 2);
-        u.tx = side === 'ally' ? ALLY_FRONT - sz - col * gap : ENEMY_FRONT + col * gap;
-        k++;
-      } else continue;
-      if (instant || u.x === undefined) { u.x = u.tx; u.y = u.ty; }
-      else { u.x += (u.tx - u.x) * 0.12; u.y += (u.ty - u.y) * 0.12; }
-    }
-  }
-  // 보스는 부하가 많아 화면 밖에 서더라도 오른쪽 끝에 보이게 한다
-  for (const u of battle.enemies) if (isBoss(u) && u.alive) u.x = Math.min(u.x, 191 - unitSize(u));
+// 유닛의 화면 위치(발 기준)
+function screenPos(u) {
+  if (u.necro) return { x: NECRO_POS.x, y: NECRO_POS.y + 24 };
+  const off = (u.lane - (LANES - 1) / 2) * LANE_GAP + u.jx * 3;
+  return roadPoint(u.d + u.jd * 1.5, off);
 }
 
 function updateToggles() {
@@ -518,11 +503,11 @@ function updateToggles() {
 function updateCounts(now) {
   if (now - view.countsAt < 100) return;
   view.countsAt = now;
-  $('allyCount').textContent = `아군 ${fmt(aliveCount(battle, 'ally') - (battle.necro.alive ? 1 : 0))} / ${fmt(battle.allies.length - 1)}`;
-  $('enemyCount').textContent = `적 ${fmt(aliveCount(battle, 'enemy'))} / ${fmt(battle.enemies.length)}`;
+  $('allyCount').textContent = `아군 ${fmt(aliveCount(battle, 'ally') - (battle.necro.alive ? 1 : 0))} / ${fmt(battle.allies.length - 1)} · 네크로맨서 ${Math.ceil((battle.necro.hp / battle.necro.maxHp) * 100)}%`;
+  $('enemyCount').textContent = `적 ${fmt(aliveCount(battle, 'enemy'))}`;
 }
 
-$('speedBtn').onclick = () => { save.settings.speed = save.settings.speed === 1 ? 2 : 1; persist(); updateToggles(); };
+$('speedBtn').onclick = () => { save.settings.speed = save.settings.speed >= 3 ? 1 : save.settings.speed + 1; persist(); updateToggles(); };
 $('autoBtn').onclick = () => { battle.auto = !battle.auto; save.settings.autoSkill = battle.auto; persist(); updateToggles(); };
 $('blastBtn').onclick = () => cast('blast');
 $('reviveBtn').onclick = () => cast('revive');
@@ -545,35 +530,39 @@ function openPause() {
 $('pauseBtn').onclick = openPause;
 
 function center(u) {
-  const size = unitSize(u);
-  return { x: u.x + size / 2, y: u.y + size / 2 };
+  const p = screenPos(u), s = unitScale(u) * (isBoss(u) ? 16 : 12);
+  return { x: p.x, y: p.y - s / 2 };
 }
 
 // 전투에서 일어난 일을 그림 효과로 바꾼다. 수천 마리일 때 효과가 화면을 덮지 않게 개수를 제한한다
 function handleEvents(events, now) {
   for (const e of events) {
     if (e.type === 'attack') {
+      e.from.anim ??= {};
       e.from.anim.lungeAt = now;
-      if ((e.from.necro || (view.detail && e.from.trait === 'ambush')) && view.bolts.length < 30)
-        view.bolts.push({ from: center(e.from), to: center(e.target), born: now, color: e.from.necro ? '#7dff6a' : '#ffffff' });
+      if (e.from.necro && view.bolts.length < 20) view.bolts.push({ from: center(e.from), to: center(e.target), born: now });
     } else if (e.type === 'hit') {
+      e.target.anim ??= {};
       e.target.anim.flashAt = now;
       if ((view.detail || e.target.necro || isBoss(e.target)) && view.floats.length < 40) {
         const c = center(e.target);
-        view.floats.push({ x: c.x + (Math.random() - 0.5) * 6, y: c.y - 8, text: fmt(e.dmg), color: e.target.side === 'ally' ? '#ff5c5c' : '#ffffff', born: now });
+        view.floats.push({ x: c.x + (Math.random() - 0.5) * 6, y: c.y - 6, text: fmt(e.dmg), color: e.target.side === 'ally' ? '#ff5c5c' : '#ffffff', born: now });
       }
     } else if (e.type === 'heal') {
       if (view.detail && view.floats.length < 40) {
         const c = center(e.target);
-        view.floats.push({ x: c.x, y: c.y - 10, text: `+${e.amount}`, color: '#7dff6a', born: now });
+        view.floats.push({ x: c.x, y: c.y - 8, text: `+${e.amount}`, color: '#7dff6a', born: now });
       }
     } else if (e.type === 'death') {
+      e.target.anim ??= {};
       e.target.anim.deadAt = now;
+      e.target.anim.deadPos = screenPos(e.target);
       if (view.puffs.length < 80) { const c = center(e.target); view.puffs.push({ x: c.x, y: c.y, born: now, side: e.target.side }); }
     } else if (e.type === 'skill') {
       view.fx.push({ kind: e.skill, born: now });
       if (e.skill === 'blast') view.shakeAt = now;
     } else if (e.type === 'revive') {
+      e.target.anim ??= {};
       e.target.anim.deadAt = 0;
       if (view.fx.length < 20) view.fx.push({ kind: 'reviveOn', target: e.target, born: now });
     } else if (e.type === 'end') {
@@ -582,130 +571,156 @@ function handleEvents(events, now) {
   }
 }
 
-// 승리 후 연출이 끝나면 결과 처리
+// 결과 처리 (승리는 파괴 연출이 끝난 뒤)
 function finishBattle() {
-  const g = battleStage, { region, stage } = stageOf(g);
+  const g = battleStage, { region } = stageOf(g);
   if (battle.result === 'lose') {
-    return openModal('<h2>패배...</h2><p>네크로맨서가 쓰러졌다.<br>소환수를 키우거나 편성을 바꿔 보세요.</p>', [
+    const ratio = 1 - battle.alive.enemy / battle.enemies.length;
+    const { souls } = recordLoss(save, g, ratio);
+    persist();
+    return openModal(`<h2>패배...</h2><p>네크로맨서가 쓰러졌다.<br>적 ${Math.round(ratio * 100)}%를 쓰러뜨려 <span class="souls">영혼 +${fmt(souls)}</span></p><p class="muted">앞 스테이지를 다시 해서 군단을 늘리거나<br>영혼으로 소환수 레벨을 올려 보세요.</p>`, [
       ['다시 도전', () => { closeModal(); openPrep(g); startBattle(); }, 'primary'],
-      ['편성 바꾸기', () => { closeModal(); openRoster('prep'); }],
+      ['소환수 키우기', () => { closeModal(); openRoster('prep'); }],
       ['지도로', () => { closeModal(); openMap(region); }],
     ]);
   }
-  const { first } = recordWin(save, g);
-  const ups = grantXp(save, stage);
+  const kills = killsByType(battle);
+  const win = recordWin(save, g);
   persist();
   battle = null;
-  openTame(g, first, ups);
+  openTame(g, win, kills);
 }
 
-// ---------- 배경과 파괴 ----------
+// ---------- 전장 그리기 ----------
 
-function makeStructures(region) {
-  const r = (a, b) => a + Math.floor(Math.random() * (b - a));
-  const list = [];
-  const kind = REGIONS[region].bg;
-  if (kind === 'village') {
-    for (let x = 4; x < 188; x += r(26, 40)) list.push({ type: 'house', x, w: r(16, 22), h: r(10, 16), color: '#7a5a3a', roof: '#a83a2a' });
-  } else if (kind === 'city') {
-    for (let x = 0; x < 192; x += r(16, 26)) list.push({ type: 'tower', x, w: r(12, 20), h: r(24, 50), color: '#3a3f55', win: '#ffd23f' });
-  } else if (kind === 'kingdom') {
-    list.push({ type: 'castle', x: 60, w: 72, h: 34, color: '#6a6a7a', roof: '#c02020' });
-    list.push({ type: 'house', x: 12, w: 18, h: 12, color: '#7a5a3a', roof: '#4a3a8a' }, { type: 'house', x: 156, w: 20, h: 14, color: '#7a5a3a', roof: '#4a3a8a' });
-  } else if (kind === 'planet') {
-    for (let x = 10; x < 188; x += r(30, 46)) list.push({ type: 'spire', x, w: r(8, 14), h: r(20, 40), color: '#3a6a5a', win: '#b0ff30' });
-  } else {
-    list.push({ type: 'planet', x: 30, w: 24, h: 24, color: '#4a6ac0' }, { type: 'planet', x: 130, w: 34, h: 34, color: '#c06a40' });
-  }
-  return list;
-}
-
-const SKIES = {
-  village: ['#5a8ac0', '#8ab8e0', '#4a7a3a'], city: ['#2a2a4a', '#5a4a7a', '#3a3a3a'], kingdom: ['#c07a4a', '#e0b07a', '#5a6a3a'],
-  planet: ['#3a1a4a', '#7a3a6a', '#5a3a2a'], cosmos: ['#05050f', '#15103a', '#1a1a2a'],
+const GROUNDS = {
+  village: { bg: '#4a6a3a', bg2: '#56783f', road: '#8a7a5a', road2: '#7a6a4a', tree: '#2f6a2a', tree2: '#4a8a3a', stone: '#c8c8c0' },
+  city: { bg: '#5a5a62', bg2: '#66666e', road: '#3a3a42', road2: '#46464e', tree: '#2f5a3a', tree2: '#3f7a4a', stone: '#d8d8d0' },
+  kingdom: { bg: '#5a6a3a', bg2: '#667846', road: '#9a8a6a', road2: '#8a7a5a', tree: '#2a5a2a', tree2: '#3a7a3a', stone: '#b8b8c0' },
+  planet: { bg: '#5a3a4a', bg2: '#684456', road: '#8a5a3a', road2: '#7a4a2a', tree: '#3a8a6a', tree2: '#5aaa8a', stone: '#a87ad8' },
+  cosmos: { bg: '#0c0a1e', bg2: '#141030', road: '#2a2050', road2: '#342a60', tree: '#6040a0', tree2: '#8a60d0', stone: '#a0a0ff' },
 };
 
-function drawBackground(c, region, now, destroyT) {
-  const kind = REGIONS[region].bg, [top, mid, ground] = SKIES[kind];
-  px(c, 0, 0, top, 192, 40);
-  px(c, 0, 40, mid, 192, 44);
-  px(c, 0, 84, ground, 192, 28);
-  if (kind === 'cosmos' || kind === 'planet' || kind === 'city')
-    for (let i = 0; i < 30; i++) px(c, (i * 53) % 192, (i * 29) % 60, i % 3 ? '#ffffff' : '#b0b0ff');
-  if (kind === 'planet') { px(c, 150, 8, '#e0d0a0', 10, 10); px(c, 168, 18, '#a0c0e0', 6, 6); }
-  for (const s of view.structures) {
-    // 파괴 중에는 건물이 흔들리며 땅으로 꺼지고 불이 붙는다
-    const sink = destroyT ? Math.min(1, destroyT * (0.8 + (s.x % 7) / 10)) * s.h : 0;
-    const shake = destroyT && destroyT < 1 ? Math.round(Math.sin(now / 30 + s.x) * 1.5) : 0;
-    const x = s.x + shake, base = 84, top = base - s.h + sink;
-    if (s.type === 'planet') {
-      const r = s.w / 2, cx = x + r, cy = 30 + sink * 2;
-      c.fillStyle = s.color;
-      c.beginPath(); c.arc(cx, cy, Math.max(0, r * (1 - (destroyT || 0) * 0.6)), 0, Math.PI * 2); c.fill();
-      continue;
-    }
-    if (top >= base) continue;
-    px(c, x, top, s.color, s.w, base - top);
-    if (s.roof && s.type === 'house') for (let i = 0; i < 6; i++) px(c, x - 2 + i, top - 6 + i, s.roof, s.w + 4 - i * 2, 1);
-    if (s.type === 'castle') {
-      for (const tx of [x - 6, x + s.w - 6]) { px(c, tx, top - 12, s.color, 12, base - top + 12); px(c, tx - 1, top - 16, s.roof, 14, 4); }
-      px(c, x + s.w / 2 - 6, base - 14, '#2a1a1a', 12, 14);
-    }
-    if (s.win) for (let wy = top + 3; wy < base - 3; wy += 6) for (let wx = x + 2; wx < x + s.w - 3; wx += 5) px(c, wx, wy, (wx + wy) % 3 ? s.win : '#000');
+// 길 바깥 장식(나무, 무너진 벽, 건물). 파괴 연출 때 무너진다
+function makeDeco(region) {
+  const r = (a, b) => a + Math.random() * (b - a);
+  const kind = REGIONS[region].bg, list = [];
+  for (let i = 0; i < 14; i++) {
+    const t = r(0.05, 0.95), side = i % 2 ? 1 : -1;
+    const p = roadPoint(t * NECRO_D, side * r(ROAD_HALF + 10, ROAD_HALF + 46));
+    list.push({ type: 'tree', x: p.x, y: p.y, s: r(8, 14) });
   }
+  for (let i = 0; i < 4; i++) {
+    const t = r(0.2, 0.8), side = i % 2 ? 1 : -1;
+    const p = roadPoint(t * NECRO_D, side * (ROAD_HALF + 4));
+    list.push({ type: 'wall', x: p.x, y: p.y, w: r(10, 18) });
+  }
+  const building = { village: 'house', city: 'tower', kingdom: 'castle', planet: 'spire', cosmos: 'planet' }[kind];
+  for (let i = 0; i < 3; i++) {
+    const t = [0.25, 0.55, 0.8][i], side = i % 2 ? -1 : 1;
+    const p = roadPoint(t * NECRO_D, side * (ROAD_HALF + 28));
+    list.push({ type: building, x: p.x, y: p.y, w: r(16, 24), h: Math.round(r(14, 26)) });
+  }
+  return list.sort((a, b) => a.y - b.y);
+}
+
+function drawField(c, region, now, destroyT) {
+  const kind = REGIONS[region].bg, G = GROUNDS[kind];
+  px(c, 0, 0, G.bg, CW, CH);
+  for (let i = 0; i < 60; i++) px(c, (i * 47) % CW, (i * 83) % CH, G.bg2, 6, 3);
+  if (kind === 'cosmos') for (let i = 0; i < 50; i++) px(c, (i * 53) % CW, (i * 31) % CH, i % 3 ? '#ffffff' : '#b0b0ff');
+  // 길
+  const corners = [roadPoint(-8, -ROAD_HALF), roadPoint(-8, ROAD_HALF), roadPoint(NECRO_D + 6, ROAD_HALF), roadPoint(NECRO_D + 6, -ROAD_HALF)];
+  c.fillStyle = G.road;
+  c.beginPath(); corners.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y))); c.closePath(); c.fill();
+  for (let i = 0; i < 40; i++) { const p = roadPoint((i * 37) % 100, ((i * 19) % 50) - 25); px(c, p.x, p.y, G.road2, 4, 2); }
+  // 장식 (파괴 중엔 흔들리며 가라앉는다)
+  for (const s of view.deco) {
+    const sink = destroyT ? Math.min(1, destroyT * (0.7 + (Math.round(s.x) % 5) / 10)) : 0;
+    const shake = destroyT && destroyT < 1 ? Math.round(Math.sin(now / 30 + s.x) * 1.5) : 0;
+    const x = Math.round(s.x + shake), y = Math.round(s.y);
+    if (s.type === 'tree') {
+      const h = Math.round(s.s * (1 - sink));
+      if (h <= 0) continue;
+      px(c, x - 1, y - 3, '#5a3a22', 2, 3);
+      c.fillStyle = G.tree;
+      c.beginPath(); c.arc(x, y - 3 - h * 0.6, h * 0.6, 0, Math.PI * 2); c.fill();
+      c.fillStyle = G.tree2;
+      c.beginPath(); c.arc(x - h * 0.2, y - 3 - h * 0.75, h * 0.35, 0, Math.PI * 2); c.fill();
+    } else if (s.type === 'wall') {
+      const h = Math.round(6 * (1 - sink));
+      for (let k = 0; k < s.w; k += 4) px(c, x + k - s.w / 2, y - h - (k % 8 ? 0 : 2), G.stone, 4, h + (k % 8 ? 0 : 2));
+    } else if (s.type === 'planet') {
+      c.fillStyle = s.h % 2 ? '#c06a40' : '#4a6ac0';
+      c.beginPath(); c.arc(x, y - 10, Math.max(0, (s.w / 2) * (1 - sink * 0.7)), 0, Math.PI * 2); c.fill();
+    } else {
+      const h = Math.round(s.h * (1 - sink));
+      if (h <= 0) continue;
+      const color = { house: '#7a5a3a', tower: '#3a3f55', castle: '#6a6a7a', spire: '#3a6a5a' }[s.type];
+      px(c, x - s.w / 2, y - h, color, s.w, h);
+      if (s.type === 'house' || s.type === 'castle') for (let i = 0; i < 5; i++) px(c, x - s.w / 2 - 2 + i, y - h - 5 + i, s.type === 'house' ? '#a83a2a' : '#c02020', s.w + 4 - i * 2, 1);
+      if (s.type === 'tower' || s.type === 'spire') for (let wy = y - h + 3; wy < y - 3; wy += 5) for (let wx = x - s.w / 2 + 2; wx < x + s.w / 2 - 2; wx += 4) px(c, wx, wy, s.type === 'tower' ? '#ffd23f' : '#b0ff30');
+    }
+  }
+  // 네크로맨서의 제단
+  px(c, NECRO_POS.x - 14, NECRO_POS.y + 23, '#2a1a3a', 28, 6);
+  px(c, NECRO_POS.x - 12, NECRO_POS.y + 21, '#4a2a6a', 24, 3);
   if (destroyT) {
-    for (let i = 0; i < 40; i++) {
-      const fx = (i * 37 + now / 20) % 192, fy = 84 - ((now / 15 + i * 13) % 40);
+    for (let i = 0; i < 50; i++) {
+      const fx = (i * 37 + now / 20) % CW, fy = CH - ((now / 12 + i * 23) % CH);
       px(c, Math.round(fx), Math.round(fy), i % 3 ? '#ff7a1a' : '#ffd23f', 2, 2);
     }
     c.fillStyle = `rgba(255, 60, 20, ${0.25 * Math.min(1, destroyT)})`;
-    c.fillRect(0, 0, 192, 112);
+    c.fillRect(0, 0, CW, CH);
   }
 }
 
 function renderBattle(now) {
   const c = bctx, b = battle;
   if (!b) return;
-  placeCrowd(false);
   const region = stageOf(battleStage).region;
   const destroyT = view.destroyAt ? (now - view.destroyAt) / 1400 : 0;
   c.save();
   if (now - view.shakeAt < 250) c.translate(Math.round(Math.sin(now / 20) * 2), 0);
-  drawBackground(c, region, now, destroyT);
-  // 화면 안에 있는 유닛만, 아래쪽에 선 유닛이 앞에 보이게 순서대로 그린다
+  drawField(c, region, now, destroyT);
+  // 화면에 보이는 유닛만, 아래쪽에 선 유닛이 앞에 보이게 순서대로
   const visible = [];
   for (const list of [b.allies, b.enemies])
     for (const u of list) {
+      u.anim ??= {};
+      if (u.side === 'enemy' && !u.active) continue;
       if (!u.alive && !(u.anim.deadAt && now - u.anim.deadAt < 300)) continue;
-      const sz = unitSize(u);
-      if (u.x > -sz && u.x < 192) visible.push(u);
+      const p = u.alive ? screenPos(u) : u.anim.deadPos;
+      if (!p || p.x < -10 || p.x > CW + 10 || p.y < -10 || p.y > CH + 20) continue;
+      visible.push([p.y, u, p]);
     }
-  visible.sort((p, q) => p.y + unitSize(p) - (q.y + unitSize(q)));
-  for (const u of visible) drawUnit(c, u, now);
+  visible.sort((p, q) => p[0] - q[0]);
+  for (const [, u, p] of visible) drawUnit(c, u, p, now);
   view.puffs = view.puffs.filter(p => now - p.born < 300);
   for (const p of view.puffs) {
     const t = (now - p.born) / 300, r = 2 + t * 4;
-    for (let i = 0; i < 4; i++) px(c, Math.round(p.x + Math.cos(i * 1.57 + t) * r), Math.round(p.y + Math.sin(i * 1.57 + t) * r), p.side === 'ally' ? '#b07aff' : '#c8ccd8');
+    for (let i = 0; i < 4; i++) px(c, Math.round(p.x + Math.cos(i * 1.57 + t) * r), Math.round(p.y + Math.sin(i * 1.57 + t) * r), p.side === 'ally' ? '#b07aff' : '#e8e8e8');
   }
-  view.bolts = view.bolts.filter(p => now - p.born < 180);
+  view.bolts = view.bolts.filter(p => now - p.born < 220);
   for (const p of view.bolts) {
-    const t = (now - p.born) / 180;
-    px(c, Math.round(p.from.x + (p.to.x - p.from.x) * t) - 1, Math.round(p.from.y + (p.to.y - p.from.y) * t) - 1, p.color, 3, 3);
+    const t = (now - p.born) / 220;
+    px(c, Math.round(p.from.x + (p.to.x - p.from.x) * t) - 1, Math.round(p.from.y + (p.to.y - p.from.y) * t) - 1, '#7dff6a', 3, 3);
   }
-  view.fx = view.fx.filter(f => now - f.born < 500);
+  view.fx = view.fx.filter(f => now - f.born < 600);
   for (const f of view.fx) {
-    const t = (now - f.born) / 500;
+    const t = (now - f.born) / 600;
     if (f.kind === 'blast') {
+      // 네크로맨서에서 길을 따라 퍼지는 보랏빛 파동
       c.strokeStyle = `rgba(176, 122, 255, ${1 - t})`;
-      c.lineWidth = 3;
-      c.beginPath(); c.arc(14, 70, 20 + t * 170, -0.7, 0.7); c.stroke();
+      c.lineWidth = 4;
+      c.beginPath(); c.arc(NECRO_POS.x, NECRO_POS.y + 12, 20 + t * 260, 1.7, 3.2); c.stroke();
     } else if (f.kind === 'reviveOn') {
       const { x, y } = center(f.target);
       for (let i = 0; i < 6; i++) px(c, x - 6 + i * 2, y + 6 - t * 24 - (i % 2) * 4, '#7dff6a', 2, 2);
     }
   }
   view.floats = view.floats.filter(f => now - f.born < 700);
-  c.font = 'bold 7px monospace';
+  c.font = 'bold 8px monospace';
   c.textAlign = 'center';
   for (const f of view.floats) {
     const t = (now - f.born) / 700;
@@ -715,47 +730,53 @@ function renderBattle(now) {
     c.fillText(f.text, f.x, f.y - t * 10);
   }
   if (destroyT) {
-    c.font = 'bold 18px system-ui, sans-serif';
+    c.font = 'bold 22px system-ui, sans-serif';
     c.fillStyle = '#000';
-    c.fillText('파괴!', 97, 37);
+    c.fillText('파괴!', CW / 2 + 1, 81);
     c.fillStyle = '#ff5c5c';
-    c.fillText('파괴!', 96, 36);
+    c.fillText('파괴!', CW / 2, 80);
   }
   c.restore();
 }
 
-// 몬스터 그림을 크기·방향별로 한 번만 그려 두고 재사용한다 (수천 마리를 매 프레임 픽셀 단위로 그리면 느리다)
+// 몬스터 그림을 한 번만 그려 두고 재사용한다 (수천 마리를 매 프레임 픽셀 단위로 그리면 느리다)
 const spriteCache = new Map();
-function sprite(typeId, scale, flip, white) {
-  const key = `${typeId}|${scale}|${flip}|${white}`;
+function sprite(typeId, white) {
+  const key = `${typeId}|${white}`;
   let cv = spriteCache.get(key);
   if (cv) return cv;
   const { art, colors } = artFor(typeId);
-  const s = Math.max(1, Math.round(scale));
   cv = document.createElement('canvas');
-  cv.width = art[0].length * s;
-  cv.height = art.length * s;
-  drawArt(cv.getContext('2d'), art, white ? WHITE : colors, 0, 0, { flip, scale: s });
+  cv.width = art[0].length;
+  cv.height = art.length;
+  drawArt(cv.getContext('2d'), art, white ? WHITE : colors, 0, 0);
   spriteCache.set(key, cv);
   return cv;
 }
 
-function drawUnit(c, u, now) {
+function drawUnit(c, u, p, now) {
   const a = u.anim, scale = unitScale(u), big = isBoss(u);
-  const dir = u.side === 'ally' ? 1 : -1;
-  const lunge = a.lungeAt && now - a.lungeAt < 160 ? Math.sin(((now - a.lungeAt) / 160) * Math.PI) * 3 * scale * dir : 0;
-  const bob = MONSTERS[u.typeId]?.shape === 'flyer' ? Math.round(Math.sin(now / 200 + u.uid) * 1.5 * scale) : 0;
+  const img = sprite(u.typeId, !!((view.detail || big || u.necro) && a.flashAt && now - a.flashAt < 90));
+  const w = img.width * scale, h = img.height * scale;
+  // 적은 오른쪽 위(네크로맨서)로, 소환수는 왼쪽 아래(적)로 덤벼든다
+  const lunge = a.lungeAt && now - a.lungeAt < 160 ? Math.sin(((now - a.lungeAt) / 160) * Math.PI) * 2 * scale : 0;
+  const dir = u.side === 'enemy' ? 1 : -1;
+  const bob = MONSTERS[u.typeId]?.shape === 'flyer' ? Math.round(Math.sin(now / 200 + u.uid) * 1.5 * scale) - 2 * scale : 0;
   const dying = !u.alive ? Math.min(1, (now - a.deadAt) / 300) : 0;
-  const flash = (view.detail || big || u.necro) && a.flashAt && now - a.flashAt < 90;
-  const img = sprite(u.typeId, scale, u.side === 'enemy', flash);
-  const w = img.width * (scale / Math.max(1, Math.round(scale))), h = img.height * (scale / Math.max(1, Math.round(scale)));
-  const x = Math.round(u.x + lunge), y = Math.round(u.y + bob + dying * 4);
+  const x = Math.round(p.x - w / 2 + lunge * dir * 0.8), y = Math.round(p.y - h + bob - lunge * dir * 0.6 + dying * 3);
   c.globalAlpha = 1 - dying;
-  c.drawImage(img, x, y, w, h);
+  if (u.necro) {
+    c.fillStyle = `rgba(125, 255, 106, ${0.15 + 0.1 * Math.sin(now / 300)})`;
+    c.beginPath(); c.arc(p.x, p.y - h / 2, 18, 0, Math.PI * 2); c.fill();
+  }
+  // 그림은 오른쪽을 본다. 소환수와 네크로맨서는 왼쪽 아래(적이 오는 쪽)를 보게 뒤집는다
+  if (u.side === 'ally') { c.save(); c.translate(x + w, y); c.scale(-1, 1); c.drawImage(img, 0, 0, w, h); c.restore(); }
+  else c.drawImage(img, x, y, w, h);
   c.globalAlpha = 1;
   if (big && u.alive) drawCrown(c, MONSTERS[u.typeId].colors.c, x, y - 2 * scale, scale);
+  if (u.evo && u.alive && scale >= 1) px(c, Math.round(p.x) - 1, y - 2, EVO_MARK[u.evo], 2, 2);
   if (!u.alive || !(view.detail || big || u.necro)) return;
-  const bw = w - 4, bx = Math.round(u.x) + 2, by = Math.round(u.y) - (big ? 3 * scale + 3 : 4);
+  const bw = Math.max(8, w - 2), bx = Math.round(p.x - bw / 2), by = y - (big ? 6 * scale : 4);
   px(c, bx, by, '#000', bw, 2);
   px(c, bx, by, u.side === 'ally' ? (u.necro ? '#b07aff' : '#7dff6a') : '#ff5c5c', Math.max(1, Math.round(bw * u.hp / u.maxHp)), 2);
 }
@@ -771,29 +792,29 @@ function updateSkillButtons() {
 // ---------- 길들이기 ----------
 
 let tameState = null;
-function openTame(g, first, ups) {
+function openTame(g, win, kills) {
   const { region, stage } = stageOf(g);
   // 이번 전투에서 실제로 만난 적들 중에서만 후보가 나온다
   const options = tameOptions(battleEnemies, Math.random);
-  tameState = { g, done: false };
+  tameState = { g, done: false, kills };
   show('tame');
   $('tameTitle').textContent = isBossStage(stage) ? `${REGIONS[region].name} 멸망!` : '길들이기!';
-  const upText = ups.length ? ` · ${ups.map(u => `${MONSTERS[u.unit.type].name} Lv.${u.unit.level}`).join(', ')} 레벨 업!` : '';
-  const capText = first ? ` · 네크로맨서 Lv.${necroLevel(save)}, 별 한도 ★${fmt(starCap(save))}` : '';
-  $('tameSub').textContent = `이번 전투에서 만난 몬스터 중 하나를 골라 길들여 보세요${upText}${capText}`;
+  $('tameSub').innerHTML = `보상 <span class="souls">영혼 +${fmt(win.souls)}</span>${win.first ? ' (첫 클리어 2배)' : ''}<br>이번 전투에서 만난 몬스터 중 하나를 길들여 보세요`;
   $('tameResult').textContent = '';
   $('tameResult').className = '';
-  for (const id of ['tameNext', 'tameMap', 'tameRetry', 'retryAsk']) $(id).hidden = true;
+  for (const id of ['tameNext', 'tameMap', 'tameRetry', 'retryAsk', 'rouletteGo']) $(id).hidden = true;
   const cards = $('tameCards');
   cards.innerHTML = '';
   for (const type of options) {
     const t = MONSTERS[type], owned = save.roster.find(r => r.type === type);
+    const amount = tameAmount(type, kills);
     const card = document.createElement('button');
     card.className = `card${t.tier === 'boss' ? ' boss' : ''}`;
     card.append(portrait(type));
+    const gain = t.tier === 'boss' && owned ? '레벨 +2' : `+${fmt(amount)}마리`;
     card.insertAdjacentHTML('beforeend', `<div class="name">${t.name}</div><div>${tierText(type)}</div>`
-      + `<div class="chance">${Math.round(tameChance(type) * 100)}%</div><div>${TRAITS[unitStats(type, 1).trait].name} · 소환 ★${starsOf(type)}</div>`
-      + `<div class="owned">${owned ? `보유 Lv.${owned.level} → 레벨 업` : '새 소환수!'}</div>`);
+      + `<div class="chance">${Math.round(tameChance(type) * 100)}%</div><div class="amount">${gain}</div>`
+      + `<div class="owned">${owned ? `보유 ${fmt(owned.count)}마리` : '새 소환수!'}</div>`);
     card.onclick = () => tryTame(card, type, stage);
     cards.append(card);
   }
@@ -805,38 +826,112 @@ function tryTame(card, type, stage) {
   for (const other of $('tameCards').children) if (other !== card) other.classList.add('dim');
   card.classList.add('taming');
   $('tameResult').textContent = '길들이는 중...';
-  const result = tame(save, type, stage, Math.random);
+  const result = tame(save, type, stage, tameState.kills, Math.random);
   persist();
   setTimeout(() => {
     card.classList.remove('taming');
     const name = MONSTERS[type].name;
     if (result.success) {
       $('tameResult').className = 'ok';
-      $('tameResult').innerHTML = result.isNew
-        ? `길들이기 성공!<br><small>${josa(name, '이', '가')} 소환수가 되었다 (Lv.${result.unit.level}, 여러 마리 소환 가능)</small>`
-        : `길들이기 성공!<br><small>${name} 레벨 업 → Lv.${result.unit.level}</small>`;
+      $('tameResult').innerHTML = result.levelUp
+        ? `길들이기 성공!<br><small>${name} 레벨 +${result.levelUp} → Lv.${result.unit.level}</small>`
+        : `길들이기 성공!<br><small>${josa(name, '이', '가')} ${fmt(result.amount)}마리 합류 (군단 ${fmt(armySize(save))}마리)</small>`;
     } else {
       $('tameResult').className = 'fail';
       $('tameResult').innerHTML = `실패...<br><small>${josa(name, '이', '가')} 도망쳤다</small>`;
       card.classList.add('dim');
     }
-    const g = tameState.g;
-    // 클리어한 스테이지를 다시 할지 먼저 묻는다
-    $('retryAsk').hidden = $('tameRetry').hidden = false;
-    $('tameRetry').onclick = () => openPrep(g);
-    if (g === STAGE_COUNT && !save.endingSeen) {
-      $('tameNext').textContent = '엔딩 보기';
-      $('tameNext').onclick = showEnding;
-      $('tameNext').hidden = false;
-    } else if (g < STAGE_COUNT) {
-      $('tameNext').textContent = `다음 스테이지: ${stageName(g + 1)}`;
-      $('tameNext').onclick = () => openPrep(g + 1);
-      $('tameNext').hidden = false;
-    }
-    $('tameMap').hidden = false;
+    if (isBossStage(stage)) $('rouletteGo').hidden = false; // 보스를 깼으면 룰렛부터
+    else showAfterStage();
   }, 1900);
 }
+
+// 클리어한 스테이지를 다시 할지 묻고, 다음 갈 곳을 고르게 한다
+function showAfterStage() {
+  const g = tameState.g;
+  show('tame');
+  $('rouletteGo').hidden = true;
+  $('retryAsk').hidden = $('tameRetry').hidden = $('tameMap').hidden = false;
+  $('tameRetry').onclick = () => openPrep(g);
+  $('tameNext').hidden = false;
+  if (g === STAGE_COUNT && !save.endingSeen) { $('tameNext').textContent = '엔딩 보기'; $('tameNext').onclick = showEnding; }
+  else if (g < STAGE_COUNT) { $('tameNext').textContent = `다음 스테이지: ${stageName(g + 1)}`; $('tameNext').onclick = () => openPrep(g + 1); }
+  else $('tameNext').hidden = true;
+}
 $('tameMap').onclick = () => openMap(stageOf(tameState.g).region);
+$('rouletteGo').onclick = openRoulette;
+
+// ---------- 보스 룰렛 ----------
+
+const wctx = $('wheel').getContext('2d');
+const WHEEL_COLORS = ['#4a2a6a', '#2a5a3a', '#6a2a4a', '#2a3a6a', '#7a5a10', '#8a1a1a'];
+let wheel = { angle: 0, spinning: false };
+const totalWeight = ROULETTE.reduce((a, s) => a + s.weight, 0);
+
+// i번째 칸의 시작·끝 각도. 칸 크기는 나올 비중에 맞춘다
+function segmentRange(i) {
+  let start = 0;
+  for (let k = 0; k < i; k++) start += ROULETTE[k].weight / totalWeight;
+  return [start * Math.PI * 2, (start + ROULETTE[i].weight / totalWeight) * Math.PI * 2];
+}
+
+function drawWheel() {
+  const c = wctx, cx = 130, cy = 136, r = 112;
+  c.clearRect(0, 0, 260, 260);
+  ROULETTE.forEach((seg, i) => {
+    const [a0, a1] = segmentRange(i);
+    c.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+    c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, r, a0 + wheel.angle, a1 + wheel.angle); c.closePath(); c.fill();
+    c.strokeStyle = '#000'; c.lineWidth = 2; c.stroke();
+    c.save();
+    c.translate(cx, cy);
+    c.rotate((a0 + a1) / 2 + wheel.angle);
+    c.fillStyle = '#fff';
+    c.font = 'bold 12px system-ui, sans-serif';
+    c.textAlign = 'right';
+    c.fillText(seg.label, r - 8, 4);
+    c.restore();
+  });
+  c.strokeStyle = '#ffd23f'; c.lineWidth = 4;
+  c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+  c.fillStyle = '#140f1f'; c.beginPath(); c.arc(cx, cy, 14, 0, Math.PI * 2); c.fill();
+  // 위쪽 바늘
+  c.fillStyle = '#ffd23f';
+  c.beginPath(); c.moveTo(cx - 10, 6); c.lineTo(cx + 10, 6); c.lineTo(cx, 32); c.closePath(); c.fill();
+}
+
+function openRoulette() {
+  show('roulette');
+  wheel = { angle: 0, spinning: false };
+  $('rouletteResult').textContent = '';
+  $('spinBtn').hidden = false;
+  $('rouletteDone').hidden = true;
+  drawWheel();
+}
+
+$('spinBtn').onclick = () => {
+  if (wheel.spinning) return;
+  wheel.spinning = true;
+  $('spinBtn').hidden = true;
+  const index = rollRoulette(Math.random);
+  const [a0, a1] = segmentRange(index);
+  // 바늘(위쪽, -90도)이 뽑힌 칸 안쪽에 오도록 여러 바퀴 돈 뒤 멈춘다
+  const inside = a0 + (a1 - a0) * (0.2 + Math.random() * 0.6);
+  const target = -Math.PI / 2 - inside + Math.PI * 2 * 6;
+  const start = performance.now(), dur = 3200;
+  const step = now => {
+    const t = Math.min(1, (now - start) / dur), ease = 1 - (1 - t) ** 3;
+    wheel.angle = target * ease;
+    drawWheel();
+    if (t < 1) return requestAnimationFrame(step);
+    const text = applyRoulette(save, index, tameState.g, Math.random);
+    persist();
+    $('rouletteResult').innerHTML = `${ROULETTE[index].label}!<br><small>${text}</small>`;
+    $('rouletteDone').hidden = false;
+  };
+  requestAnimationFrame(step);
+};
+$('rouletteDone').onclick = showAfterStage;
 
 function showEnding() {
   save.endingSeen = true;
@@ -846,7 +941,7 @@ function showEnding() {
 }
 $('endHome').onclick = goHome;
 
-// ---------- 소환수 관리 ----------
+// ---------- 소환수 키우기 ----------
 
 let rosterFrom = 'home', selected = null;
 function openRoster(from) {
@@ -856,80 +951,60 @@ function openRoster(from) {
   renderRoster();
 }
 
-// 다른 종류는 그대로 두고 이 종류만으로 채울 수 있는 최대 마리 수
-function maxFor(r) {
-  const stars = starsOf(r.type), current = save.army[r.id] ?? 0;
-  const n = Math.floor((starCap(save) - (armyStars(save) - current * stars)) / stars);
-  return MONSTERS[r.type].tier === 'boss' ? Math.min(1, n) : n;
-}
-
-function smallBtn(label, fn, disabled) {
-  const b = document.createElement('button');
-  b.textContent = label;
-  b.disabled = disabled;
-  b.onclick = fn;
-  return b;
-}
-
-function changeCount(r, n) {
-  save.autoArmy = false; // 직접 고치면 자동 편성은 꺼진다
-  setCount(save, r.id, n);
-  persist();
-  renderRoster();
-}
-
 function renderRoster() {
-  const used = armyStars(save), cap = starCap(save);
-  $('starText').textContent = `★ ${fmt(used)} / ${fmt(cap)}`;
-  $('sizeText').textContent = `군단 ${fmt(armySize(save))}마리 · 네크로맨서 Lv.${necroLevel(save)}`;
-  $('starFill').style.width = `${Math.min(100, (used / cap) * 100)}%`;
-  $('autoArmyBtn').classList.toggle('on', save.autoArmy);
-  $('autoArmyBtn').textContent = save.autoArmy ? '자동 편성 켜짐' : '자동 편성';
+  $('soulText').textContent = `영혼 ${fmt(save.souls)}`;
+  $('armyText').textContent = `${save.roster.length}종 · 군단 ${fmt(armySize(save))}마리`;
   const list = $('armyList');
   list.innerHTML = '';
-  const order = [...save.roster].sort((a, b) => MONSTERS[b.type].region - MONSTERS[a.type].region || starsOf(b.type) - starsOf(a.type) || b.level - a.level);
+  const order = [...save.roster].sort((a, b) => MONSTERS[b.type].region - MONSTERS[a.type].region || b.count - a.count);
   for (const r of order) {
-    const t = MONSTERS[r.type], n = save.army[r.id] ?? 0, max = maxFor(r);
-    const step = Math.max(1, Math.round(max / 10)); // 수천 마리도 몇 번 눌러서 맞출 수 있게
+    const st = unitStats(r.type, r.level, r.evo), t = MONSTERS[r.type];
     const row = document.createElement('div');
     row.className = `armyRow${selected === r.id ? ' sel' : ''}`;
-    const pic = portrait(r.type);
+    const pic = portrait(r.type, r.evo);
     const info = document.createElement('div');
     info.className = 'info';
-    info.innerHTML = `<strong>${t.name}</strong> Lv.${r.level}<br><span style="color:var(--gold)">★${starsOf(r.type)}</span> · ${TRAITS[unitStats(r.type, r.level).trait].name}`;
+    info.innerHTML = `<strong>${nameHtml(r)}</strong> Lv.${r.level} <span style="color:var(--gold)">×${fmt(r.count)}</span><br>${tierText(r.type)} · ${TRAITS[st.trait].name}`;
     pic.onclick = info.onclick = () => { selected = selected === r.id ? null : r.id; renderRoster(); };
-    const cnt = document.createElement('div');
-    cnt.className = 'cnt';
-    cnt.textContent = fmt(n);
-    row.append(pic, info,
-      smallBtn('−', () => changeCount(r, n - step), n === 0), cnt,
-      smallBtn('+', () => changeCount(r, n + step), n >= max),
-      smallBtn('최대', () => changeCount(r, max), n >= max));
+    const btns = document.createElement('div');
+    btns.className = 'btns';
+    const lv = document.createElement('button');
+    const cost = levelUpCost(r);
+    lv.textContent = r.level >= 30 ? '최대 레벨' : `레벨 업 ${fmt(cost)}`;
+    lv.disabled = r.level >= 30 || save.souls < cost;
+    lv.onclick = () => { const res = levelUp(save, r.id); if (!res.ok) return toast(res.reason); persist(); renderRoster(); };
+    btns.append(lv);
+    if (canEvolve(r)) {
+      const ev = document.createElement('button');
+      ev.className = 'evo';
+      ev.textContent = `진화 ${fmt(evolveCost(r))}`;
+      ev.disabled = save.souls < evolveCost(r);
+      ev.onclick = () => confirmEvolve(r);
+      btns.append(ev);
+    }
+    row.append(pic, info, btns);
+    if (selected === r.id) {
+      const d = document.createElement('div');
+      d.className = 'detail';
+      const next = r.evo < MAX_EVO && t.tier !== 'boss' ? (r.level >= EVO_LEVEL ? '진화할 수 있어요!' : `레벨 ${EVO_LEVEL}부터 진화 가능 (${r.evo + 1}단계)`) : '더 진화할 수 없어요';
+      d.innerHTML = `한 마리 능력치: 체력 ${fmt(st.hp)} · 공격 ${fmt(st.atk)} · 공격 간격 ${st.interval}초 · 이동 ${st.speed}<br>`
+        + `<span style="color:var(--accent)">${TRAITS[st.trait].name}</span>: ${TRAITS[st.trait].desc}<br>출신: ${REGIONS[t.region].name} · ${next}`;
+      row.append(d);
+    }
     list.append(row);
   }
-  renderDetail();
 }
 
-function renderDetail() {
-  const box = $('detail');
-  const r = save.roster.find(o => o.id === selected);
-  if (!r) { box.hidden = true; return; }
-  box.hidden = false;
-  const t = MONSTERS[r.type], st = unitStats(r.type, r.level), trait = TRAITS[st.trait];
-  box.innerHTML = '';
-  box.append(portrait(r.type));
-  const info = document.createElement('div');
-  info.className = 'info';
-  info.innerHTML = `<strong>${t.name}</strong> Lv.${r.level} · ${tierText(r.type)} · 소환 ★${starsOf(r.type)}<br>`
-    + `체력 ${fmt(st.hp)} · 공격 ${fmt(st.atk)} · 공격 간격 ${st.interval}초<br>`
-    + `<span style="color:var(--accent)">${trait.name}</span>: ${trait.desc}<br>`
-    + `${t.starter ? '처음부터 함께한 소환수' : `출신: ${REGIONS[t.region].name}`} · 경험치 ${r.xp}/${xpNeed(r.level)}`
-    + `<div class="xp"><div style="width:${Math.min(100, (r.xp / xpNeed(r.level)) * 100)}%"></div></div>`;
-  box.append(info);
+function confirmEvolve(r) {
+  const nextName = displayName(r.type, r.evo + 1);
+  const before = unitStats(r.type, r.level, r.evo), after = unitStats(r.type, 1, r.evo + 1);
+  openModal(`<h2>진화</h2><p>${displayName(r.type, r.evo)} ${fmt(r.count)}마리가<br><strong>${nextName}</strong>(으)로 진화해요.</p>`
+    + `<p class="muted">레벨은 1부터 다시 시작하지만 더 강해져요.<br>체력 ${fmt(before.hp)} → ${fmt(after.hp)} · 공격 ${fmt(before.atk)} → ${fmt(after.atk)}</p>`, [
+    ['진화하기', () => { const res = evolve(save, r.id); closeModal(); if (!res.ok) return toast(res.reason); persist(); renderRoster(); toast(`${nextName} 탄생!`); }, 'primary'],
+    ['취소', closeModal],
+  ]);
 }
 
-$('autoArmyBtn').onclick = () => { save.autoArmy = true; autoArmy(save); persist(); renderRoster(); toast('별 한도를 가장 알차게 채웠어요'); };
-$('clearArmyBtn').onclick = () => { save.autoArmy = false; save.army = {}; persist(); renderRoster(); };
 $('rosterBack').onclick = () => {
   if (rosterFrom === 'prep') { show('prep'); renderPrepParty(); } else goHome();
 };
@@ -937,10 +1012,9 @@ $('rosterBack').onclick = () => {
 // ---------- 환경설정 ----------
 
 const SETTINGS = [
-  { key: 'speed', label: '기본 전투 속도', desc: '전투 화면의 속도 버튼과 같아요', choices: [[1, '×1'], [2, '×2']] },
+  { key: 'speed', label: '기본 전투 속도', desc: '전투 화면의 속도 버튼과 같아요', choices: [[1, '×1'], [2, '×2'], [3, '×3']] },
   { key: 'autoSkill', label: '자동 스킬', desc: '켜면 스킬이 준비되는 대로 알아서 써요', choices: [[false, '끄기'], [true, '켜기']] },
 ];
-let settingsFrom = 'home';
 function openSettings() {
   show('settings');
   const list = $('settingList');
@@ -990,13 +1064,10 @@ function renderHomeArt(c, now, ending) {
   px(c, 0, 0, ending ? '#05050f' : '#1a1030', 96, 64);
   for (let i = 0; i < 24; i++) px(c, (i * 41) % 96, (i * 23) % 40, i % 4 ? '#6a5a9a' : '#ffffff');
   px(c, 0, 50, ending ? '#1a1a2a' : '#2a1a3a', 96, 14);
-  if (ending) {
-    // 부서진 행성 조각이 떠다닌다
-    for (let i = 0; i < 12; i++) px(c, 48 + Math.cos(now / 900 + i) * (20 + i * 2), 26 + Math.sin(now / 900 + i) * (10 + i), i % 2 ? '#c06a40' : '#4a6ac0', 3, 3);
-  }
+  if (ending) for (let i = 0; i < 12; i++) px(c, 48 + Math.cos(now / 900 + i) * (20 + i * 2), 26 + Math.sin(now / 900 + i) * (10 + i), i % 2 ? '#c06a40' : '#4a6ac0', 3, 3);
   drawArt(c, NECRO_ART, NECRO_COLORS, 42, 34 + Math.round(Math.sin(now / 500)), {});
-  // 네크로맨서 주위를 도는 영혼과 소환수
-  const party = armyEntries().slice(0, 3).map(([r]) => r);
+  // 가장 많은 소환수 셋이 네크로맨서 곁에
+  const party = [...save.roster].sort((a, b) => b.count - a.count).slice(0, 3);
   party.forEach((r, i) => {
     const { art, colors } = artFor(r.type);
     drawArt(c, art, colors, [8, 24, 72][i], 38 + Math.round(Math.sin(now / 400 + i)), { flip: i === 2 });
