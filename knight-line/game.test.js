@@ -2,15 +2,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createState, createStage, generateLevel, stageConfig, move, undo, targetIn,
-  isCleared, isStuck, solve, seeded,
+  isCleared, isStuck, solve, hint, seeded, TOUGH_KIND, TOUGH_FROM_STAGE,
 } from './game.js';
 
-const level = (knight, monsters, size = 5) => createState({ size, knight, monsters: monsters.map(([x, y]) => ({ x, y, kind: 0 })) });
+// [x, y] 는 일반 몬스터, [x, y, 2] 는 체력 2인 갑옷 몬스터
+const level = (knight, monsters, size = 5) => createState({
+  size, knight, monsters: monsters.map(([x, y, hp = 1]) => ({ x, y, kind: hp > 1 ? TOUGH_KIND : 0, hp })),
+});
 
 test('일직선으로 달려가 처음 만나는 몬스터를 처치하고 그 칸에 선다', () => {
   const s = level({ x: 0, y: 2 }, [[3, 2], [4, 2]]);
-  const m = move(s, 'right');
+  const { monster: m, killed } = move(s, 'right');
   assert.deepEqual([m.x, m.y], [3, 2]);
+  assert.equal(killed, true);
   assert.deepEqual(s.knight, { x: 3, y: 2 });
   assert.equal(s.monsters.length, 1);
 });
@@ -48,18 +52,83 @@ test('solve는 실제로 깨지는 순서를 돌려준다', () => {
 });
 
 test('생성된 판은 항상 깰 수 있고 칸이 겹치지 않는다', () => {
-  for (let n = 1; n <= 30; n++) {
-    const { size, count } = stageConfig(n);
-    const lv = generateLevel(seeded(n), size, count);
+  for (let n = 1; n <= 60; n++) {
+    const { size, count, tough } = stageConfig(n);
+    const lv = generateLevel(seeded(n), size, count, tough);
     assert.equal(lv.monsters.length, count);
+    assert.equal(lv.monsters.filter(m => m.hp === 2).length, tough);
     const cells = new Set([lv.knight, ...lv.monsters].map(c => `${c.x},${c.y}`));
     assert.equal(cells.size, count + 1);
     const s = createState(lv);
+    for (const d of lv.solution) assert.ok(move(s, d), `스테이지 ${n}`);
+    assert.ok(isCleared(s), `스테이지 ${n}`);
+  }
+});
+
+test('solve는 생성된 판의 풀이를 찾는다', () => {
+  for (let n = 1; n <= 20; n++) {
+    const s = createStage(n);
     const dirs = solve(s);
     assert.ok(dirs, `스테이지 ${n}`);
     for (const d of dirs) move(s, d);
     assert.ok(isCleared(s));
   }
+});
+
+test('갑옷 몬스터는 10스테이지까지 없고 11스테이지부터 나온다', () => {
+  for (let n = 1; n < TOUGH_FROM_STAGE; n++) assert.equal(stageConfig(n).tough, 0);
+  assert.ok(stageConfig(TOUGH_FROM_STAGE).tough >= 1);
+  assert.ok(createStage(TOUGH_FROM_STAGE).monsters.some(m => m.hp === 2));
+});
+
+test('갑옷 몬스터: 첫 공격은 버티고 기사는 달려온 방향에서 바로 앞 칸에 선다', () => {
+  const s = level({ x: 0, y: 2 }, [[3, 2, 2]]);
+  const r = move(s, 'right');
+  assert.equal(r.killed, false);
+  assert.deepEqual(s.knight, { x: 2, y: 2 });
+  assert.equal(s.monsters[0].hp, 1);
+  // 두 번째 공격에 쓰러지고 그 칸으로 들어간다
+  assert.equal(move(s, 'right').killed, true);
+  assert.deepEqual(s.knight, { x: 3, y: 2 });
+  assert.ok(isCleared(s));
+});
+
+test('갑옷 몬스터가 바로 옆이면 제자리에서 때린다', () => {
+  const s = level({ x: 2, y: 3 }, [[2, 2, 2]]);
+  move(s, 'up');
+  assert.deepEqual(s.knight, { x: 2, y: 3 });
+  assert.equal(s.monsters[0].hp, 1);
+});
+
+test('되돌리기는 갑옷 몬스터의 체력도 되돌린다', () => {
+  const s = level({ x: 0, y: 0 }, [[0, 4, 2]]);
+  move(s, 'down');
+  move(s, 'down');
+  assert.ok(isCleared(s));
+  undo(s);
+  assert.equal(s.monsters[0].hp, 1);
+  assert.deepEqual(s.knight, { x: 0, y: 3 });
+  undo(s);
+  assert.equal(s.monsters[0].hp, 2);
+  assert.deepEqual(s.knight, { x: 0, y: 0 });
+});
+
+test('solve는 갑옷 몬스터의 멈춤 위치까지 계산한다', () => {
+  // 갑옷 몬스터를 한 번 치면 (2,0)에 멈춰야 아래 몬스터를 잡고, 돌아와서 마무리할 수 있다
+  const s = level({ x: 0, y: 0 }, [[3, 0, 2], [2, 3], [3, 3]]);
+  const dirs = solve(s);
+  assert.ok(dirs);
+  for (const d of dirs) move(s, d);
+  assert.ok(isCleared(s));
+});
+
+test('힌트: 정답 경로를 따라가는 중이면 다음 방향, 막힌 상태면 null', () => {
+  const s = createStage(33);
+  assert.equal(hint(s), s.solution[0]);
+  move(s, s.solution[0]);
+  assert.equal(hint(s), s.solution[1]);
+  const stuck = level({ x: 0, y: 0 }, [[2, 2]]);
+  assert.equal(hint(stuck), null);
 });
 
 test('같은 스테이지는 언제나 같은 판', () => {
