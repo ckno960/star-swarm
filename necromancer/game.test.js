@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MONSTERS, REGIONS, TAME_CHANCE, SHAPES, EVO_LEVEL, MAX_EVO, EVO_POWER, unitStats, tameChance, levelMult, starsOf, displayName } from './data.js';
-import { createBattle, stepBattle, useSkill, canUse, simulate, necro, killsByType, NECRO_D, LANES } from './battle.js';
+import { createBattle, stepBattle, useSkill, canUse, simulate, necro, killsByType, NECRO_D } from './battle.js';
 import {
   defaultSave, loadSave, stageEnemies, tameOptions, tame, tameAmount, recordWin, recordLoss, partyUnits, enemyUnits, groupEnemies,
   stageOf, globalStage, isUnlocked, regionProgress, STAGE_COUNT, armySize, enemyCount, necroLevel, stageSouls,
@@ -53,8 +53,8 @@ test('전투: 적은 네크로맨서를 향해 오고, 막는 소환수가 없�
 });
 
 test('전투: 소환수가 길을 막으면 적은 소환수와 싸운다', () => {
-  // 모든 줄을 소환수가 막고 있으면 네크로맨서는 맞지 않는다
-  const summons = Array.from({ length: LANES }, () => unit({ hp: 1000, atk: 50 }));
+  // 튼튼한 소환수들이 있으면 적은 네크로맨서까지 가지 못한다
+  const summons = Array.from({ length: 6 }, () => unit({ hp: 1000, atk: 50 }));
   const b = createBattle([...summons, necroU({ hp: 10, atk: 0 })], [unit({ hp: 100, atk: 5 })], fixed(0.5), { spawnTime: 0 });
   const events = [];
   while (!b.over) events.push(...stepBattle(b, 1));
@@ -63,7 +63,7 @@ test('전투: 소환수가 길을 막으면 적은 소환수와 싸운다', () =
 });
 
 test('전투: 제한 시간(3분)이 지나면 패배', () => {
-  const summons = Array.from({ length: LANES }, () => unit({ hp: 1e9, atk: 0.0001 }));
+  const summons = Array.from({ length: 6 }, () => unit({ hp: 1e9, atk: 0.0001 }));
   const b = createBattle([...summons, necroU({ hp: 1e9, atk: 0 })], [unit({ hp: 1e9, atk: 0.0001 })], fixed(0.5), { spawnTime: 0 });
   assert.equal(simulate(b), 'lose');
   assert.ok(b.time >= 180);
@@ -97,6 +97,21 @@ test('스킬: 되살리기는 쓰러진 소환수를 체력 50%로', () => {
   assert.ok(b.allies[0].alive && b.allies[1].alive);
   assert.equal(b.allies[0].hp, 40);
   assert.ok(necro(b).necro);
+});
+
+test('전투: 1:1이 아니라 모두가 한꺼번에 싸운다 (여러 마리가 한 적을 둘러싸고 때림)', () => {
+  const r = seeded(2);
+  const summons = Array.from({ length: 20 }, () => unit({ hp: 400, atk: 2, interval: 1 }));
+  const enemies = Array.from({ length: 4 }, () => unit({ hp: 1e4, atk: 1, interval: 1 }));
+  const b = createBattle([...summons, necroU({ hp: 1e6 })], enemies, r, { spawnTime: 0 });
+  const attackers = new Set(), targets = new Map();
+  for (let t = 0; t < 40; t++) for (const e of stepBattle(b, 0.5)) {
+    if (e.type !== 'attack' || e.from.side !== 'ally' || e.from.necro) continue;
+    attackers.add(e.from.uid);
+    targets.set(e.target.uid, (targets.get(e.target.uid) ?? new Set()).add(e.from.uid));
+  }
+  assert.equal(attackers.size, 20, '소환수 모두가 싸움에 참여');
+  assert.ok(Math.max(...[...targets.values()].map(s => s.size)) >= 4, '한 적을 여러 마리가 함께 때림');
 });
 
 test('전투: 수천 마리끼리 싸워도 끝까지 돌아가고 빠르다', () => {
