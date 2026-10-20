@@ -1,16 +1,21 @@
-// 진행 상황: 스테이지 구성, 군단 편성, 길들이기, 경험치, 저장 데이터. 순수 로직(DOM, localStorage 접근 없음).
-// 길들인 몬스터는 "소환할 수 있는 종류"가 되고, 같은 종류를 여러 마리 소환할 수 있다.
-// 소환수 별 합은 네크로맨서 레벨에 따른 한도를 넘을 수 없다.
-import { MONSTERS, REGIONS, STAGES_PER_REGION, MAX_LEVEL, regionPower, unitStats, tameChance, starsOf } from './data.js';
+// 진행 상황: 스테이지 구성, 군단, 길들이기, 영혼(보상)·레벨 업·진화, 룰렛, 저장 데이터. 순수 로직(DOM, localStorage 접근 없음).
+// 군단은 길들인 숫자만큼만 소환한다. 길들이기에 성공하면 그 전투에서 쓰러뜨린 같은 종류의 일부를 한꺼번에 데려온다.
+import {
+  MONSTERS, REGIONS, STAGES_PER_REGION, MAX_LEVEL, EVO_LEVEL, MAX_EVO, regionPower, unitStats, tameChance, starsOf, displayName,
+} from './data.js';
 
 export const STAGE_COUNT = REGIONS.length * STAGES_PER_REGION;
 export const ENEMY_GROWTH = 1.16; // 스테이지마다 적 수가 16%씩 늘어 마지막엔 약 2,900마리
-export const CAP_BASE = 5;
-// 별 한도는 적 수와 같은 비율로 늘고, 그 위에 약간의 덤을 얹는다: 27스테이지까지 0.22%씩 늘고, 38스테이지부터 0.15%씩 줄어든다.
-// 군단이 클수록 몇 % 차이로 승패가 갈려서(수가 많은 쪽이 압도) 덤을 끝까지 늘리면 뒤 지역이 너무 쉬워진다. 값은 시뮬레이션으로 맞췄다
-export const CAP_BONUS = 0.0022, CAP_BONUS_UNTIL = 27, CAP_TAPER = 0.0015, CAP_TAPER_FROM = 38;
-export const BOSS_FACTOR = 0.45; // 적 보스 힘 = 소환수 보스 기본치 × 이 값 × √(부하 수 / 8)
-const NECRO = { hp: 90, atk: 5, interval: 1.2 };
+export const TAME_SHARE = 0.35, TAME_MIN = 2; // 길들이기에 성공하면 쓰러뜨린 같은 종류의 이 비율만큼(최소 2마리) 데려온다
+export const BOSS_FACTOR = 0.35; // 적 보스 힘 = 소환수 보스 기본치 × 이 값 × √(부하 수 / 8)
+// 뒤 지역 적은 레벨을 조금 더 높게. 군단이 커지고 진화가 쌓이면 뒤로 갈수록 너무 쉬워져서
+export const ENEMY_LEVEL_BONUS = [0, 0, 0, 2, 8];
+// 영혼: 스테이지를 깰 때마다 받는 보상. 처음 깨면 두 배
+export const SOUL_BASE = 12, SOUL_GROWTH = 1.05;
+// 레벨 업 비용 = LV_COST × 별 × LV_GROWTH^(레벨-1) × (진화 단계+1)
+export const LV_COST = 3, LV_GROWTH = 1.3;
+export const EVO_COST = 100; // 진화 비용 = EVO_COST × 별 × (진화 단계+1)
+const NECRO = { hp: 120, atk: 6, interval: 1.0 };
 // 앞줄부터 서는 순서: 튼튼한 몬스터가 앞, 급습하는 비행형은 뒤
 const FRONT_ORDER = { boss: 0, golem: 1, blob: 2, humanoid: 3, beast: 4, flyer: 5 };
 
@@ -28,10 +33,9 @@ export function isBossStage(stage) {
 export function defaultSave() {
   return {
     cleared: 0, // 처음 깬 가장 높은 전체 스테이지 번호
-    roster: [{ id: 1, type: 'skeleton', level: 1, xp: 0 }], // 소환할 수 있는 종류
-    army: { 1: 2 }, // 종류(id)별 소환할 마리 수
-    autoArmy: true, // 켜져 있으면 전투 전에 별 한도를 가장 알차게 채운다
+    roster: [{ id: 1, type: 'slime', level: 1, evo: 0, count: 1 }], // 길들인 종류와 마리 수
     nextId: 2,
+    souls: 0,
     settings: { speed: 1, autoSkill: false },
     ended: false,
   };
@@ -43,8 +47,12 @@ export function loadSave(raw) {
     if (!raw) return base;
     const s = JSON.parse(raw);
     const save = { ...base, ...s, settings: { ...base.settings, ...s.settings } };
-    // 예전 버전(편성 3자리)은 자동 편성으로 바꾼다
-    if (!s.army) { save.army = {}; save.autoArmy = true; delete save.party; autoArmy(save); }
+    // 예전 버전(별 한도 편성)은 편성했던 마리 수를 길들인 수로 옮긴다
+    if (s.roster?.some(r => r.count === undefined)) {
+      save.roster = s.roster.map(r => ({ id: r.id, type: r.type, level: r.level, evo: r.evo ?? 0, count: Math.max(1, s.army?.[r.id] ?? s.party?.includes(r.id) ?? 1) }));
+    }
+    for (const k of ['army', 'autoArmy', 'party']) delete save[k];
+    save.souls ??= 0;
     return save;
   } catch {
     return base;
@@ -59,66 +67,8 @@ export function necroLevel(save) {
   return save.cleared + 1;
 }
 
-// 소환수 별 한도. 적이 늘어나는 속도에 맞춰 함께 늘어난다
-export function starCap(save) {
-  const c = save.cleared;
-  const bonus = CAP_BONUS * Math.min(c, CAP_BONUS_UNTIL) - CAP_TAPER * Math.max(0, c - CAP_TAPER_FROM);
-  return Math.round(CAP_BASE * ENEMY_GROWTH ** c * (1 + bonus));
-}
-
-export function armyStars(save) {
-  let sum = 0;
-  for (const [id, n] of Object.entries(save.army)) {
-    const r = save.roster.find(o => o.id === Number(id));
-    if (r) sum += starsOf(r.type) * n;
-  }
-  return sum;
-}
-
 export function armySize(save) {
-  return Object.values(save.army).reduce((a, n) => a + n, 0);
-}
-
-// 종류 하나의 마리 수를 바꾼다. 별 한도를 넘으면 들어갈 만큼만 넣는다. 보스는 한 마리만
-export function setCount(save, id, n) {
-  const r = save.roster.find(o => o.id === id);
-  if (!r) return 0;
-  const stars = starsOf(r.type), current = save.army[id] ?? 0;
-  const room = starCap(save) - (armyStars(save) - current * stars);
-  let want = Math.max(0, Math.min(n, Math.floor(room / stars)));
-  if (MONSTERS[r.type].tier === 'boss') want = Math.min(want, 1);
-  if (want) save.army[id] = want;
-  else delete save.army[id];
-  return want;
-}
-
-// 별 하나당 힘(√(체력×초당 피해) / 별)
-export function powerPerStar(r) {
-  const st = unitStats(r.type, r.level);
-  return Math.sqrt(st.hp * (st.atk / st.interval)) / starsOf(r.type);
-}
-
-// 별 한도를 알차게 채운다: 보스는 한 마리씩 먼저, 그다음 별당 힘이 센 종류부터 남은 별의 절반씩
-export function autoArmy(save) {
-  save.army = {};
-  const cap = starCap(save);
-  let left = cap;
-  const bosses = save.roster.filter(r => MONSTERS[r.type].tier === 'boss').sort((a, b) => powerPerStar(b) - powerPerStar(a));
-  for (const r of bosses) if (starsOf(r.type) <= left) { save.army[r.id] = 1; left -= starsOf(r.type); }
-  const rest = save.roster.filter(r => MONSTERS[r.type].tier !== 'boss').sort((a, b) => powerPerStar(b) - powerPerStar(a));
-  rest.forEach((r, i) => {
-    const stars = starsOf(r.type);
-    const budget = i === rest.length - 1 ? left : Math.max(stars, Math.ceil(left / 2));
-    const n = Math.floor(Math.min(budget, left) / stars);
-    if (n > 0) { save.army[r.id] = n; left -= n * stars; }
-  });
-  // 남은 별 자투리는 가장 싼 종류로 채운다
-  const cheapest = [...rest].sort((a, b) => starsOf(a.type) - starsOf(b.type))[0];
-  if (cheapest && left >= starsOf(cheapest.type)) {
-    const n = Math.floor(left / starsOf(cheapest.type));
-    save.army[cheapest.id] = (save.army[cheapest.id] ?? 0) + n;
-  }
-  return save.army;
+  return save.roster.reduce((a, r) => a + r.count, 0);
 }
 
 // 네크로맨서는 처음 깬 스테이지 수만큼 강해진다 (10스테이지마다 다음 지역 수준)
@@ -128,23 +78,21 @@ export function necroPower(save) {
 
 export function necroUnit(save) {
   const p = necroPower(save);
-  return { typeId: 'necro', name: '네크로맨서', necro: true, level: necroLevel(save), hp: Math.round(NECRO.hp * p), atk: Math.round(NECRO.atk * p * 10) / 10, interval: NECRO.interval, trait: 'bolt' };
+  return { typeId: 'necro', name: '네크로맨서', necro: true, level: necroLevel(save), hp: Math.round(NECRO.hp * p), atk: Math.round(NECRO.atk * p * 10) / 10, interval: NECRO.interval, trait: 'bolt', speed: 0 };
 }
 
 function frontOrder(type) {
   return FRONT_ORDER[MONSTERS[type].shape];
 }
 
-// 전투에 나갈 유닛 목록: 소환수(앞줄 순서대로) + 맨 뒤 네크로맨서
+// 전투에 나갈 유닛 목록: 길들인 모든 소환수(앞줄 순서대로) + 네크로맨서
 export function partyUnits(save) {
   const units = [];
-  const entries = Object.entries(save.army)
-    .map(([id, n]) => [save.roster.find(o => o.id === Number(id)), n])
-    .filter(([r, n]) => r && n > 0)
-    .sort(([a], [b]) => frontOrder(a.type) - frontOrder(b.type));
-  for (const [r, n] of entries) {
-    const st = unitStats(r.type, r.level);
-    for (let i = 0; i < n; i++) units.push({ typeId: r.type, name: MONSTERS[r.type].name, level: r.level, rosterId: r.id, ...st });
+  const list = [...save.roster].sort((a, b) => frontOrder(a.type) - frontOrder(b.type));
+  for (const r of list) {
+    const st = unitStats(r.type, r.level, r.evo);
+    const name = displayName(r.type, r.evo);
+    for (let i = 0; i < r.count; i++) units.push({ typeId: r.type, evo: r.evo, name, level: r.level, rosterId: r.id, ...st });
   }
   units.push(necroUnit(save));
   return units;
@@ -158,10 +106,10 @@ export function maxTier(stage) {
   return Math.min(5, 1 + Math.floor((stage - 1) / 2));
 }
 
-// 스테이지가 오를수록 적이 늘고 강한 종류가 섞인다. 10스테이지는 보스가 부하들 맨 뒤에 선다
+// 스테이지가 오를수록 적이 늘고 강한 종류가 섞인다. 10스테이지는 보스가 맨 마지막에 나온다
 export function stageEnemies(region, stage, rand) {
   const R = REGIONS[region], g = globalStage(region, stage);
-  const count = enemyCount(g);
+  const count = enemyCount(g), level = stage + ENEMY_LEVEL_BONUS[region];
   // 약한 몬스터가 떼로, 강한 몬스터는 드물게 (등급 t가 나올 비중 1/t)
   const weights = Array.from({ length: maxTier(stage) }, (_, i) => 1 / (i + 1));
   const total = weights.reduce((x, y) => x + y, 0);
@@ -169,11 +117,10 @@ export function stageEnemies(region, stage, rand) {
   for (let i = 0; i < count; i++) {
     let r = rand() * total, t = 0;
     while (r >= weights[t] && t < weights.length - 1) r -= weights[t++];
-    list.push({ type: R.monsters[t], level: stage });
+    list.push({ type: R.monsters[t], level });
   }
-  list.sort((a, b) => frontOrder(a.type) - frontOrder(b.type));
   // 부하가 많을수록 보스도 커진다. 고정이면 작은 전투에선 혼자 압도하고 큰 전투에선 아무것도 아니게 된다
-  if (isBossStage(stage)) list.push({ type: R.boss, level: stage, scale: BOSS_FACTOR * Math.sqrt(Math.max(1, count / 8)) });
+  if (isBossStage(stage)) list.push({ type: R.boss, level, scale: BOSS_FACTOR * Math.sqrt(Math.max(1, count / 8)) });
   return list;
 }
 
@@ -183,7 +130,7 @@ export function enemyUnits(list) {
     const key = `${e.type}:${e.level}:${e.scale ?? 1}`;
     if (!cache[key]) {
       const st = unitStats(e.type, e.level), k = e.scale ?? 1;
-      cache[key] = { typeId: e.type, name: MONSTERS[e.type].name, level: e.level, ...st, hp: Math.round(st.hp * k), atk: st.atk * k };
+      cache[key] = { typeId: e.type, evo: 0, name: MONSTERS[e.type].name, level: e.level, ...st, hp: Math.round(st.hp * k), atk: st.atk * k };
     }
     return { ...cache[key] };
   });
@@ -210,52 +157,136 @@ export function tameOptions(enemyList, rand) {
   return picks;
 }
 
-// 길들이기를 시도한다. 성공하면 새 종류로, 이미 있으면 그 종류의 레벨을 올린다
-export function tame(save, type, stage, rand) {
+// 길들이면 데려오는 마리 수. 보스는 한 마리
+export function tameAmount(type, kills) {
+  if (MONSTERS[type].tier === 'boss') return 1;
+  return Math.max(TAME_MIN, Math.round((kills[type] ?? 0) * TAME_SHARE));
+}
+
+// 길들이기를 시도한다. 성공하면 그만큼 군단에 더한다. 보스를 이미 가졌으면 대신 레벨이 2 오른다
+export function tame(save, type, stage, kills, rand) {
   const chance = tameChance(type);
   if (rand() >= chance) return { success: false, chance };
+  const amount = tameAmount(type, kills);
   const owned = save.roster.find(r => r.type === type);
-  let result;
+  if (owned && MONSTERS[type].tier === 'boss') {
+    owned.level = Math.min(MAX_LEVEL, owned.level + 2);
+    return { success: true, chance, unit: owned, levelUp: 2, amount: 0 };
+  }
   if (owned) {
-    const before = owned.level;
-    owned.level = Math.min(MAX_LEVEL, Math.max(owned.level + 1, stage));
-    owned.xp = 0;
-    result = { success: true, chance, unit: owned, levelUp: owned.level - before };
-  } else {
-    // 싸웠던 그 레벨 그대로 데려온다
-    const unit = { id: save.nextId++, type, level: stage, xp: 0 };
-    save.roster.push(unit);
-    result = { success: true, chance, unit, isNew: true };
+    owned.count += amount;
+    return { success: true, chance, unit: owned, amount };
   }
-  if (save.autoArmy) autoArmy(save);
-  return result;
+  // 싸웠던 그 레벨로 데려온다. 더 키우는 건 영혼으로
+  const unit = { id: save.nextId++, type, level: stage, evo: 0, count: amount };
+  save.roster.push(unit);
+  return { success: true, chance, unit, amount, isNew: true };
 }
 
-export function xpNeed(level) {
-  return 5 + level * 3;
-}
-
-// 이긴 전투에 나간 종류에게 경험치를 준다. 레벨이 오른 종류 목록을 돌려준다
-export function grantXp(save, stage) {
-  const ups = [];
-  for (const id of Object.keys(save.army)) {
-    const r = save.roster.find(o => o.id === Number(id));
-    if (!r || r.level >= MAX_LEVEL) continue;
-    r.xp += stage + 2;
-    const before = r.level;
-    while (r.level < MAX_LEVEL && r.xp >= xpNeed(r.level)) { r.xp -= xpNeed(r.level); r.level++; }
-    if (r.level > before) ups.push({ unit: r, from: before });
-  }
-  return ups;
+export function stageSouls(g, first) {
+  return Math.round(SOUL_BASE * SOUL_GROWTH ** (g - 1)) * (first ? 2 : 1);
 }
 
 export function recordWin(save, g) {
   const first = g > save.cleared;
   if (first) save.cleared = g;
   if (g === STAGE_COUNT) save.ended = true;
-  // 레벨이 올라 별 한도가 늘었으니 다시 채운다
-  if (save.autoArmy) autoArmy(save);
-  return { first };
+  const souls = stageSouls(g, first);
+  save.souls += souls;
+  return { first, souls };
+}
+
+// 져도 쓰러뜨린 적 비율만큼 영혼을 조금 준다(최대 절반). 질수록 아무것도 못 얻으면 같은 곳에서 계속 막힌다
+export function recordLoss(save, g, killedRatio) {
+  const souls = Math.floor(stageSouls(g, false) * 0.5 * Math.max(0, Math.min(1, killedRatio)));
+  save.souls += souls;
+  return { souls };
+}
+
+export function levelUpCost(r) {
+  return Math.ceil(LV_COST * starsOf(r.type) * LV_GROWTH ** (r.level - 1) * (r.evo + 1));
+}
+
+export function levelUp(save, id) {
+  const r = save.roster.find(o => o.id === id);
+  if (!r) return { ok: false, reason: '없는 소환수' };
+  if (r.level >= MAX_LEVEL) return { ok: false, reason: '최대 레벨이에요' };
+  const cost = levelUpCost(r);
+  if (save.souls < cost) return { ok: false, reason: '영혼이 부족해요' };
+  save.souls -= cost;
+  r.level++;
+  return { ok: true, cost };
+}
+
+export function canEvolve(r) {
+  return r.level >= EVO_LEVEL && r.evo < MAX_EVO && MONSTERS[r.type].tier !== 'boss';
+}
+
+export function evolveCost(r) {
+  return EVO_COST * starsOf(r.type) * (r.evo + 1);
+}
+
+export function evolve(save, id, free = false) {
+  const r = save.roster.find(o => o.id === id);
+  if (!r || !canEvolve(r)) return { ok: false, reason: `레벨 ${EVO_LEVEL}부터 진화할 수 있어요` };
+  const cost = free ? 0 : evolveCost(r);
+  if (save.souls < cost) return { ok: false, reason: '영혼이 부족해요' };
+  save.souls -= cost;
+  r.evo++;
+  r.level = 1;
+  return { ok: true, cost };
+}
+
+// ---------- 보스 룰렛 ----------
+
+// weight: 나올 비중. 칸 크기도 비중에 맞춘다
+export const ROULETTE = [
+  { kind: 'souls', mult: 2, label: '영혼 ×2', weight: 5 },
+  { kind: 'copies', label: '군단 증원', weight: 4 },
+  { kind: 'souls', mult: 5, label: '영혼 ×5', weight: 3 },
+  { kind: 'levels', label: '레벨 +3', weight: 4 },
+  { kind: 'evolve', label: '무료 진화', weight: 1.5 },
+  { kind: 'souls', mult: 15, label: '잭팟 영혼 ×15', weight: 0.8 },
+];
+
+export function rollRoulette(rand) {
+  const total = ROULETTE.reduce((a, s) => a + s.weight, 0);
+  let r = rand() * total;
+  for (let i = 0; i < ROULETTE.length; i++) {
+    if (r < ROULETTE[i].weight) return i;
+    r -= ROULETTE[i].weight;
+  }
+  return ROULETTE.length - 1;
+}
+
+// 뽑힌 칸의 상을 준다. 무슨 일이 일어났는지 글로 돌려준다
+export function applyRoulette(save, index, g, rand) {
+  const seg = ROULETTE[index];
+  const base = stageSouls(g, false);
+  const souls = n => { save.souls += n; return `영혼 +${n}`; };
+  if (seg.kind === 'souls') return souls(base * seg.mult);
+  const pick = list => list[Math.floor(rand() * list.length)];
+  if (seg.kind === 'copies') {
+    // 가장 많은 종류를 30% 늘린다
+    const r = [...save.roster].filter(o => MONSTERS[o.type].tier !== 'boss').sort((a, b) => b.count - a.count)[0];
+    if (!r) return souls(base * 3);
+    const add = Math.max(1, Math.round(r.count * 0.3));
+    r.count += add;
+    return `${displayName(r.type, r.evo)} +${add}마리`;
+  }
+  if (seg.kind === 'levels') {
+    const list = save.roster.filter(o => o.level < MAX_LEVEL);
+    if (!list.length) return souls(base * 3);
+    const r = pick(list);
+    r.level = Math.min(MAX_LEVEL, r.level + 3);
+    return `${displayName(r.type, r.evo)} Lv.${r.level}`;
+  }
+  // 무료 진화: 진화할 수 있는 종류가 없으면 영혼으로
+  const ready = save.roster.filter(canEvolve);
+  if (!ready.length) return `진화할 소환수가 없어 ${souls(base * 6)}`;
+  const r = pick(ready);
+  evolve(save, r.id, true);
+  return `${displayName(r.type, r.evo)}(으)로 진화!`;
 }
 
 // 지역 파괴율: 그 지역에서 처음 깬 스테이지 비율
