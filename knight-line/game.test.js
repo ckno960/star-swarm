@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createState, createStage, generateLevel, stageConfig, move, undo, targetIn,
-  isCleared, isStuck, solve, hint, seeded, TOUGH_KIND, TOUGH_FROM_STAGE,
+  isCleared, isStuck, solve, hint, seeded, goldenLast, createDaily, TOUGH_KIND, TOUGH_FROM_STAGE, GOLDEN_FROM_STAGE,
 } from './game.js';
 
 // [x, y] 는 일반 몬스터, [x, y, 2] 는 체력 2인 갑옷 몬스터
@@ -140,4 +140,37 @@ test('targetIn은 바로 앞 몬스터만 본다', () => {
   const s = level({ x: 2, y: 4 }, [[2, 1], [2, 3]]);
   assert.deepEqual([targetIn(s, 'up').x, targetIn(s, 'up').y], [2, 3]);
   assert.equal(targetIn(s, 'down'), null);
+});
+
+test('황금 몬스터: 3스테이지부터 가끔, 정답대로 풀면 마지막에 쓰러진다', () => {
+  let found = 0;
+  for (let n = 1; n <= 40; n++) {
+    const s = createStage(n);
+    const golds = s.monsters.filter(m => m.golden);
+    assert.ok(golds.length <= 1);
+    if (n < GOLDEN_FROM_STAGE) assert.equal(golds.length, 0);
+    if (!golds.length) continue;
+    found++;
+    for (const d of s.solution) move(s, d);
+    assert.ok(goldenLast(s), `스테이지 ${n}`);
+  }
+  assert.ok(found >= 5);
+});
+
+test('황금 몬스터를 먼저 잡으면 보너스 없음', () => {
+  const s = createState({ size: 5, knight: { x: 0, y: 0 }, monsters: [{ x: 3, y: 0, kind: 0, golden: true }, { x: 3, y: 3, kind: 0 }] });
+  move(s, 'right');
+  move(s, 'down');
+  assert.ok(isCleared(s));
+  assert.equal(goldenLast(s), false);
+});
+
+test('오늘의 퍼즐: 날마다 다른 판이고 항상 깰 수 있다', () => {
+  assert.notDeepEqual(createDaily(1).monsters, createDaily(2).monsters);
+  assert.deepEqual(createDaily(7), createDaily(7));
+  for (let d = 1; d <= 14; d++) {
+    const s = createDaily(d);
+    for (const dir of s.solution) move(s, dir);
+    assert.ok(isCleared(s));
+  }
 });

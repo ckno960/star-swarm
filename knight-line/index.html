@@ -5,19 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>나이트 라인</title>
 <style>
-  :root { --bg: #1b1b2a; --panel: #26263a; --line: #4a4a6a; --text: #f2f2f2; --accent: #ffd23f; --red: #ff5c5c; }
+  :root { --bg: #1b1b2a; --panel: #26263a; --line: #4a4a6a; --text: #f2f2f2; --accent: #ffd23f; --red: #ff5c5c; --green: #7dff9b; }
   html, body {
     margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
     font: 16px system-ui, sans-serif;
     overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none;
   }
   body { display: flex; justify-content: center; }
-  main { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 480px; padding: 16px; box-sizing: border-box; }
-  #play, #bonus { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
-  #play[hidden], #bonus[hidden] { display: none; }
-  h1 { margin: 4px 0 0; font-size: 26px; letter-spacing: 3px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
-  #hud { display: flex; justify-content: space-between; align-items: center; width: 100%; font-size: 17px; }
+  main { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 480px; padding: 12px 16px; box-sizing: border-box; }
+  .panel { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+  .panel[hidden] { display: none; }
+  h1 { margin: 0; font-size: 24px; letter-spacing: 3px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
+  #playerTitle { font-size: 12px; opacity: 0.75; margin-top: -4px; }
+  #nav { display: flex; gap: 6px; }
+  #nav[hidden] { display: none; }
+  #nav button { min-height: 34px; font-size: 14px; padding: 0 10px; }
+  #hud { display: flex; justify-content: space-between; align-items: center; width: 100%; font-size: 16px; }
   #stagePick { display: flex; align-items: center; gap: 6px; }
+  #stars { color: var(--accent); letter-spacing: 1px; }
   #stats { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   #coins { color: var(--accent); font-weight: 700; }
   button {
@@ -27,21 +32,25 @@
   button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
   button:disabled { opacity: 0.35; }
   button.primary { border-color: var(--accent); }
-  #stagePick button { min-height: 36px; min-width: 36px; padding: 0; }
+  #stagePick button { min-height: 34px; min-width: 34px; padding: 0; }
   #board { position: relative; }
-  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; border: 3px solid #000; touch-action: none; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+  #canvas, #pachi { border: 3px solid #000; }
   #overlay {
     position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 12px; background: rgba(0, 0, 0, 0.7); text-align: center;
+    gap: 10px; background: rgba(0, 0, 0, 0.75); text-align: center; padding: 8px; box-sizing: border-box;
   }
   #overlay[hidden] { display: none; }
-  #overlay h2 { margin: 0; font-size: 30px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
-  #overlay p { margin: 0; opacity: 0.85; }
-  #overlay div { display: flex; gap: 8px; }
+  #overlay h2 { margin: 0; font-size: 28px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
+  #overlay .bigStars { font-size: 34px; color: var(--accent); letter-spacing: 4px; text-shadow: 2px 2px 0 #000; }
+  #overlay p { margin: 0; opacity: 0.9; line-height: 1.5; }
+  #overlay .reward { color: var(--green); }
+  #overlay .miss { color: var(--red); font-size: 14px; }
+  #overlay .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   #tools { display: flex; gap: 8px; }
   #dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 4px; }
   #dpad button { padding: 0; min-height: 0; font-size: 22px; }
-  #bonus h2 { margin: 0; font-size: 24px; color: var(--accent); text-shadow: 3px 3px 0 #000; letter-spacing: 2px; }
+  .panel h2 { margin: 0; font-size: 22px; color: var(--accent); text-shadow: 3px 3px 0 #000; letter-spacing: 2px; }
   #reels { display: flex; gap: 6px; padding: 6px; background: #000; border: 3px solid var(--accent); }
   #reels span {
     width: 52px; height: 60px; display: flex; align-items: center; justify-content: center;
@@ -52,6 +61,20 @@
   @keyframes flash { 50% { border-color: #ff5c5c; background: #ffd23f; } }
   #reelMsg { min-height: 22px; font-weight: 700; color: var(--accent); text-align: center; }
   #bonusInfo { display: flex; gap: 16px; font-size: 16px; }
+  #tabs { display: flex; gap: 6px; }
+  #tabs button { min-height: 36px; }
+  #tabs button.on { border-color: var(--accent); color: var(--accent); }
+  #items { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; overflow-y: auto; max-height: calc(100vh - 290px); }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; background: var(--panel); border: 3px solid var(--line); }
+  .card.on { border-color: var(--accent); }
+  .card canvas { width: 64px; height: 64px; }
+  .card button { width: 100%; min-height: 36px; font-size: 14px; }
+  #bookList { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 8px; background: var(--panel); border: 3px solid var(--line); }
+  .row canvas { width: 48px; height: 48px; }
+  .row .name { flex: 1; }
+  .row .badges { color: var(--accent); letter-spacing: 2px; }
+  .muted { font-size: 13px; opacity: 0.7; text-align: center; }
   #toast {
     position: fixed; left: 50%; top: 16px; transform: translateX(-50%);
     background: #000; border: 3px solid var(--accent); padding: 8px 16px; white-space: nowrap; pointer-events: none;
@@ -65,16 +88,22 @@
 <body>
 <main>
   <h1>나이트 라인</h1>
+  <div id="playerTitle"></div>
+  <div id="nav">
+    <button id="dailyBtn">오늘의 퍼즐</button>
+    <button id="shopBtn">상점</button>
+    <button id="bookBtn">도감</button>
+  </div>
   <div id="hud">
     <div id="stagePick">
       <button id="prevStage" aria-label="이전 스테이지">◀</button>
-      <span id="stageLabel"></span>
+      <span id="stageLabel"></span><span id="stars"></span>
       <button id="nextStage" aria-label="다음 스테이지">▶</button>
     </div>
     <div id="stats"><span id="left"></span><span id="coins"></span></div>
   </div>
 
-  <div id="play">
+  <div id="play" class="panel">
     <div id="board">
       <canvas id="canvas" role="img" aria-label="게임 화면. 기사와 몬스터가 있는 격자입니다."></canvas>
       <div id="overlay" hidden></div>
@@ -89,10 +118,10 @@
       <button data-dir="left" aria-label="왼쪽">◀</button><span></span><button data-dir="right" aria-label="오른쪽">▶</button>
       <span></span><button data-dir="down" aria-label="아래">▼</button><span></span>
     </div>
-    <p class="hint">밀기·방향키로 4방향 이동. 기사는 그 방향의 첫 몬스터까지 달려가 처치해요.<br>몬스터가 없는 방향으로는 갈 수 없어요. 갑옷 몬스터는 두 번 때려야 쓰러져요.</p>
+    <p class="hint">★ 클리어 · ★★ 힌트 없이 · ★★★ 힌트·되돌리기 없이<br>반짝이는 황금 몬스터를 마지막에 잡으면 보너스 코인!</p>
   </div>
 
-  <section id="bonus" hidden>
+  <section id="bonus" class="panel" hidden>
     <h2>보너스 파친코</h2>
     <div id="reels" aria-live="polite"><span>7</span><span>7</span><span>7</span></div>
     <div id="reelMsg"></div>
@@ -100,160 +129,180 @@
     <div id="bonusInfo"><span id="ballsLeft"></span><span id="won"></span></div>
     <button id="dropBtn" class="primary">공 발사</button>
     <button id="claimBtn" class="primary" hidden>계속하기</button>
-    <p class="hint">판 위쪽을 누르면 그 자리에서 공이 떨어져요.<br>가운데 START에 들어가면 슬롯이 돌아요. 7 세 개면 잭팟!</p>
+  </section>
+
+  <section id="shop" class="panel" hidden>
+    <h2>상점</h2>
+    <div id="tabs"></div>
+    <div id="items"></div>
+    <button id="shopClose">돌아가기</button>
+  </section>
+
+  <section id="book" class="panel" hidden>
+    <h2>몬스터 도감</h2>
+    <p class="muted" id="bookSummary"></p>
+    <div id="bookList"></div>
+    <p class="muted">종류마다 10 · 50 · 100마리를 처치하면 배지(●)를 받아요.<br>모든 종류 100마리를 채우면 '전설의 기사'!</p>
+    <button id="bookClose">돌아가기</button>
   </section>
 </main>
 <div id="toast"></div>
 
 <script type="module">
-import { createStage, move, undo, targetIn, isCleared, isStuck, hint, DIRS, TOUGH_FROM_STAGE } from './game.js';
+import {
+  createStage, createDaily, move, undo, targetIn, isCleared, isStuck, hint, goldenLast, DIRS, TOUGH_FROM_STAGE, TOUGH_KIND,
+} from './game.js';
 import {
   createBoard, dropBall, stepBoard, isFinished, spinReels,
   BOARD_W, BOARD_H, BALL_R, SLOTS, SLOT_W, SLOT_TOP, SYMBOLS,
 } from './pachinko.js';
+import {
+  loadSave, starsFor, recordClear, recordKills, recordDaily, bonusAvailable, bonusBalls, canHintFree, spend, buy, equip,
+  titleFor, totalKills, dayIndex, shareText, SHOP, CATEGORIES, BESTIARY, BADGES, HINT_COST, GOLD_COINS,
+} from './meta.js';
 
 const $ = id => document.getElementById(id);
-const CELL = 16, SLIDE_MS_PER_CELL = 45, BONUS_EVERY = 10, MAX_HELD_SPINS = 4;
+const CELL = 16, SLIDE_MS_PER_CELL = 45, MAX_HELD_SPINS = 4;
 const PACHI_SCALE = 4; // 파친코 판은 내부 해상도를 키워서 칸 숫자가 번지지 않게 한다
-const SPRITES = {
-  knight: [
-    '.....rr.....',
-    '....rr......',
-    '...gggggg...',
-    '..gggggggg..',
-    '..gkkkkkkg..',
-    '..gggggggg..',
-    '...gggggg...',
-    '..bbbbbbbb.w',
-    '.gbbbybbbbgw',
-    '.gbbbbbbbbgw',
-    '..bbbbbbbb.h',
-    '...gg..gg...',
-    '..ggg..ggg..',
-  ],
-  monsters: [
-    [ // 슬라임
-      '............',
-      '............',
-      '............',
-      '............',
-      '.....mm.....',
-      '...mmmmmm...',
-      '..mmmmmmmm..',
-      '.mmwkmmwkmm.',
-      '.mmkkmmkkmm.',
-      'mmmmmmmmmmmm',
-      'mmmmddddmmmm',
-      '.mmmmmmmmmm.',
-      '..mmmmmmmm..',
-    ],
-    [ // 박쥐
-      '............',
-      '............',
-      'm..........m',
-      'mm...mm...mm',
-      'mmm.mmmm.mmm',
-      'mmmmwkkwmmmm',
-      '.mmmkkkkmmm.',
-      '..mmmddmmm..',
-      '...m.mm.m...',
-      '............',
-      '............',
-      '............',
-      '............',
-    ],
-    [ // 유령
-      '....mmmm....',
-      '...mmmmmm...',
-      '..mmmmmmmm..',
-      '..mkkmmkkm..',
-      '..mkkmmkkm..',
-      '..mmmmmmmm..',
-      '..mmmkkmmm..',
-      '..mmmmmmmm..',
-      '..mmmmmmmm..',
-      '..mmmmmmmm..',
-      '..mmmmmmmm..',
-      '..m.mm.mm.m.',
-      '............',
-    ],
-    [ // 갑옷 오크 (체력 2)
-      '..a......a..',
-      '..aa....aa..',
-      '..aaaaaaaa..',
-      '.aawwaawwaa.',
-      '.aaaaaaaaaa.',
-      '..mmmmmmmm..',
-      '.mmtmmmmtmm.',
-      'aaaaaaaaaaaa',
-      'aamaaaaaamaa',
-      '.aaaaaaaaaa.',
-      '..mmm..mmm..',
-      '..mm....mm..',
-      '.aaa....aaa.',
-    ],
-  ],
+
+// ---------- 그림 데이터 ----------
+
+const KNIGHT = [
+  '.....rr.....',
+  '....rr......',
+  '...gggggg...',
+  '..gggggggg..',
+  '..gkkkkkkg..',
+  '..gggggggg..',
+  '...gggggg...',
+  '..bbbbbbbb.w',
+  '.gbbbybbbbgw',
+  '.gbbbbbbbbgw',
+  '..bbbbbbbb.h',
+  '...gg..gg...',
+  '..ggg..ggg..',
+];
+const CAT_KNIGHT = ['..g......g..', '..gg....gg..', ...KNIGHT.slice(2)];
+const SKINS = {
+  'knight.basic': { sprite: KNIGHT, colors: { r: '#e04040', g: '#c8ccd8', k: '#20202a', b: '#3a5fcf', y: '#ffd23f', w: '#e8e8f0', h: '#8a5a2a' } },
+  'knight.cat': { sprite: CAT_KNIGHT, colors: { r: '#f0a040', g: '#f0a040', k: '#20202a', b: '#ff7aa8', y: '#ffffff', w: '#e8e8f0', h: '#8a5a2a' } },
+  'knight.ninja': { sprite: KNIGHT, colors: { r: '#e04040', g: '#2e2e40', k: '#f2c49b', b: '#1e1e2c', y: '#e04040', w: '#c8ccd8', h: '#5a5a6a' } },
+  'knight.skull': { sprite: KNIGHT, colors: { r: '#9a4aff', g: '#e8e6dc', k: '#000000', b: '#4a2a5a', y: '#9a4aff', w: '#c8ccd8', h: '#3a3a3a' } },
+  'knight.gold': { sprite: KNIGHT, colors: { r: '#ffffff', g: '#ffd23f', k: '#5a3a00', b: '#c98a10', y: '#ffffff', w: '#fff6c0', h: '#8a5a2a' } },
 };
-const KNIGHT_COLORS = { r: '#e04040', g: '#c8ccd8', k: '#20202a', b: '#3a5fcf', y: '#ffd23f', w: '#e8e8f0', h: '#8a5a2a' };
+const MONSTERS = [
+  [ // 슬라임
+    '............', '............', '............', '............',
+    '.....mm.....', '...mmmmmm...', '..mmmmmmmm..', '.mmwkmmwkmm.',
+    '.mmkkmmkkmm.', 'mmmmmmmmmmmm', 'mmmmddddmmmm', '.mmmmmmmmmm.', '..mmmmmmmm..',
+  ],
+  [ // 박쥐
+    '............', '............', 'm..........m', 'mm...mm...mm',
+    'mmm.mmmm.mmm', 'mmmmwkkwmmmm', '.mmmkkkkmmm.', '..mmmddmmm..',
+    '...m.mm.m...', '............', '............', '............', '............',
+  ],
+  [ // 유령
+    '....mmmm....', '...mmmmmm...', '..mmmmmmmm..', '..mkkmmkkm..',
+    '..mkkmmkkm..', '..mmmmmmmm..', '..mmmkkmmm..', '..mmmmmmmm..',
+    '..mmmmmmmm..', '..mmmmmmmm..', '..mmmmmmmm..', '..m.mm.mm.m.', '............',
+  ],
+  [ // 갑옷 오크 (체력 2)
+    '..a......a..', '..aa....aa..', '..aaaaaaaa..', '.aawwaawwaa.',
+    '.aaaaaaaaaa.', '..mmmmmmmm..', '.mmtmmmmtmm.', 'aaaaaaaaaaaa',
+    'aamaaaaaamaa', '.aaaaaaaaaa.', '..mmm..mmm..', '..mm....mm..', '.aaa....aaa.',
+  ],
+];
 const MONSTER_COLORS = [
   { m: '#5bd65b', d: '#3a9a3a', k: '#111', w: '#fff' },
   { m: '#9b5bd9', d: '#6a3a9a', k: '#111', w: '#ff5c5c' },
   { m: '#e8e8f0', d: '#b0b0c8', k: '#20202a', w: '#fff' },
   { a: '#7a8aa8', m: '#4a8a3a', w: '#ff3030', t: '#f2f2f2' },
 ];
+const GOLD_COLORS = { m: '#ffd23f', d: '#c98a10', a: '#ffd23f', k: '#5a3a00', w: '#ffffff', t: '#ffffff' };
 const WHITE = new Proxy({}, { get: () => '#ffffff' });
-// 한 대 맞은 갑옷 오크의 갑옷 금
-const CRACKS = [[3, 1], [4, 2], [8, 8], [7, 9], [9, 7], [2, 8]];
+const CRACKS = [[3, 1], [4, 2], [8, 8], [7, 9], [9, 7], [2, 8]]; // 한 대 맞은 갑옷 오크의 갑옷 금
+const THEMES = {
+  'theme.dungeon': { a: '#4a4a5e', b: '#525268', line: '#3a3a4c' },
+  'theme.snow': { a: '#dfe8f2', b: '#d2dce9', line: '#b8c6d8', deco: '#ffffff' },
+  'theme.desert': { a: '#e0c27a', b: '#d6b66c', line: '#c4a258', deco: '#a8823a' },
+  'theme.lava': { a: '#3a2424', b: '#432a2a', line: '#2a1818', deco: '#ff5a1a', glow: true },
+};
+const EFFECTS = {
+  'effect.basic': { trail: 'line', burst: null, count: 14, speed: 40, life: 400 },
+  'effect.stardust': { trail: 'line', burst: ['#ffd23f', '#ffffff', '#ffe98a', '#7af0ff'], count: 28, speed: 55, life: 700 },
+  'effect.fire': { trail: 'fire', burst: ['#ff7a1a', '#ffd23f', '#e04040'], count: 20, speed: 45, life: 500 },
+  'effect.lightning': { trail: 'lightning', burst: ['#7af0ff', '#ffffff'], count: 18, speed: 70, life: 350, flash: true },
+};
+
+// ---------- 상태 ----------
 
 const canvas = $('canvas'), ctx = canvas.getContext('2d');
 const pachi = $('pachi'), pctx = pachi.getContext('2d');
 pachi.width = BOARD_W * PACHI_SCALE; pachi.height = BOARD_H * PACHI_SCALE;
 pctx.setTransform(PACHI_SCALE, 0, 0, PACHI_SCALE, 0, 0);
 
-let cleared = load('knightLine.cleared', 0);
-let coins = load('knightLine.coins', 0);
-let bonusDone = load('knightLine.bonus', 0); // 보너스를 받은 마지막 스테이지
-let stage = Math.min(cleared + 1, load('knightLine.stage', 1));
-let s, initialCount = 0, anim = null, queued = null, facing = 'right', shake = null, hintDir = null, hintAt = 0;
-let particles = [], hitFlash = null, toastTimer = null;
-let bonus = null;
+const save = loadSave(k => { try { return localStorage.getItem(k); } catch { return null; } });
+let mode = 'stage', stage = Math.min(save.cleared + 1, save.stage), day = dayIndex();
+let s, startMonsters = [], attempt, anim = null, queued = null, facing = 'right', shake = null, hintDir = null, hintAt = 0;
+let particles = [], hitFlash = null, screenFlash = 0, toastTimer = null, bonus = null, shopTab = 'knight';
 
-function load(key, fallback) {
-  try { return Number(localStorage.getItem(key)) || fallback; } catch { return fallback; }
-}
-function save(key, value) {
-  try { localStorage.setItem(key, String(value)); } catch {}
+function persist() {
+  try { localStorage.setItem('knightLine.save', JSON.stringify(save)); } catch {}
 }
 
-function startStage(n) {
-  stage = n;
-  save('knightLine.stage', n);
-  s = createStage(n);
-  initialCount = s.monsters.length;
+function show(panel) {
+  for (const id of ['play', 'bonus', 'shop', 'book']) $(id).hidden = id !== panel;
+  $('nav').hidden = panel === 'bonus';
+  $('hud').style.visibility = panel === 'play' || panel === 'bonus' ? 'visible' : 'hidden';
+}
+
+function beginLevel(state) {
+  s = state;
+  startMonsters = s.monsters.map(m => ({ kind: m.kind, golden: !!m.golden }));
+  attempt = { hints: 0, undos: 0 };
   anim = queued = shake = hintDir = hitFlash = bonus = null;
   particles = [];
   canvas.width = canvas.height = s.size * CELL;
   $('overlay').hidden = true;
-  $('play').hidden = false;
-  $('bonus').hidden = true;
+  show('play');
   fitBoard();
   updateHud();
+}
+
+function startStage(n) {
+  mode = 'stage';
+  stage = n;
+  save.stage = n;
+  persist();
+  beginLevel(createStage(n));
   if (n === TOUGH_FROM_STAGE) toast('갑옷 오크 등장! 두 번 때려야 쓰러져요');
+  else if (s.monsters.some(m => m.golden) && !save.golds[n]) toast('황금 몬스터를 마지막에 잡아 보세요!');
+}
+
+function startDaily() {
+  mode = 'daily';
+  day = dayIndex();
+  beginLevel(createDaily(day));
+  toast(save.daily.results[day] ? '오늘의 퍼즐 (보상은 이미 받았어요)' : '오늘의 퍼즐! 깨면 코인 보상');
+}
+
+function starText(n) {
+  return n ? '★'.repeat(n) + '☆'.repeat(3 - n) : '';
 }
 
 function updateHud() {
-  $('stageLabel').textContent = `스테이지 ${stage}`;
-  $('prevStage').disabled = stage <= 1 || !!bonus;
-  $('nextStage').disabled = stage > cleared || !!bonus;
+  const daily = mode === 'daily';
+  $('prevStage').hidden = $('nextStage').hidden = daily;
+  $('stageLabel').textContent = daily ? `오늘의 퍼즐 #${day} ` : `스테이지 ${stage} `;
+  $('stars').textContent = starText(daily ? save.daily.results[day]?.stars : save.stars[stage]);
+  $('prevStage').disabled = stage <= 1;
+  $('nextStage').disabled = stage > save.cleared;
   $('left').textContent = `남은 몬스터 ${s.monsters.length}`;
-  $('coins').textContent = `코인 ${coins}`;
+  $('coins').textContent = `코인 ${save.coins}`;
   $('undoBtn').disabled = !s.history.length;
-}
-
-function addCoins(n) {
-  coins += n;
-  save('knightLine.coins', coins);
-  updateHud();
+  $('hintBtn').textContent = canHintFree(stage, daily) ? '힌트' : `힌트 ${HINT_COST}코인`;
+  $('dailyBtn').textContent = daily ? '스테이지로' : `오늘의 퍼즐${save.daily.results[day] ? ' ✓' : ''}`;
+  $('playerTitle').textContent = `${titleFor(save)} · 처치 ${totalKills(save)}`;
 }
 
 function toast(text) {
@@ -263,8 +312,14 @@ function toast(text) {
   toastTimer = setTimeout(() => $('toast').classList.remove('show'), 1800);
 }
 
+// ---------- 퍼즐 조작 ----------
+
+function canPlay() {
+  return !$('play').hidden && $('overlay').hidden && !bonus;
+}
+
 function tryMove(dir) {
-  if (!$('overlay').hidden || bonus) return;
+  if (!canPlay()) return;
   if (anim) { queued = dir; return; } // 달리는 중에 누른 방향은 도착하자마자 이어서 실행
   if (dir === 'left' || dir === 'right') facing = dir;
   const from = { ...s.knight };
@@ -282,59 +337,112 @@ function tryMove(dir) {
 function finishMove(now) {
   const { monster: m, killed } = anim;
   anim = null;
-  if (killed) burst(m.x * CELL + 8, m.y * CELL + 9, MONSTER_COLORS[m.kind].m ?? MONSTER_COLORS[m.kind].a, 14, 40);
-  else { burst(m.x * CELL + 8, m.y * CELL + 8, '#ffffff', 8, 30); hitFlash = { m, at: now }; }
-  if (isCleared(s)) {
-    if (stage > cleared) { cleared = stage; save('knightLine.cleared', cleared); }
-    updateHud();
-    const text = `몬스터 ${initialCount}마리 처치!`;
-    if (stage % BONUS_EVERY === 0 && stage > bonusDone)
-      return showOverlay('STAGE CLEAR', `${text}<br>${stage}스테이지 보너스!`, [['보너스 파친코 ▶', startBonus, true]]);
-    return showOverlay('STAGE CLEAR', text, [['다음 스테이지', () => startStage(stage + 1), true]]);
+  if (killed) {
+    const fx = EFFECTS[save.equip.effect];
+    const colors = fx.burst ?? [m.golden ? '#ffd23f' : MONSTER_COLORS[m.kind].m];
+    burst(m.x * CELL + 8, m.y * CELL + 9, colors, fx.count, fx.speed, fx.life);
+    if (fx.flash) screenFlash = now;
+    if (m.golden && !isCleared(s)) toast('아깝다! 황금 몬스터는 마지막에 잡아야 보너스');
+  } else {
+    burst(m.x * CELL + 8, m.y * CELL + 8, ['#ffffff'], 8, 30, 300);
+    hitFlash = { m, at: now };
   }
+  if (isCleared(s)) return mode === 'daily' ? finishDaily() : finishStage();
   if (isStuck(s)) {
-    return showOverlay('막혔어요', '어느 방향에도 몬스터가 없어요', [['되돌리기', doUndo, true], ['다시', () => startStage(stage)]]);
+    return showOverlay(`<h2>막혔어요</h2><p>어느 방향에도 몬스터가 없어요</p>`, [['되돌리기', doUndo, true], ['다시', restart]]);
   }
   if (queued) { const d = queued; queued = null; tryMove(d); }
 }
 
-function burst(x, y, color, n, speed) {
-  const born = performance.now();
-  for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, v = speed * (0.5 + Math.random());
-    particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, born, color });
-  }
+function rewardLines(rewards) {
+  return rewards.map(r => `<p class="reward">${r.label} +${r.coins} 코인</p>`).join('');
 }
 
-function showOverlay(title, html, buttons) {
+function finishStage() {
+  const stars = starsFor(attempt);
+  const golden = goldenLast(s);
+  const hadGolden = startMonsters.some(m => m.golden);
+  const rewards = recordClear(save, { stage, stars, golden, monsters: startMonsters });
+  persist();
+  updateHud();
+  const missed = hadGolden && !golden && !save.golds[stage] ? `<p class="miss">황금 몬스터를 마지막에 잡으면 +${GOLD_COINS} 코인</p>` : '';
+  const html = `<h2>STAGE CLEAR</h2><div class="bigStars">${starText(stars)}</div>${rewardLines(rewards)}${missed}`;
+  const buttons = [];
+  if (bonusAvailable(save, stage)) buttons.push(['보너스 파친코 ▶', startBonus, true]);
+  else buttons.push(['다음 스테이지', () => startStage(stage + 1), true]);
+  if (stars < 3 || missed) buttons.push(['다시 도전', restart]);
+  showOverlay(html, buttons);
+}
+
+function finishDaily() {
+  const stars = starsFor(attempt);
+  const result = { stars, undos: attempt.undos, hints: attempt.hints };
+  const rewards = recordDaily(save, day, result);
+  recordKills(save, startMonsters);
+  persist();
+  updateHud();
+  const streak = save.daily.streak > 1 ? `<p>${save.daily.streak}일 연속 클리어!</p>` : '';
+  const html = `<h2>오늘의 퍼즐 #${day}</h2><div class="bigStars">${starText(stars)}</div>${rewardLines(rewards)}${streak}`
+    + (rewards.length ? '' : '<p class="muted">오늘 보상은 이미 받았어요. 내일 또 만나요!</p>');
+  showOverlay(html, [['결과 공유', () => share(result), true], ['다시 도전', restart], ['스테이지로', () => startStage(stage)]]);
+}
+
+async function share(result) {
+  const text = shareText(day, result);
+  try {
+    if (navigator.share) await navigator.share({ text, url: location.href });
+    else { await navigator.clipboard.writeText(`${text}\n${location.href}`); toast('결과를 복사했어요'); }
+  } catch { /* 공유를 취소한 경우 */ }
+}
+
+function showOverlay(html, buttons) {
   const o = $('overlay');
-  o.innerHTML = `<h2>${title}</h2><p>${html}</p><div></div>`;
+  o.innerHTML = `${html}<div class="btns"></div>`;
   for (const [label, fn, primary] of buttons) {
     const b = document.createElement('button');
     b.textContent = label;
     if (primary) b.className = 'primary';
     b.onclick = fn;
-    o.querySelector('div').append(b);
+    o.querySelector('.btns').append(b);
   }
   o.hidden = false;
 }
 
-function doUndo() {
-  if (anim || bonus) return;
-  if (undo(s)) { $('overlay').hidden = true; hintDir = null; updateHud(); }
+function restart() {
+  if (mode === 'daily') startDaily();
+  else startStage(stage);
 }
 
-$('undoBtn').onclick = doUndo;
-$('resetBtn').onclick = () => startStage(stage);
-$('hintBtn').onclick = () => {
-  if (anim || !$('overlay').hidden) return;
+function doUndo() {
+  if (anim || bonus) return;
+  if (undo(s)) { attempt.undos++; $('overlay').hidden = true; hintDir = null; updateHud(); }
+}
+
+function useHint() {
+  if (anim || !canPlay()) return;
+  if (hintDir) { hintAt = performance.now(); return; } // 이미 보이는 힌트는 다시 깜빡이기만 하고 코인을 또 받지 않는다
   const d = hint(s);
   if (d === undefined) return toast('너무 복잡해서 힌트를 못 찾았어요. 다시 해 보세요');
   if (!d) return toast('이 상태로는 깰 수 없어요. 되돌려 보세요');
+  // 힌트를 못 찾았을 때는 코인을 받지 않도록 결과를 본 다음에 낸다
+  if (!canHintFree(stage, mode === 'daily')) {
+    if (!spend(save, HINT_COST)) return toast(`코인이 부족해요 (힌트 ${HINT_COST}코인)`);
+    persist();
+  }
+  attempt.hints++;
   hintDir = d; hintAt = performance.now();
-};
+  updateHud();
+}
+
+$('undoBtn').onclick = doUndo;
+$('resetBtn').onclick = restart;
+$('hintBtn').onclick = useHint;
 $('prevStage').onclick = () => startStage(stage - 1);
 $('nextStage').onclick = () => startStage(stage + 1);
+$('dailyBtn').onclick = () => (mode === 'daily' ? startStage(stage) : startDaily());
+$('shopBtn').onclick = openShop;
+$('bookBtn').onclick = openBook;
+$('shopClose').onclick = $('bookClose').onclick = () => { show('play'); updateHud(); };
 
 const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
 addEventListener('keydown', e => {
@@ -342,9 +450,10 @@ addEventListener('keydown', e => {
     if (e.code === 'Space' && !e.repeat) { e.preventDefault(); bonusDrop(); }
     return;
   }
+  if ($('play').hidden) return;
   if (KEYS[e.code]) { e.preventDefault(); if (!e.repeat) tryMove(KEYS[e.code]); }
   else if (e.code === 'KeyZ' || e.code === 'Backspace') doUndo();
-  else if (e.code === 'KeyR') startStage(stage);
+  else if (e.code === 'KeyR') restart();
 });
 for (const b of document.querySelectorAll('#dpad button'))
   b.addEventListener('pointerdown', e => { e.preventDefault(); tryMove(b.dataset.dir); });
@@ -361,27 +470,121 @@ addEventListener('pointerup', e => {
 });
 
 function fitBoard() {
-  const avail = Math.min(innerWidth - 32 - 6, innerHeight - 380, 640);
+  const avail = Math.min(innerWidth - 32 - 6, innerHeight - 420, 640);
   canvas.style.width = canvas.style.height = `${Math.floor(Math.max(s.size * CELL, avail))}px`;
   // 슬롯, 버튼까지 한 화면에 들어오게 위아래 요소 높이만큼 뺀다
-  const ph = Math.max(BOARD_H, Math.min(innerHeight - 470, (innerWidth - 38) * BOARD_H / BOARD_W, 720));
+  const ph = Math.max(BOARD_H, Math.min(innerHeight - 440, (innerWidth - 38) * BOARD_H / BOARD_W, 720));
   pachi.style.height = `${Math.floor(ph)}px`;
   pachi.style.width = `${Math.floor(ph * BOARD_W / BOARD_H)}px`;
 }
 addEventListener('resize', fitBoard);
 
+// ---------- 상점 ----------
+
+function openShop() {
+  if (anim) return;
+  show('shop');
+  renderShop();
+}
+
+function renderShop() {
+  $('tabs').innerHTML = '';
+  for (const [cat, name] of Object.entries(CATEGORIES)) {
+    const b = document.createElement('button');
+    b.textContent = name;
+    b.className = cat === shopTab ? 'on' : '';
+    b.onclick = () => { shopTab = cat; renderShop(); };
+    $('tabs').append(b);
+  }
+  $('items').innerHTML = '';
+  for (const item of SHOP.filter(i => i.cat === shopTab)) {
+    const owned = save.owned.includes(item.id), on = save.equip[item.cat] === item.id;
+    const card = document.createElement('div');
+    card.className = `card${on ? ' on' : ''}`;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 32;
+    drawPreview(cv.getContext('2d'), item);
+    const name = document.createElement('div');
+    name.textContent = item.name;
+    const btn = document.createElement('button');
+    btn.textContent = on ? '장착 중' : owned ? '장착' : `${item.price} 코인`;
+    btn.disabled = on;
+    if (!owned) btn.className = 'primary';
+    btn.onclick = () => {
+      if (owned) equip(save, item.id);
+      else {
+        const r = buy(save, item.id);
+        if (!r.ok) return toast(r.reason);
+        toast(`${item.name} 구매! 바로 장착했어요`);
+      }
+      persist();
+      updateHud();
+      renderShop();
+    };
+    card.append(cv, name, btn);
+    $('items').append(card);
+  }
+}
+
+function drawPreview(c, item) {
+  const theme = item.cat === 'theme' ? item.id : save.equip.theme;
+  drawFloor(c, 2, theme, 0);
+  const skin = item.cat === 'knight' ? item.id : save.equip.knight;
+  if (item.cat === 'effect') {
+    const fx = EFFECTS[item.id];
+    drawTrail(c, fx.trail, 0, 8, 10, 8, 0.5);
+    const colors = fx.burst ?? ['#5bd65b'];
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      px(c, 24 + Math.round(Math.cos(a) * 5), 12 + Math.round(Math.sin(a) * 5), colors[i % colors.length], 2, 2);
+    }
+    drawSprite(c, SKINS[skin].sprite, SKINS[skin].colors, 8, 8);
+  } else drawSprite(c, SKINS[skin].sprite, SKINS[skin].colors, 8, 8);
+}
+
+// ---------- 도감 ----------
+
+function openBook() {
+  if (anim) return;
+  show('book');
+  $('bookSummary').textContent = `칭호: ${titleFor(save)} · 총 처치 ${totalKills(save)}마리`;
+  $('bookList').innerHTML = '';
+  for (const b of BESTIARY) {
+    const n = save.kills[b.key] ?? 0;
+    const row = document.createElement('div');
+    row.className = 'row';
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 16;
+    const c = cv.getContext('2d');
+    if (n) {
+      const golden = b.key === 'golden';
+      drawSprite(c, MONSTERS[golden ? 0 : Number(b.key)], golden ? GOLD_COLORS : MONSTER_COLORS[Number(b.key)], 0, 0);
+    } else drawSprite(c, MONSTERS[b.key === 'golden' ? 0 : Number(b.key)], new Proxy({}, { get: () => '#3a3a4c' }), 0, 0);
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = n ? b.name : '???';
+    const count = document.createElement('div');
+    count.textContent = `${n}마리`;
+    const badges = document.createElement('div');
+    badges.className = 'badges';
+    badges.textContent = BADGES.map(need => (n >= need ? '●' : '○')).join('');
+    row.append(cv, name, count, badges);
+    $('bookList').append(row);
+  }
+}
+
 // ---------- 보너스 파친코 ----------
 
 function startBonus() {
   // 시작하자마자 받은 것으로 기록해서 새로고침으로 다시 돌릴 수 없게 한다
-  bonusDone = stage;
-  save('knightLine.bonus', bonusDone);
-  bonus = { board: createBoard(), won: 0, held: 0, spin: null, lastDrop: 0, floats: [], reached: false };
-  $('play').hidden = true;
-  $('bonus').hidden = false;
+  save.bonusDone = stage;
+  persist();
+  const balls = bonusBalls(save, stage);
+  bonus = { board: createBoard(Math.random, balls), won: 0, held: 0, spin: null, lastDrop: 0, floats: [], reached: false };
+  show('bonus');
   $('dropBtn').hidden = false;
   $('claimBtn').hidden = true;
-  $('reelMsg').textContent = 'START 구멍을 노려 보세요';
+  $('reelMsg').textContent = `별을 모은 만큼 공 ${balls}개!`;
   $('reels').classList.remove('jackpot');
   showReels(['7', '7', '7']);
   fitBoard();
@@ -419,7 +622,9 @@ function showReels(symbols) {
 function winCoins(n, x, y, text) {
   if (!n) return;
   bonus.won += n;
-  addCoins(n);
+  save.coins += n;
+  persist();
+  updateHud();
   bonus.floats.push({ x, y, text: text ?? `+${n}`, born: performance.now() });
 }
 
@@ -475,7 +680,6 @@ function renderBonus(now) {
   p(0, 0, '#14213d', BOARD_W, BOARD_H);
   for (let y = 0; y < BOARD_H; y += 8) p(0, y, '#172645', BOARD_W, 4);
   for (const peg of bonus.board.pegs) { p(peg.x - 1, peg.y - 1, '#ffd23f', 2, 2); p(peg.x - 1, peg.y - 1, '#fff6c0'); }
-  // 바닥 칸
   SLOTS.forEach((slot, i) => {
     const x = Math.round(i * SLOT_W);
     const color = slot.start ? (Math.floor(now / 200) % 2 ? '#ff3030' : '#c01818') : slot.coins >= 10 ? '#2f7f4f' : slot.coins ? '#2a5a8a' : '#333344';
@@ -503,32 +707,81 @@ function renderBonus(now) {
   }
 }
 
-// ---------- 퍼즐 화면 그리기 ----------
+// ---------- 그리기 ----------
 
-function px(x, y, color, w = 1, h = 1) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, w, h);
+function px(c, x, y, color, w = 1, h = 1) {
+  c.fillStyle = color;
+  c.fillRect(x, y, w, h);
 }
 
-function drawSprite(map, colors, x, y, flip = false) {
+function drawSprite(c, map, colors, x, y, flip = false) {
   const ox = Math.round(x) + 2, oy = Math.round(y) + 2;
   map.forEach((row, r) => {
-    for (let c = 0; c < row.length; c++) {
-      const ch = row[flip ? row.length - 1 - c : c];
-      if (ch !== '.') px(ox + c, oy + r, colors[ch]);
+    for (let col = 0; col < row.length; col++) {
+      const ch = row[flip ? row.length - 1 - col : col];
+      if (ch !== '.') px(c, ox + col, oy + r, colors[ch]);
     }
   });
+}
+
+function drawFloor(c, size, themeId, now) {
+  const t = THEMES[themeId];
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const X = x * CELL, Y = y * CELL;
+      px(c, X, Y, (x + y) % 2 ? t.a : t.b, CELL, CELL);
+      px(c, X, Y + CELL - 1, t.line, CELL, 1);
+      px(c, X + CELL - 1, Y, t.line, 1, CELL);
+      if (!t.deco) continue;
+      // 칸마다 정해진 자리에 무늬를 찍는다 (눈송이, 모래, 용암 틈)
+      const h = (x * 73 + y * 151) % 97;
+      const dx = 2 + (h % 10), dy = 2 + ((h * 7) % 10);
+      const color = t.glow && Math.floor(now / 400 + h) % 3 === 0 ? '#ffd23f' : t.deco;
+      if (t.glow) { px(c, X + dx, Y + dy, color, 3, 1); px(c, X + dx + 2, Y + dy + 1, color, 2, 1); }
+      else { px(c, X + dx, Y + dy, color); if (h % 3 === 0) px(c, X + dy, Y + dx, color); }
+    }
+}
+
+// 기사가 달려간 길의 잔상. (x0,y0)~(x1,y1)은 칸 왼쪽 위 기준 픽셀 좌표
+function drawTrail(c, kind, x0, y0, x1, y1, alpha = 0.25) {
+  const len = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  if (kind === 'line') {
+    c.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    c.fillRect(Math.min(x0, x1) + 6, Math.min(y0, y1) + 6, Math.abs(x1 - x0) + 4, Math.abs(y1 - y0) + 4);
+    return;
+  }
+  const colors = kind === 'fire' ? ['#ff7a1a', '#ffd23f', '#e04040'] : ['#7af0ff', '#ffffff'];
+  for (let i = 0; i <= len; i += 2) {
+    const t = len ? i / len : 0;
+    const x = x0 + (x1 - x0) * t + 7, y = y0 + (y1 - y0) * t + 7;
+    const j = kind === 'fire' ? (Math.random() - 0.5) * 4 : Math.sin(i * 1.7 + performance.now() / 40) * 3;
+    const vertical = x0 === x1;
+    px(c, Math.round(x + (vertical ? j : 0)), Math.round(y + (vertical ? 0 : j)), colors[(i / 2) % colors.length | 0], 2, 2);
+  }
 }
 
 function drawMonster(m, now) {
   const bob = Math.round(Math.sin(now / 300 + m.x * 1.7 + m.y));
   const x = m.x * CELL, y = m.y * CELL + bob;
   const flash = hitFlash && hitFlash.m === m && now - hitFlash.at < 200;
-  drawSprite(SPRITES.monsters[m.kind], flash ? WHITE : MONSTER_COLORS[m.kind], x, y);
-  if (m.kind !== 3) return;
-  if (m.hp === 1) for (const [cx, cy] of CRACKS) px(x + 2 + cx, y + 2 + cy, '#20202a');
-  // 남은 체력 칸
-  for (let i = 0; i < 2; i++) px(x + 4 + i * 5, y, i < m.hp ? '#ff3030' : '#3a3a4c', 3, 2);
+  drawSprite(ctx, MONSTERS[m.kind], flash ? WHITE : m.golden ? GOLD_COLORS : MONSTER_COLORS[m.kind], x, y);
+  if (m.golden) {
+    // 반짝이는 점이 몸 둘레를 돈다
+    const a = now / 300;
+    px(ctx, x + 8 + Math.round(Math.cos(a) * 7), y + 8 + Math.round(Math.sin(a) * 7), '#ffffff', 1, 1);
+    px(ctx, x + 8 + Math.round(Math.cos(a + Math.PI) * 7), y + 8 + Math.round(Math.sin(a + Math.PI) * 7), '#fff6c0', 1, 1);
+  }
+  if (m.kind !== TOUGH_KIND) return;
+  if (m.hp === 1) for (const [cx, cy] of CRACKS) px(ctx, x + 2 + cx, y + 2 + cy, '#20202a');
+  for (let i = 0; i < 2; i++) px(ctx, x + 4 + i * 5, y, i < m.hp ? '#ff3030' : '#3a3a4c', 3, 2);
+}
+
+function burst(x, y, colors, n, speed, life) {
+  const born = performance.now();
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = speed * (0.5 + Math.random());
+    particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, born, life, color: colors[i % colors.length] });
+  }
 }
 
 function render(now) {
@@ -536,14 +789,8 @@ function render(now) {
   const dt = Math.min(0.05, (now - (render.last ?? now)) / 1000);
   render.last = now;
   if (bonus) { updateBonus(now, dt); renderBonus(now); return; }
-  if (!s) return;
-  for (let y = 0; y < s.size; y++)
-    for (let x = 0; x < s.size; x++) {
-      const X = x * CELL, Y = y * CELL;
-      px(X, Y, (x + y) % 2 ? '#4a4a5e' : '#525268', CELL, CELL);
-      px(X, Y + CELL - 1, '#3a3a4c', CELL, 1);
-      px(X + CELL - 1, Y, '#3a3a4c', 1, CELL);
-    }
+  if (!s || $('play').hidden) return;
+  drawFloor(ctx, s.size, save.equip.theme, now);
 
   // 힌트: 다음에 갈 방향의 몬스터까지 점선
   if (hintDir && !anim) {
@@ -551,8 +798,8 @@ function render(now) {
     if (m && Math.floor((now - hintAt) / 250) % 2 === 0) {
       const [dx, dy] = DIRS[hintDir];
       for (let x = s.knight.x + dx, y = s.knight.y + dy; x !== m.x || y !== m.y; x += dx, y += dy)
-        px(x * CELL + 6, y * CELL + 6, '#ffd23f', 4, 4);
-      px(m.x * CELL, m.y * CELL, 'rgba(255, 210, 63, 0.35)', CELL, CELL);
+        px(ctx, x * CELL + 6, y * CELL + 6, '#ffd23f', 4, 4);
+      px(ctx, m.x * CELL, m.y * CELL, 'rgba(255, 210, 63, 0.35)', CELL, CELL);
     }
   }
 
@@ -567,10 +814,7 @@ function render(now) {
       const e = t * t; // 점점 빨라지며 돌진
       kx = (anim.from.x + (anim.to.x - anim.from.x) * e) * CELL;
       ky = (anim.from.y + (anim.to.y - anim.from.y) * e) * CELL;
-      // 달려간 길에 남는 잔상
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-      const x0 = anim.from.x * CELL + 6, y0 = anim.from.y * CELL + 6;
-      ctx.fillRect(Math.min(x0, kx + 6), Math.min(y0, ky + 6), Math.abs(kx - anim.from.x * CELL) + 4, Math.abs(ky - anim.from.y * CELL) + 4);
+      drawTrail(ctx, EFFECTS[save.equip.effect].trail, anim.from.x * CELL, anim.from.y * CELL, kx, ky);
     }
   }
 
@@ -586,13 +830,15 @@ function render(now) {
       kx += dx * off; ky += dy * off;
     }
   }
-  drawSprite(SPRITES.knight, KNIGHT_COLORS, kx, ky, facing === 'left');
+  const skin = SKINS[save.equip.knight];
+  drawSprite(ctx, skin.sprite, skin.colors, kx, ky, facing === 'left');
 
-  particles = particles.filter(p => now - p.born < 400);
+  particles = particles.filter(p => now - p.born < p.life);
   for (const p of particles) {
     const t = (now - p.born) / 1000;
-    px(Math.round(p.x + p.vx * t), Math.round(p.y + p.vy * t), p.color, 2, 2);
+    px(ctx, Math.round(p.x + p.vx * t), Math.round(p.y + p.vy * t), p.color, 2, 2);
   }
+  if (now - screenFlash < 90) px(ctx, 0, 0, 'rgba(200, 245, 255, 0.35)', canvas.width, canvas.height);
 
   if (anim && now - anim.start >= anim.dur) finishMove(now);
 }

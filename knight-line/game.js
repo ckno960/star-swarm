@@ -6,6 +6,10 @@ export const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 export const MONSTER_KINDS = 3;   // 일반 몬스터 종류 수 (kind 0~2)
 export const TOUGH_KIND = 3;      // 갑옷 몬스터
 export const TOUGH_FROM_STAGE = 11;
+export const GOLDEN_FROM_STAGE = 3;
+export const GOLDEN_CHANCE = 0.35;
+// 오늘의 퍼즐은 요일처럼 7일 주기로 난이도가 돈다 (이 스테이지 번호의 크기·몬스터 수를 빌려 쓴다)
+const DAILY_STAGES = [8, 10, 12, 14, 16, 18, 20];
 
 export function stageConfig(n) {
   const size = Math.min(10, 5 + Math.floor((n - 1) / 2));
@@ -17,7 +21,31 @@ export function stageConfig(n) {
 // 스테이지 번호를 시드로 써서 같은 스테이지는 언제나 같은 판이 나온다
 export function createStage(n) {
   const { size, count, tough } = stageConfig(n);
-  return createState(generateLevel(seeded(n * 7919), size, count, tough));
+  const level = generateLevel(seeded(n * 7919), size, count, tough);
+  // 판을 만드는 난수와 따로 굴려야 황금 몬스터가 있어도 판 배치가 바뀌지 않는다
+  if (n >= GOLDEN_FROM_STAGE && seeded(n * 104729)() < GOLDEN_CHANCE) markGolden(level);
+  return createState(level);
+}
+
+export function createDaily(day) {
+  const { size, count, tough } = stageConfig(DAILY_STAGES[((day % 7) + 7) % 7]);
+  return createState(generateLevel(seeded(500009 + day * 7717), size, count, tough));
+}
+
+// 황금 몬스터는 정답 경로에서 마지막으로 쓰러지는 몬스터라서, 마지막에 잡는 방법이 반드시 있다
+function markGolden(level) {
+  const s = createState(level);
+  let last = null;
+  for (const d of level.solution) {
+    const r = move(s, d);
+    if (r.killed) last = r.monster;
+  }
+  level.monsters.find(o => o.x === last.x && o.y === last.y).golden = true;
+}
+
+// 클리어한 판에서 마지막으로 쓰러뜨린 몬스터가 황금 몬스터인지
+export function goldenLast(s) {
+  return isCleared(s) && !!s.history.at(-1)?.monster.golden;
 }
 
 export function createState(level) {

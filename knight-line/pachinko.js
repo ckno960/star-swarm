@@ -10,14 +10,14 @@ export const SLOT_W = BOARD_W / SLOTS.length;
 export const SYMBOLS = ['7', '★', '♦', '♣', '♥'];
 const GRAVITY = 260, BOUNCE = 0.45, MAX_AGE = 12;
 
-export function createBoard(rand = Math.random) {
+export function createBoard(rand = Math.random, balls = BALLS_PER_BONUS) {
   const pegs = [];
   for (let row = 0; row < 10; row++) {
     const y = 28 + row * 12;
     const offset = row % 2 ? 6 : 0;
     for (let x = 6 + offset; x <= BOARD_W - 6; x += 12) pegs.push({ x, y });
   }
-  return { rand, pegs, balls: [], ballsLeft: BALLS_PER_BONUS };
+  return { rand, pegs, balls: [], ballsLeft: balls };
 }
 
 // 위쪽 x 위치에서 공을 하나 떨어뜨린다. 남은 공이 없으면 false
