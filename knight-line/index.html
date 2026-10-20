@@ -5,17 +5,55 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>나이트 라인</title>
 <style>
-  :root { --bg: #1b1b2a; --panel: #26263a; --line: #4a4a6a; --text: #f2f2f2; --accent: #ffd23f; --red: #ff5c5c; }
+  :root { --bg: #1b1b2a; --panel: #26263a; --line: #4a4a6a; --text: #f2f2f2; --accent: #ffd23f; --red: #ff5c5c; --green: #7dff9b; }
   html, body {
     margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
     font: 16px system-ui, sans-serif;
     overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none;
   }
   body { display: flex; justify-content: center; }
-  main { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; max-width: 480px; padding: 16px; box-sizing: border-box; }
-  h1 { margin: 4px 0 0; font-size: 26px; letter-spacing: 3px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
-  #hud { display: flex; justify-content: space-between; align-items: center; width: 100%; font-size: 17px; }
-  #stagePick { display: flex; align-items: center; gap: 6px; }
+  main { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; max-width: 480px; padding: 12px 16px; box-sizing: border-box; }
+  .panel { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+  .panel[hidden] { display: none; }
+  h1 { margin: 48px 0 0; font-size: 40px; letter-spacing: 4px; color: var(--accent); text-shadow: 4px 4px 0 #000; }
+  #homeArt { width: 288px; height: 96px; margin: 8px 0; }
+  #playerTitle { font-size: 14px; opacity: 0.8; }
+  #homeCoins { color: var(--accent); font-weight: 700; margin-bottom: 12px; }
+  button.big { width: 260px; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 20px; }
+  button.big small { font-size: 12px; font-weight: 400; opacity: 0.8; }
+  .row2 { display: flex; gap: 8px; width: 260px; margin-top: 8px; }
+  .row2 button { flex: 1; }
+  .iconBtn { position: absolute; top: 12px; right: 16px; width: 44px; padding: 0; font-size: 22px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+  .topbar button { min-height: 38px; font-size: 14px; }
+  .topbar h2 { flex: 1; text-align: center; }
+  .topbar .spacer { width: 78px; }
+  #stageGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; overflow-y: auto; max-height: calc(100vh - 110px); padding: 4px; box-sizing: border-box; }
+  #stageGrid button { min-height: 60px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 18px; }
+  #stageGrid button small { font-size: 10px; color: var(--accent); letter-spacing: 0; font-weight: 400; }
+  #stageGrid button.bonus { border-color: #c01818; }
+  #stageGrid button.current { border-color: var(--accent); }
+  #hud { display: flex; justify-content: space-between; align-items: center; width: 100%; font-size: 16px; }
+  #hud[hidden] { display: none; }
+  #stagePick { display: flex; align-items: center; gap: 8px; }
+  #pauseBtn { min-height: 40px; width: 44px; padding: 0; font-size: 16px; }
+  #modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.75); z-index: 5; }
+  #modal[hidden] { display: none; }
+  #modal .box { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; background: var(--bg); border: 3px solid var(--accent); box-shadow: 4px 4px 0 #000; }
+  #modal .box h2 { margin: 0 0 6px; font-size: 24px; color: var(--accent); }
+  #modal .box p { margin: 0 0 6px; text-align: center; line-height: 1.5; }
+  #modal .box button { width: 220px; }
+  #modal .box button.danger { border-color: var(--red); color: var(--red); }
+  .setting { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 10px; background: var(--panel); border: 3px solid var(--line); box-sizing: border-box; }
+  .setting .label { font-weight: 700; }
+  .setting .desc { font-size: 12px; opacity: 0.7; }
+  .choices { display: flex; gap: 6px; }
+  .choices button { flex: 1; min-height: 38px; font-size: 14px; padding: 0 6px; }
+  .choices button.on { border-color: var(--accent); color: var(--accent); }
+  #settings .danger { border-color: var(--red); color: var(--red); width: 100%; }
+  #stars { color: var(--accent); letter-spacing: 1px; }
+  #stats { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  #coins { color: var(--accent); font-weight: 700; }
   button {
     font: 700 16px system-ui, sans-serif; color: var(--text); background: var(--panel);
     border: 3px solid var(--line); border-radius: 0; min-height: 44px; padding: 0 14px; box-shadow: 3px 3px 0 #000;
@@ -23,166 +61,407 @@
   button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
   button:disabled { opacity: 0.35; }
   button.primary { border-color: var(--accent); }
-  #stagePick button { min-height: 36px; min-width: 36px; padding: 0; }
+  #stagePick button { min-height: 34px; min-width: 34px; padding: 0; }
   #board { position: relative; }
-  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; border: 3px solid #000; touch-action: none; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+  #canvas, #pachi { border: 3px solid #000; }
   #overlay {
     position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 12px; background: rgba(0, 0, 0, 0.7); text-align: center;
+    gap: 10px; background: rgba(0, 0, 0, 0.75); text-align: center; padding: 8px; box-sizing: border-box;
   }
   #overlay[hidden] { display: none; }
-  #overlay h2 { margin: 0; font-size: 30px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
-  #overlay p { margin: 0; opacity: 0.85; }
-  #overlay div { display: flex; gap: 8px; }
+  #overlay h2 { margin: 0; font-size: 28px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
+  #overlay .bigStars { font-size: 34px; color: var(--accent); letter-spacing: 4px; text-shadow: 2px 2px 0 #000; }
+  #overlay p { margin: 0; opacity: 0.9; line-height: 1.5; }
+  #overlay .reward { color: var(--green); }
+  #overlay .miss { color: var(--red); font-size: 14px; }
+  #overlay .btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   #tools { display: flex; gap: 8px; }
   #dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 4px; }
   #dpad button { padding: 0; min-height: 0; font-size: 22px; }
+  .panel h2 { margin: 0; font-size: 22px; color: var(--accent); text-shadow: 3px 3px 0 #000; letter-spacing: 2px; }
+  #reels { display: flex; gap: 6px; padding: 6px; background: #000; border: 3px solid var(--accent); }
+  #reels span {
+    width: 52px; height: 60px; display: flex; align-items: center; justify-content: center;
+    background: #f2f2f2; color: #1b1b2a; font: 900 34px system-ui, sans-serif;
+  }
+  #reels span.seven { color: #e02020; }
+  #reels.jackpot { animation: flash 0.15s steps(2) 12; }
+  @keyframes flash { 50% { border-color: #ff5c5c; background: #ffd23f; } }
+  #reelMsg { min-height: 22px; font-weight: 700; color: var(--accent); text-align: center; }
+  #bonusInfo { display: flex; gap: 16px; font-size: 16px; }
+  #tabs { display: flex; gap: 6px; }
+  #tabs button { min-height: 36px; }
+  #tabs button.on { border-color: var(--accent); color: var(--accent); }
+  #items { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; overflow-y: auto; max-height: calc(100vh - 290px); }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; background: var(--panel); border: 3px solid var(--line); }
+  .card.on { border-color: var(--accent); }
+  .card canvas { width: 64px; height: 64px; }
+  .card button { width: 100%; min-height: 36px; font-size: 14px; }
+  #bookList { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 8px; background: var(--panel); border: 3px solid var(--line); }
+  .row canvas { width: 48px; height: 48px; }
+  .row .name { flex: 1; }
+  .row .badges { color: var(--accent); letter-spacing: 2px; }
+  .muted { font-size: 13px; opacity: 0.7; text-align: center; }
   #toast {
     position: fixed; left: 50%; top: 16px; transform: translateX(-50%);
     background: #000; border: 3px solid var(--accent); padding: 8px 16px; white-space: nowrap; pointer-events: none;
-    transition: opacity 0.2s; opacity: 0;
+    transition: opacity 0.2s; opacity: 0; z-index: 10;
   }
   #toast.show { opacity: 1; }
   .hint { font-size: 12px; opacity: 0.6; text-align: center; margin: 0; line-height: 1.5; }
-  @media (hover: hover) and (pointer: fine) { #dpad { display: none; } }
+  @media (hover: hover) and (pointer: fine) { body[data-dpad="auto"] #dpad { display: none; } }
+  body[data-dpad="hide"] #dpad { display: none; }
 </style>
 </head>
 <body>
 <main>
-  <h1>나이트 라인</h1>
-  <div id="hud">
+  <section id="home" class="panel">
+    <button id="settingsBtn" class="iconBtn" aria-label="환경설정">⚙</button>
+    <h1>나이트 라인</h1>
+    <canvas id="homeArt" width="96" height="32" aria-hidden="true"></canvas>
+    <div id="playerTitle"></div>
+    <div id="homeCoins"></div>
+    <button id="stageBtn" class="big primary">스테이지<small id="stageSub"></small></button>
+    <button id="dailyBtn" class="big">오늘의 퍼즐<small id="dailySub"></small></button>
+    <div class="row2"><button id="shopBtn">상점</button><button id="bookBtn">도감</button></div>
+  </section>
+
+  <section id="select" class="panel" hidden>
+    <div class="topbar"><button id="selectBack">← 메인</button><h2>스테이지</h2><span class="spacer"></span></div>
+    <div id="stageGrid"></div>
+  </section>
+
+  <section id="settings" class="panel" hidden>
+    <div class="topbar"><button id="settingsBack">← 돌아가기</button><h2>환경설정</h2><span class="spacer"></span></div>
+    <div id="settingList" style="display:flex;flex-direction:column;gap:10px;width:100%"></div>
+    <button id="resetData" class="danger">기록 초기화</button>
+    <p class="muted">나이트 라인 · 기록은 이 기기에만 저장돼요</p>
+  </section>
+
+  <div id="hud" hidden>
     <div id="stagePick">
-      <button id="prevStage" aria-label="이전 스테이지">◀</button>
-      <span id="stageLabel"></span>
-      <button id="nextStage" aria-label="다음 스테이지">▶</button>
+      <button id="pauseBtn" aria-label="일시정지">❚❚</button>
+      <span><span id="stageLabel"></span><span id="stars"></span></span>
     </div>
-    <span id="left"></span>
+    <div id="stats"><span id="left"></span><span id="coins"></span></div>
   </div>
-  <div id="board">
-    <canvas id="canvas" role="img" aria-label="게임 화면. 기사와 몬스터가 있는 격자입니다."></canvas>
-    <div id="overlay" hidden></div>
+
+  <div id="play" class="panel">
+    <div id="board">
+      <canvas id="canvas" role="img" aria-label="게임 화면. 기사와 몬스터가 있는 격자입니다."></canvas>
+      <div id="overlay" hidden></div>
+    </div>
+    <div id="tools">
+      <button id="undoBtn">되돌리기</button>
+      <button id="resetBtn">다시</button>
+      <button id="hintBtn">힌트</button>
+    </div>
+    <div id="dpad">
+      <span></span><button data-dir="up" aria-label="위">▲</button><span></span>
+      <button data-dir="left" aria-label="왼쪽">◀</button><span></span><button data-dir="right" aria-label="오른쪽">▶</button>
+      <span></span><button data-dir="down" aria-label="아래">▼</button><span></span>
+    </div>
+    <p class="hint">★ 클리어 · ★★ 힌트 없이 · ★★★ 힌트·되돌리기 없이<br>반짝이는 황금 몬스터를 마지막에 잡으면 보너스 코인!</p>
   </div>
-  <div id="tools">
-    <button id="undoBtn">되돌리기</button>
-    <button id="resetBtn">다시</button>
-    <button id="hintBtn">힌트</button>
-  </div>
-  <div id="dpad">
-    <span></span><button data-dir="up" aria-label="위">▲</button><span></span>
-    <button data-dir="left" aria-label="왼쪽">◀</button><span></span><button data-dir="right" aria-label="오른쪽">▶</button>
-    <span></span><button data-dir="down" aria-label="아래">▼</button><span></span>
-  </div>
-  <p class="hint">밀기·방향키로 4방향 이동. 기사는 그 방향의 첫 몬스터까지 달려가 처치해요.<br>몬스터가 없는 방향으로는 갈 수 없어요. 모두 처치하면 클리어!</p>
+
+  <section id="bonus" class="panel" hidden>
+    <h2>보너스 파친코</h2>
+    <div id="reels" aria-live="polite"><span>7</span><span>7</span><span>7</span></div>
+    <div id="reelMsg"></div>
+    <canvas id="pachi" role="img" aria-label="파친코 판. 위를 눌러 공을 떨어뜨립니다."></canvas>
+    <div id="bonusInfo"><span id="ballsLeft"></span><span id="won"></span></div>
+    <button id="dropBtn" class="primary">공 발사</button>
+    <button id="claimBtn" class="primary" hidden>계속하기</button>
+  </section>
+
+  <section id="shop" class="panel" hidden>
+    <h2>상점</h2>
+    <div id="tabs"></div>
+    <div id="items"></div>
+    <button id="shopClose">← 메인</button>
+  </section>
+
+  <section id="book" class="panel" hidden>
+    <h2>몬스터 도감</h2>
+    <p class="muted" id="bookSummary"></p>
+    <div id="bookList"></div>
+    <p class="muted">종류마다 10 · 50 · 100마리를 처치하면 배지(●)를 받아요.<br>모든 종류 100마리를 채우면 '전설의 기사'!</p>
+    <button id="bookClose">← 메인</button>
+  </section>
 </main>
+<div id="modal" hidden><div class="box"></div></div>
 <div id="toast"></div>
 
 <script type="module">
-import { createStage, stageConfig, move, undo, targetIn, isCleared, isStuck, solve, DIRS } from './game.js';
+import {
+  createStage, createDaily, move, undo, targetIn, isCleared, isStuck, hint, goldenLast, DIRS, TOUGH_FROM_STAGE, TOUGH_KIND,
+} from './game.js';
+import {
+  createBoard, dropBall, stepBoard, isFinished, spinReels,
+  BOARD_W, BOARD_H, BALL_R, SLOTS, SLOT_W, SLOT_TOP, SYMBOLS,
+} from './pachinko.js';
+import {
+  loadSave, starsFor, recordClear, recordKills, recordDaily, bonusAvailable, bonusBalls, canHintFree, spend, buy, equip,
+  titleFor, totalKills, dayIndex, shareText, SHOP, CATEGORIES, BESTIARY, BADGES, HINT_COST, GOLD_COINS, BONUS_EVERY,
+} from './meta.js';
 
 const $ = id => document.getElementById(id);
-const CELL = 16, SLIDE_MS_PER_CELL = 45;
-const SPRITES = {
-  knight: [
-    '.....rr.....',
-    '....rr......',
-    '...gggggg...',
-    '..gggggggg..',
-    '..gkkkkkkg..',
-    '..gggggggg..',
-    '...gggggg...',
-    '..bbbbbbbb.w',
-    '.gbbbybbbbgw',
-    '.gbbbbbbbbgw',
-    '..bbbbbbbb.h',
-    '...gg..gg...',
-    '..ggg..ggg..',
-  ],
-  monsters: [
-    [ // 슬라임
-      '............',
-      '............',
-      '............',
-      '............',
-      '.....mm.....',
-      '...mmmmmm...',
-      '..mmmmmmmm..',
-      '.mmwkmmwkmm.',
-      '.mmkkmmkkmm.',
-      'mmmmmmmmmmmm',
-      'mmmmddddmmmm',
-      '.mmmmmmmmmm.',
-      '..mmmmmmmm..',
-    ],
-    [ // 박쥐
-      '............',
-      '............',
-      'm..........m',
-      'mm...mm...mm',
-      'mmm.mmmm.mmm',
-      'mmmmwkkwmmmm',
-      '.mmmkkkkmmm.',
-      '..mmmddmmm..',
-      '...m.mm.m...',
-      '............',
-      '............',
-      '............',
-      '............',
-    ],
-    [ // 유령
-      '....mmmm....',
-      '...mmmmmm...',
-      '..mmmmmmmm..',
-      '..mkkmmkkm..',
-      '..mkkmmkkm..',
-      '..mmmmmmmm..',
-      '..mmmkkmmm..',
-      '..mmmmmmmm..',
-      '..mmmmmmmm..',
-      '..mmmmmmmm..',
-      '..mmmmmmmm..',
-      '..m.mm.mm.m.',
-      '............',
-    ],
-  ],
+const CELL = 16, MAX_HELD_SPINS = 4;
+const SLIDE_MS = { normal: 45, fast: 22 }; // 한 칸 달리는 데 걸리는 시간
+const SETTINGS = [
+  { key: 'speed', label: '이동 속도', desc: '기사가 달려가는 애니메이션 속도', choices: [['normal', '보통'], ['fast', '빠르게']] },
+  { key: 'flash', label: '번쩍임 효과', desc: '번개 효과, 피격·잭팟 깜빡임', choices: [[true, '켜기'], [false, '끄기']] },
+  { key: 'dpad', label: '화면 방향 버튼', desc: '자동은 휴대폰·태블릿에서만 보여요', choices: [['auto', '자동'], ['show', '항상'], ['hide', '숨기기']] },
+];
+const PACHI_SCALE = 4; // 파친코 판은 내부 해상도를 키워서 칸 숫자가 번지지 않게 한다
+
+// ---------- 그림 데이터 ----------
+
+const KNIGHT = [
+  '.....rr.....',
+  '....rr......',
+  '...gggggg...',
+  '..gggggggg..',
+  '..gkkkkkkg..',
+  '..gggggggg..',
+  '...gggggg...',
+  '..bbbbbbbb.w',
+  '.gbbbybbbbgw',
+  '.gbbbbbbbbgw',
+  '..bbbbbbbb.h',
+  '...gg..gg...',
+  '..ggg..ggg..',
+];
+const CAT_KNIGHT = ['..g......g..', '..gg....gg..', ...KNIGHT.slice(2)];
+const SKINS = {
+  'knight.basic': { sprite: KNIGHT, colors: { r: '#e04040', g: '#c8ccd8', k: '#20202a', b: '#3a5fcf', y: '#ffd23f', w: '#e8e8f0', h: '#8a5a2a' } },
+  'knight.cat': { sprite: CAT_KNIGHT, colors: { r: '#f0a040', g: '#f0a040', k: '#20202a', b: '#ff7aa8', y: '#ffffff', w: '#e8e8f0', h: '#8a5a2a' } },
+  'knight.ninja': { sprite: KNIGHT, colors: { r: '#e04040', g: '#2e2e40', k: '#f2c49b', b: '#1e1e2c', y: '#e04040', w: '#c8ccd8', h: '#5a5a6a' } },
+  'knight.skull': { sprite: KNIGHT, colors: { r: '#9a4aff', g: '#e8e6dc', k: '#000000', b: '#4a2a5a', y: '#9a4aff', w: '#c8ccd8', h: '#3a3a3a' } },
+  'knight.gold': { sprite: KNIGHT, colors: { r: '#ffffff', g: '#ffd23f', k: '#5a3a00', b: '#c98a10', y: '#ffffff', w: '#fff6c0', h: '#8a5a2a' } },
 };
-const KNIGHT_COLORS = { r: '#e04040', g: '#c8ccd8', k: '#20202a', b: '#3a5fcf', y: '#ffd23f', w: '#e8e8f0', h: '#8a5a2a' };
+const MONSTERS = [
+  [ // 슬라임
+    '............', '............', '............', '............',
+    '.....mm.....', '...mmmmmm...', '..mmmmmmmm..', '.mmwkmmwkmm.',
+    '.mmkkmmkkmm.', 'mmmmmmmmmmmm', 'mmmmddddmmmm', '.mmmmmmmmmm.', '..mmmmmmmm..',
+  ],
+  [ // 박쥐
+    '............', '............', 'm..........m', 'mm...mm...mm',
+    'mmm.mmmm.mmm', 'mmmmwkkwmmmm', '.mmmkkkkmmm.', '..mmmddmmm..',
+    '...m.mm.m...', '............', '............', '............', '............',
+  ],
+  [ // 유령
+    '....mmmm....', '...mmmmmm...', '..mmmmmmmm..', '..mkkmmkkm..',
+    '..mkkmmkkm..', '..mmmmmmmm..', '..mmmkkmmm..', '..mmmmmmmm..',
+    '..mmmmmmmm..', '..mmmmmmmm..', '..mmmmmmmm..', '..m.mm.mm.m.', '............',
+  ],
+  [ // 갑옷 오크 (체력 2)
+    '..a......a..', '..aa....aa..', '..aaaaaaaa..', '.aawwaawwaa.',
+    '.aaaaaaaaaa.', '..mmmmmmmm..', '.mmtmmmmtmm.', 'aaaaaaaaaaaa',
+    'aamaaaaaamaa', '.aaaaaaaaaa.', '..mmm..mmm..', '..mm....mm..', '.aaa....aaa.',
+  ],
+];
 const MONSTER_COLORS = [
   { m: '#5bd65b', d: '#3a9a3a', k: '#111', w: '#fff' },
   { m: '#9b5bd9', d: '#6a3a9a', k: '#111', w: '#ff5c5c' },
   { m: '#e8e8f0', d: '#b0b0c8', k: '#20202a', w: '#fff' },
+  { a: '#7a8aa8', m: '#4a8a3a', w: '#ff3030', t: '#f2f2f2' },
 ];
-const SAVE_KEY = 'knightLine.cleared';
+const GOLD_COLORS = { m: '#ffd23f', d: '#c98a10', a: '#ffd23f', k: '#5a3a00', w: '#ffffff', t: '#ffffff' };
+const WHITE = new Proxy({}, { get: () => '#ffffff' });
+const CRACKS = [[3, 1], [4, 2], [8, 8], [7, 9], [9, 7], [2, 8]]; // 한 대 맞은 갑옷 오크의 갑옷 금
+const THEMES = {
+  'theme.dungeon': { a: '#4a4a5e', b: '#525268', line: '#3a3a4c' },
+  'theme.snow': { a: '#dfe8f2', b: '#d2dce9', line: '#b8c6d8', deco: '#ffffff' },
+  'theme.desert': { a: '#e0c27a', b: '#d6b66c', line: '#c4a258', deco: '#a8823a' },
+  'theme.lava': { a: '#3a2424', b: '#432a2a', line: '#2a1818', deco: '#ff5a1a', glow: true },
+};
+const EFFECTS = {
+  'effect.basic': { trail: 'line', burst: null, count: 14, speed: 40, life: 400 },
+  'effect.stardust': { trail: 'line', burst: ['#ffd23f', '#ffffff', '#ffe98a', '#7af0ff'], count: 28, speed: 55, life: 700 },
+  'effect.fire': { trail: 'fire', burst: ['#ff7a1a', '#ffd23f', '#e04040'], count: 20, speed: 45, life: 500 },
+  'effect.lightning': { trail: 'lightning', burst: ['#7af0ff', '#ffffff'], count: 18, speed: 70, life: 350, flash: true },
+};
+
+// ---------- 상태 ----------
 
 const canvas = $('canvas'), ctx = canvas.getContext('2d');
-let cleared = load(SAVE_KEY, 0);
-let stage = Math.min(cleared + 1, load('knightLine.stage', 1));
-let s, anim = null, queued = null, facing = 'right', shake = null, hint = null, particles = [], toastTimer = null;
+const pachi = $('pachi'), pctx = pachi.getContext('2d');
+pachi.width = BOARD_W * PACHI_SCALE; pachi.height = BOARD_H * PACHI_SCALE;
+pctx.setTransform(PACHI_SCALE, 0, 0, PACHI_SCALE, 0, 0);
 
-function load(key, fallback) {
-  try { return Number(localStorage.getItem(key)) || fallback; } catch { return fallback; }
-}
-function save(key, value) {
-  try { localStorage.setItem(key, String(value)); } catch {}
+const save = loadSave(k => { try { return localStorage.getItem(k); } catch { return null; } });
+let mode = 'stage', stage = Math.min(save.cleared + 1, save.stage), day = dayIndex();
+let s, startMonsters = [], attempt, anim = null, queued = null, facing = 'right', shake = null, hintDir = null, hintAt = 0;
+let particles = [], hitFlash = null, screenFlash = 0, toastTimer = null, bonus = null, shopTab = 'knight';
+
+function persist() {
+  try { localStorage.setItem('knightLine.save', JSON.stringify(save)); } catch {}
 }
 
-function startStage(n) {
-  stage = n;
-  save('knightLine.stage', n);
-  s = createStage(n);
-  anim = queued = shake = hint = null;
+function show(panel) {
+  for (const id of ['home', 'select', 'settings', 'play', 'bonus', 'shop', 'book']) $(id).hidden = id !== panel;
+  $('hud').hidden = panel !== 'play' && panel !== 'bonus';
+  $('pauseBtn').hidden = panel === 'bonus'; // 파친코 도중에 나가면 남은 공을 잃으므로 일시정지를 두지 않는다
+}
+
+// ---------- 메인, 스테이지 선택 ----------
+
+function goHome() {
+  closeModal();
+  anim = queued = null;
+  show('home');
+  renderHome();
+}
+
+function renderHome() {
+  day = dayIndex();
+  $('playerTitle').textContent = `${titleFor(save)} · 처치 ${totalKills(save)}`;
+  $('homeCoins').textContent = `코인 ${save.coins}`;
+  $('stageSub').textContent = save.cleared ? `${save.cleared}스테이지까지 클리어 · 이어서 ${save.cleared + 1}` : '1스테이지부터 시작';
+  const done = save.daily.results[day];
+  $('dailySub').textContent = done ? `#${day} 클리어 ${starText(done.stars)}` : `#${day} · 깨면 30코인${save.daily.streak && save.daily.lastDay === day - 1 ? ` · ${save.daily.streak}일 연속 중` : ''}`;
+}
+
+function openSelect() {
+  show('select');
+  const grid = $('stageGrid');
+  grid.innerHTML = '';
+  const last = Math.max(20, Math.ceil((save.cleared + 1) / 10) * 10);
+  for (let n = 1; n <= last; n++) {
+    const b = document.createElement('button');
+    const open = n <= save.cleared + 1;
+    b.disabled = !open;
+    b.className = [n % BONUS_EVERY === 0 ? 'bonus' : '', n === save.cleared + 1 ? 'current' : ''].join(' ');
+    b.innerHTML = `${n}<small>${open ? starText(save.stars[n]) || (n === save.cleared + 1 ? 'NEW' : '') : '🔒'}</small>`;
+    b.setAttribute('aria-label', `${n}스테이지${open ? '' : ' 잠김'}`);
+    b.onclick = () => startStage(n);
+    grid.append(b);
+  }
+  grid.querySelector('.current')?.scrollIntoView({ block: 'center' });
+}
+
+// ---------- 일시정지, 환경설정 ----------
+
+function openModal(html, buttons) {
+  const box = $('modal').querySelector('.box');
+  box.innerHTML = html;
+  for (const [label, fn, cls] of buttons) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    if (cls) b.className = cls;
+    b.onclick = fn;
+    box.append(b);
+  }
+  $('modal').hidden = false;
+  box.querySelector('button')?.focus();
+}
+
+function closeModal() {
+  $('modal').hidden = true;
+}
+
+function openPause() {
+  if (!s || bonus) return;
+  openModal('<h2>일시정지</h2>', [
+    ['계속하기', closeModal, 'primary'],
+    ['옵션', () => openSettings('pause')],
+    ['재시작', () => { closeModal(); restart(); }],
+    ['메인 페이지', goHome],
+  ]);
+}
+
+let settingsFrom = 'home';
+function openSettings(from) {
+  settingsFrom = from;
+  closeModal();
+  show('settings');
+  renderSettings();
+}
+
+function renderSettings() {
+  const list = $('settingList');
+  list.innerHTML = '';
+  for (const opt of SETTINGS) {
+    const box = document.createElement('div');
+    box.className = 'setting';
+    box.innerHTML = `<div class="label">${opt.label}</div><div class="desc">${opt.desc}</div><div class="choices"></div>`;
+    for (const [value, name] of opt.choices) {
+      const b = document.createElement('button');
+      b.textContent = name;
+      b.className = save.settings[opt.key] === value ? 'on' : '';
+      b.onclick = () => { save.settings[opt.key] = value; persist(); applySettings(); renderSettings(); };
+      box.querySelector('.choices').append(b);
+    }
+    list.append(box);
+  }
+}
+
+function closeSettings() {
+  if (settingsFrom === 'pause') { show('play'); openPause(); }
+  else goHome();
+}
+
+function applySettings() {
+  document.body.dataset.dpad = save.settings.dpad;
+}
+
+function confirmReset() {
+  openModal('<h2>기록 초기화</h2><p>코인, 별, 산 아이템, 도감이<br>모두 사라져요. 되돌릴 수 없어요.</p>', [
+    ['초기화', () => {
+      try { for (const k of Object.keys(localStorage)) if (k.startsWith('knightLine.')) localStorage.removeItem(k); } catch {}
+      location.reload();
+    }, 'danger'],
+    ['취소', closeModal, 'primary'],
+  ]);
+}
+
+function beginLevel(state) {
+  s = state;
+  startMonsters = s.monsters.map(m => ({ kind: m.kind, golden: !!m.golden }));
+  attempt = { hints: 0, undos: 0 };
+  anim = queued = shake = hintDir = hitFlash = bonus = null;
   particles = [];
+  closeModal();
   canvas.width = canvas.height = s.size * CELL;
   $('overlay').hidden = true;
+  show('play');
   fitBoard();
   updateHud();
 }
 
+function startStage(n) {
+  mode = 'stage';
+  stage = n;
+  save.stage = n;
+  persist();
+  beginLevel(createStage(n));
+  if (n === TOUGH_FROM_STAGE) toast('갑옷 오크 등장! 두 번 때려야 쓰러져요');
+  else if (s.monsters.some(m => m.golden) && !save.golds[n]) toast('황금 몬스터를 마지막에 잡아 보세요!');
+}
+
+function startDaily() {
+  mode = 'daily';
+  day = dayIndex();
+  beginLevel(createDaily(day));
+  toast(save.daily.results[day] ? '오늘의 퍼즐 (보상은 이미 받았어요)' : '오늘의 퍼즐! 깨면 코인 보상');
+}
+
+function starText(n) {
+  return n ? '★'.repeat(n) + '☆'.repeat(3 - n) : '';
+}
+
 function updateHud() {
-  $('stageLabel').textContent = `스테이지 ${stage}`;
-  $('prevStage').disabled = stage <= 1;
-  $('nextStage').disabled = stage > cleared;
+  const daily = mode === 'daily';
+  $('stageLabel').textContent = daily ? `오늘의 퍼즐 #${day} ` : `스테이지 ${stage} `;
+  $('stars').textContent = starText(daily ? save.daily.results[day]?.stars : save.stars[stage]);
   $('left').textContent = `남은 몬스터 ${s.monsters.length}`;
+  $('coins').textContent = `코인 ${save.coins}`;
   $('undoBtn').disabled = !s.history.length;
+  $('hintBtn').textContent = canHintFree(stage, daily) ? '힌트' : `힌트 ${HINT_COST}코인`;
 }
 
 function toast(text) {
@@ -192,72 +471,156 @@ function toast(text) {
   toastTimer = setTimeout(() => $('toast').classList.remove('show'), 1800);
 }
 
+// ---------- 퍼즐 조작 ----------
+
+function canPlay() {
+  return !$('play').hidden && $('overlay').hidden && $('modal').hidden && !bonus;
+}
+
 function tryMove(dir) {
-  if (!$('overlay').hidden) return;
+  if (!canPlay()) return;
   if (anim) { queued = dir; return; } // 달리는 중에 누른 방향은 도착하자마자 이어서 실행
   if (dir === 'left' || dir === 'right') facing = dir;
   const from = { ...s.knight };
-  const m = move(s, dir);
-  if (!m) { shake = { dir, start: performance.now() }; return; }
-  hint = null;
-  const cells = Math.abs(m.x - from.x) + Math.abs(m.y - from.y);
-  anim = { from, to: { x: m.x, y: m.y }, monster: m, start: performance.now(), dur: cells * SLIDE_MS_PER_CELL + 40 };
+  const r = move(s, dir);
+  if (!r) { shake = { dir, start: performance.now() }; return; }
+  hintDir = null;
+  const cells = Math.abs(s.knight.x - from.x) + Math.abs(s.knight.y - from.y);
+  anim = {
+    from, to: { ...s.knight }, dir, ...r, start: performance.now(),
+    dur: cells ? cells * SLIDE_MS[save.settings.speed] + 40 : 140, // 바로 옆을 때릴 때는 제자리에서 찌르는 동작
+  };
   updateHud();
 }
 
 function finishMove(now) {
-  const m = anim.monster;
+  const { monster: m, killed } = anim;
   anim = null;
-  for (let i = 0; i < 14; i++) {
-    const a = Math.random() * Math.PI * 2, v = 20 + Math.random() * 40;
-    particles.push({ x: m.x * CELL + 8, y: m.y * CELL + 9, vx: Math.cos(a) * v, vy: Math.sin(a) * v, born: now, color: MONSTER_COLORS[m.kind].m });
+  if (killed) {
+    const fx = EFFECTS[save.equip.effect];
+    const colors = fx.burst ?? [m.golden ? '#ffd23f' : MONSTER_COLORS[m.kind].m];
+    burst(m.x * CELL + 8, m.y * CELL + 9, colors, fx.count, fx.speed, fx.life);
+    if (fx.flash && save.settings.flash) screenFlash = now;
+    if (m.golden && !isCleared(s)) toast('아깝다! 황금 몬스터는 마지막에 잡아야 보너스');
+  } else {
+    burst(m.x * CELL + 8, m.y * CELL + 8, ['#ffffff'], 8, 30, 300);
+    if (save.settings.flash) hitFlash = { m, at: now };
   }
-  if (isCleared(s)) {
-    if (stage > cleared) { cleared = stage; save(SAVE_KEY, cleared); }
-    updateHud();
-    return showOverlay('STAGE CLEAR', `${s.history.length}마리 처치!`, [['다음 스테이지', () => startStage(stage + 1), true]]);
-  }
+  if (isCleared(s)) return mode === 'daily' ? finishDaily() : finishStage();
   if (isStuck(s)) {
-    return showOverlay('막혔어요', '어느 방향에도 몬스터가 없어요', [['되돌리기', doUndo, true], ['다시', () => startStage(stage)]]);
+    return showOverlay(`<h2>막혔어요</h2><p>어느 방향에도 몬스터가 없어요</p>`, [['되돌리기', doUndo, true], ['다시', restart]]);
   }
   if (queued) { const d = queued; queued = null; tryMove(d); }
 }
 
-function showOverlay(title, text, buttons) {
+function rewardLines(rewards) {
+  return rewards.map(r => `<p class="reward">${r.label} +${r.coins} 코인</p>`).join('');
+}
+
+function finishStage() {
+  const stars = starsFor(attempt);
+  const golden = goldenLast(s);
+  const hadGolden = startMonsters.some(m => m.golden);
+  const rewards = recordClear(save, { stage, stars, golden, monsters: startMonsters });
+  persist();
+  updateHud();
+  const missed = hadGolden && !golden && !save.golds[stage] ? `<p class="miss">황금 몬스터를 마지막에 잡으면 +${GOLD_COINS} 코인</p>` : '';
+  const html = `<h2>STAGE CLEAR</h2><div class="bigStars">${starText(stars)}</div>${rewardLines(rewards)}${missed}`;
+  const buttons = [];
+  if (bonusAvailable(save, stage)) buttons.push(['보너스 파친코 ▶', startBonus, true]);
+  else buttons.push(['다음 스테이지', () => startStage(stage + 1), true]);
+  if (stars < 3 || missed) buttons.push(['다시 도전', restart]);
+  showOverlay(html, buttons);
+}
+
+function finishDaily() {
+  const stars = starsFor(attempt);
+  const result = { stars, undos: attempt.undos, hints: attempt.hints };
+  const rewards = recordDaily(save, day, result);
+  recordKills(save, startMonsters);
+  persist();
+  updateHud();
+  const streak = save.daily.streak > 1 ? `<p>${save.daily.streak}일 연속 클리어!</p>` : '';
+  const html = `<h2>오늘의 퍼즐 #${day}</h2><div class="bigStars">${starText(stars)}</div>${rewardLines(rewards)}${streak}`
+    + (rewards.length ? '' : '<p class="muted">오늘 보상은 이미 받았어요. 내일 또 만나요!</p>');
+  showOverlay(html, [['결과 공유', () => share(result), true], ['다시 도전', restart], ['메인으로', goHome]]);
+}
+
+async function share(result) {
+  const text = shareText(day, result);
+  try {
+    if (navigator.share) await navigator.share({ text, url: location.href });
+    else { await navigator.clipboard.writeText(`${text}\n${location.href}`); toast('결과를 복사했어요'); }
+  } catch { /* 공유를 취소한 경우 */ }
+}
+
+function showOverlay(html, buttons) {
   const o = $('overlay');
-  o.innerHTML = `<h2>${title}</h2><p>${text}</p><div></div>`;
+  o.innerHTML = `${html}<div class="btns"></div>`;
   for (const [label, fn, primary] of buttons) {
     const b = document.createElement('button');
     b.textContent = label;
     if (primary) b.className = 'primary';
     b.onclick = fn;
-    o.querySelector('div').append(b);
+    o.querySelector('.btns').append(b);
   }
   o.hidden = false;
 }
 
+function restart() {
+  if (mode === 'daily') startDaily();
+  else startStage(stage);
+}
+
 function doUndo() {
-  if (anim) return;
-  if (undo(s)) { $('overlay').hidden = true; hint = null; updateHud(); }
+  if (anim || bonus) return;
+  if (undo(s)) { attempt.undos++; $('overlay').hidden = true; hintDir = null; updateHud(); }
+}
+
+function useHint() {
+  if (anim || !canPlay()) return;
+  if (hintDir) { hintAt = performance.now(); return; } // 이미 보이는 힌트는 다시 깜빡이기만 하고 코인을 또 받지 않는다
+  const d = hint(s);
+  if (d === undefined) return toast('너무 복잡해서 힌트를 못 찾았어요. 다시 해 보세요');
+  if (!d) return toast('이 상태로는 깰 수 없어요. 되돌려 보세요');
+  // 힌트를 못 찾았을 때는 코인을 받지 않도록 결과를 본 다음에 낸다
+  if (!canHintFree(stage, mode === 'daily')) {
+    if (!spend(save, HINT_COST)) return toast(`코인이 부족해요 (힌트 ${HINT_COST}코인)`);
+    persist();
+  }
+  attempt.hints++;
+  hintDir = d; hintAt = performance.now();
+  updateHud();
 }
 
 $('undoBtn').onclick = doUndo;
-$('resetBtn').onclick = () => startStage(stage);
-$('hintBtn').onclick = () => {
-  if (anim || !$('overlay').hidden) return;
-  const dirs = solve(s);
-  if (dirs === undefined) return toast('너무 복잡해서 힌트를 못 찾았어요');
-  if (!dirs) return toast('이 상태로는 깰 수 없어요. 되돌려 보세요');
-  hint = { dir: dirs[0], start: performance.now() };
-};
-$('prevStage').onclick = () => startStage(stage - 1);
-$('nextStage').onclick = () => startStage(stage + 1);
+$('resetBtn').onclick = restart;
+$('hintBtn').onclick = useHint;
+$('stageBtn').onclick = openSelect;
+$('dailyBtn').onclick = startDaily;
+$('shopBtn').onclick = openShop;
+$('bookBtn').onclick = openBook;
+$('shopClose').onclick = $('bookClose').onclick = $('selectBack').onclick = goHome;
+$('settingsBtn').onclick = () => openSettings('home');
+$('settingsBack').onclick = closeSettings;
+$('resetData').onclick = confirmReset;
+$('pauseBtn').onclick = openPause;
 
 const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
 addEventListener('keydown', e => {
+  if (bonus) {
+    if (e.code === 'Space' && !e.repeat) { e.preventDefault(); bonusDrop(); }
+    return;
+  }
+  if (e.code === 'Escape') {
+    if (!$('modal').hidden && $('play').hidden === false) return closeModal();
+    if (!$('play').hidden) return openPause();
+    return;
+  }
+  if ($('play').hidden || !$('modal').hidden) return;
   if (KEYS[e.code]) { e.preventDefault(); if (!e.repeat) tryMove(KEYS[e.code]); }
   else if (e.code === 'KeyZ' || e.code === 'Backspace') doUndo();
-  else if (e.code === 'KeyR') startStage(stage);
+  else if (e.code === 'KeyR') restart();
 });
 for (const b of document.querySelectorAll('#dpad button'))
   b.addEventListener('pointerdown', e => { e.preventDefault(); tryMove(b.dataset.dir); });
@@ -274,64 +637,372 @@ addEventListener('pointerup', e => {
 });
 
 function fitBoard() {
-  const avail = Math.min(innerWidth - 32 - 6, innerHeight - 380, 640);
+  const avail = Math.min(innerWidth - 32 - 6, innerHeight - 420, 640);
   canvas.style.width = canvas.style.height = `${Math.floor(Math.max(s.size * CELL, avail))}px`;
+  // 슬롯, 버튼까지 한 화면에 들어오게 위아래 요소 높이만큼 뺀다
+  const ph = Math.max(BOARD_H, Math.min(innerHeight - 440, (innerWidth - 38) * BOARD_H / BOARD_W, 720));
+  pachi.style.height = `${Math.floor(ph)}px`;
+  pachi.style.width = `${Math.floor(ph * BOARD_W / BOARD_H)}px`;
 }
 addEventListener('resize', fitBoard);
 
-function px(x, y, color, w = 1, h = 1) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, w, h);
+// ---------- 상점 ----------
+
+function openShop() {
+  show('shop');
+  renderShop();
 }
 
-function drawSprite(map, colors, x, y, flip = false) {
+function renderShop() {
+  $('tabs').innerHTML = '';
+  for (const [cat, name] of Object.entries(CATEGORIES)) {
+    const b = document.createElement('button');
+    b.textContent = name;
+    b.className = cat === shopTab ? 'on' : '';
+    b.onclick = () => { shopTab = cat; renderShop(); };
+    $('tabs').append(b);
+  }
+  $('items').innerHTML = '';
+  for (const item of SHOP.filter(i => i.cat === shopTab)) {
+    const owned = save.owned.includes(item.id), on = save.equip[item.cat] === item.id;
+    const card = document.createElement('div');
+    card.className = `card${on ? ' on' : ''}`;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 32;
+    drawPreview(cv.getContext('2d'), item);
+    const name = document.createElement('div');
+    name.textContent = item.name;
+    const btn = document.createElement('button');
+    btn.textContent = on ? '장착 중' : owned ? '장착' : `${item.price} 코인`;
+    btn.disabled = on;
+    if (!owned) btn.className = 'primary';
+    btn.onclick = () => {
+      if (owned) equip(save, item.id);
+      else {
+        const r = buy(save, item.id);
+        if (!r.ok) return toast(r.reason);
+        toast(`${item.name} 구매! 바로 장착했어요`);
+      }
+      persist();
+      updateHud();
+      renderShop();
+    };
+    card.append(cv, name, btn);
+    $('items').append(card);
+  }
+}
+
+function drawPreview(c, item) {
+  const theme = item.cat === 'theme' ? item.id : save.equip.theme;
+  drawFloor(c, 2, theme, 0);
+  const skin = item.cat === 'knight' ? item.id : save.equip.knight;
+  if (item.cat === 'effect') {
+    const fx = EFFECTS[item.id];
+    drawTrail(c, fx.trail, 0, 8, 10, 8, 0.5);
+    const colors = fx.burst ?? ['#5bd65b'];
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      px(c, 24 + Math.round(Math.cos(a) * 5), 12 + Math.round(Math.sin(a) * 5), colors[i % colors.length], 2, 2);
+    }
+    drawSprite(c, SKINS[skin].sprite, SKINS[skin].colors, 8, 8);
+  } else drawSprite(c, SKINS[skin].sprite, SKINS[skin].colors, 8, 8);
+}
+
+// ---------- 도감 ----------
+
+function openBook() {
+  show('book');
+  $('bookSummary').textContent = `칭호: ${titleFor(save)} · 총 처치 ${totalKills(save)}마리`;
+  $('bookList').innerHTML = '';
+  for (const b of BESTIARY) {
+    const n = save.kills[b.key] ?? 0;
+    const row = document.createElement('div');
+    row.className = 'row';
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 16;
+    const c = cv.getContext('2d');
+    if (n) {
+      const golden = b.key === 'golden';
+      drawSprite(c, MONSTERS[golden ? 0 : Number(b.key)], golden ? GOLD_COLORS : MONSTER_COLORS[Number(b.key)], 0, 0);
+    } else drawSprite(c, MONSTERS[b.key === 'golden' ? 0 : Number(b.key)], new Proxy({}, { get: () => '#3a3a4c' }), 0, 0);
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = n ? b.name : '???';
+    const count = document.createElement('div');
+    count.textContent = `${n}마리`;
+    const badges = document.createElement('div');
+    badges.className = 'badges';
+    badges.textContent = BADGES.map(need => (n >= need ? '●' : '○')).join('');
+    row.append(cv, name, count, badges);
+    $('bookList').append(row);
+  }
+}
+
+// ---------- 보너스 파친코 ----------
+
+function startBonus() {
+  // 시작하자마자 받은 것으로 기록해서 새로고침으로 다시 돌릴 수 없게 한다
+  save.bonusDone = stage;
+  persist();
+  const balls = bonusBalls(save, stage);
+  bonus = { board: createBoard(Math.random, balls), won: 0, held: 0, spin: null, lastDrop: 0, floats: [], reached: false };
+  show('bonus');
+  $('dropBtn').hidden = false;
+  $('claimBtn').hidden = true;
+  $('reelMsg').textContent = `별을 모은 만큼 공 ${balls}개!`;
+  $('reels').classList.remove('jackpot');
+  showReels(['7', '7', '7']);
+  fitBoard();
+  updateHud();
+  updateBonusInfo();
+}
+
+function bonusDrop(x = BOARD_W / 2 + (Math.random() - 0.5) * 24) {
+  if (!bonus) return;
+  const now = performance.now();
+  if (now - bonus.lastDrop < 180) return;
+  if (dropBall(bonus.board, x)) { bonus.lastDrop = now; updateBonusInfo(); }
+}
+
+$('dropBtn').addEventListener('pointerdown', e => { e.preventDefault(); bonusDrop(); });
+pachi.addEventListener('pointerdown', e => {
+  const r = pachi.getBoundingClientRect();
+  bonusDrop((e.clientX - r.left) / r.width * BOARD_W);
+});
+$('claimBtn').onclick = () => startStage(stage + 1);
+
+function updateBonusInfo() {
+  const held = bonus.held ? ` (대기 ${bonus.held})` : '';
+  $('ballsLeft').textContent = `남은 공 ${bonus.board.ballsLeft}${held}`;
+  $('won').textContent = `획득 코인 ${bonus.won}`;
+}
+
+function showReels(symbols) {
+  [...$('reels').children].forEach((el, i) => {
+    el.textContent = symbols[i];
+    el.classList.toggle('seven', symbols[i] === '7');
+  });
+}
+
+function winCoins(n, x, y, text) {
+  if (!n) return;
+  bonus.won += n;
+  save.coins += n;
+  persist();
+  updateHud();
+  bonus.floats.push({ x, y, text: text ?? `+${n}`, born: performance.now() });
+}
+
+function updateBonus(now, dt) {
+  const b = bonus;
+  for (const l of stepBoard(b.board, dt)) {
+    const slot = SLOTS[l.slot];
+    if (slot.start) {
+      if (b.held < MAX_HELD_SPINS) b.held++;
+      b.floats.push({ x: l.x, y: SLOT_TOP - 4, text: 'START!', born: now });
+    } else winCoins(slot.coins, l.x, SLOT_TOP - 4);
+    updateBonusInfo();
+  }
+
+  // 슬롯: 왼쪽부터 차례로 멈춘다. 앞 두 개가 같으면 '리치'
+  if (!b.spin && b.held) {
+    b.held--;
+    b.spin = { ...spinReels(), start: now };
+    b.reached = false;
+    $('reels').classList.remove('jackpot');
+    $('reelMsg').textContent = '';
+    updateBonusInfo();
+  }
+  if (b.spin) {
+    const t = now - b.spin.start;
+    const stops = [600, 900, b.spin.reels[0] === b.spin.reels[1] ? 1800 : 1200];
+    showReels(b.spin.reels.map((sym, i) => (t >= stops[i] ? sym : SYMBOLS[Math.floor(now / 60 + i * 2) % SYMBOLS.length])));
+    if (!b.reached && t >= stops[1] && b.spin.reels[0] === b.spin.reels[1]) {
+      b.reached = true;
+      $('reelMsg').textContent = b.spin.reels[0] === '7' ? '리치!! 잭팟 찬스!' : '리치!';
+    }
+    if (t >= stops[2] + 200) {
+      const { coins: won, extraBalls, label, reels } = b.spin;
+      b.spin = null;
+      winCoins(won, BOARD_W / 2, 40, won ? `+${won}` : undefined);
+      b.board.ballsLeft += extraBalls;
+      $('reelMsg').textContent = won ? `${label} +${won} 코인${extraBalls ? ` · 보너스 공 +${extraBalls}` : ''}` : '꽝';
+      if (reels.every(r => r === reels[0]) && save.settings.flash) $('reels').classList.add('jackpot');
+      if (label === 'JACKPOT!!') toast('🎰 JACKPOT!! +300 코인');
+      updateBonusInfo();
+    }
+  }
+
+  if (isFinished(b.board) && !b.spin && !b.held && $('claimBtn').hidden) {
+    $('dropBtn').hidden = true;
+    $('claimBtn').hidden = false;
+    $('claimBtn').textContent = `계속하기 (+${b.won} 코인 획득)`;
+  }
+}
+
+function renderBonus(now) {
+  const p = (x, y, c, w = 1, h = 1) => { pctx.fillStyle = c; pctx.fillRect(x, y, w, h); };
+  p(0, 0, '#14213d', BOARD_W, BOARD_H);
+  for (let y = 0; y < BOARD_H; y += 8) p(0, y, '#172645', BOARD_W, 4);
+  for (const peg of bonus.board.pegs) { p(peg.x - 1, peg.y - 1, '#ffd23f', 2, 2); p(peg.x - 1, peg.y - 1, '#fff6c0'); }
+  SLOTS.forEach((slot, i) => {
+    const x = Math.round(i * SLOT_W);
+    const color = slot.start ? (save.settings.flash && Math.floor(now / 200) % 2 ? '#ff3030' : '#c01818') : slot.coins >= 10 ? '#2f7f4f' : slot.coins ? '#2a5a8a' : '#333344';
+    p(x, SLOT_TOP, color, Math.ceil(SLOT_W), BOARD_H - SLOT_TOP);
+    if (i) p(x, SLOT_TOP - 4, '#c8ccd8', 1, BOARD_H - SLOT_TOP + 4);
+  });
+  pctx.font = 'bold 7px monospace';
+  pctx.textAlign = 'center';
+  pctx.textBaseline = 'middle';
+  SLOTS.forEach((slot, i) => {
+    pctx.fillStyle = '#fff';
+    pctx.fillText(slot.start ? 'S' : String(slot.coins), (i + 0.5) * SLOT_W, SLOT_TOP + 9);
+  });
+  for (const ball of bonus.board.balls) {
+    const x = Math.round(ball.x), y = Math.round(ball.y);
+    p(x - BALL_R + 1, y - BALL_R, '#e8e8f0', BALL_R * 2 - 2, BALL_R * 2);
+    p(x - BALL_R, y - BALL_R + 1, '#e8e8f0', BALL_R * 2, BALL_R * 2 - 2);
+    p(x - 1, y - 1, '#ffffff');
+  }
+  bonus.floats = bonus.floats.filter(f => now - f.born < 900);
+  for (const f of bonus.floats) {
+    const t = (now - f.born) / 900;
+    pctx.fillStyle = `rgba(255, 210, 63, ${1 - t})`;
+    pctx.fillText(f.text, f.x, f.y - t * 14);
+  }
+}
+
+// ---------- 그리기 ----------
+
+function px(c, x, y, color, w = 1, h = 1) {
+  c.fillStyle = color;
+  c.fillRect(x, y, w, h);
+}
+
+function drawSprite(c, map, colors, x, y, flip = false) {
   const ox = Math.round(x) + 2, oy = Math.round(y) + 2;
   map.forEach((row, r) => {
-    for (let c = 0; c < row.length; c++) {
-      const ch = row[flip ? row.length - 1 - c : c];
-      if (ch !== '.') px(ox + c, oy + r, colors[ch]);
+    for (let col = 0; col < row.length; col++) {
+      const ch = row[flip ? row.length - 1 - col : col];
+      if (ch !== '.') px(c, ox + col, oy + r, colors[ch]);
     }
   });
 }
 
+function drawFloor(c, size, themeId, now) {
+  const t = THEMES[themeId];
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const X = x * CELL, Y = y * CELL;
+      px(c, X, Y, (x + y) % 2 ? t.a : t.b, CELL, CELL);
+      px(c, X, Y + CELL - 1, t.line, CELL, 1);
+      px(c, X + CELL - 1, Y, t.line, 1, CELL);
+      if (!t.deco) continue;
+      // 칸마다 정해진 자리에 무늬를 찍는다 (눈송이, 모래, 용암 틈)
+      const h = (x * 73 + y * 151) % 97;
+      const dx = 2 + (h % 10), dy = 2 + ((h * 7) % 10);
+      const color = t.glow && Math.floor(now / 400 + h) % 3 === 0 ? '#ffd23f' : t.deco;
+      if (t.glow) { px(c, X + dx, Y + dy, color, 3, 1); px(c, X + dx + 2, Y + dy + 1, color, 2, 1); }
+      else { px(c, X + dx, Y + dy, color); if (h % 3 === 0) px(c, X + dy, Y + dx, color); }
+    }
+}
+
+// 기사가 달려간 길의 잔상. (x0,y0)~(x1,y1)은 칸 왼쪽 위 기준 픽셀 좌표
+function drawTrail(c, kind, x0, y0, x1, y1, alpha = 0.25) {
+  const len = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  if (kind === 'line') {
+    c.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    c.fillRect(Math.min(x0, x1) + 6, Math.min(y0, y1) + 6, Math.abs(x1 - x0) + 4, Math.abs(y1 - y0) + 4);
+    return;
+  }
+  const colors = kind === 'fire' ? ['#ff7a1a', '#ffd23f', '#e04040'] : ['#7af0ff', '#ffffff'];
+  for (let i = 0; i <= len; i += 2) {
+    const t = len ? i / len : 0;
+    const x = x0 + (x1 - x0) * t + 7, y = y0 + (y1 - y0) * t + 7;
+    const j = kind === 'fire' ? (Math.random() - 0.5) * 4 : Math.sin(i * 1.7 + performance.now() / 40) * 3;
+    const vertical = x0 === x1;
+    px(c, Math.round(x + (vertical ? j : 0)), Math.round(y + (vertical ? 0 : j)), colors[(i / 2) % colors.length | 0], 2, 2);
+  }
+}
+
+function drawMonster(m, now) {
+  const bob = Math.round(Math.sin(now / 300 + m.x * 1.7 + m.y));
+  const x = m.x * CELL, y = m.y * CELL + bob;
+  const flash = hitFlash && hitFlash.m === m && now - hitFlash.at < 200;
+  drawSprite(ctx, MONSTERS[m.kind], flash ? WHITE : m.golden ? GOLD_COLORS : MONSTER_COLORS[m.kind], x, y);
+  if (m.golden) {
+    // 반짝이는 점이 몸 둘레를 돈다
+    const a = now / 300;
+    px(ctx, x + 8 + Math.round(Math.cos(a) * 7), y + 8 + Math.round(Math.sin(a) * 7), '#ffffff', 1, 1);
+    px(ctx, x + 8 + Math.round(Math.cos(a + Math.PI) * 7), y + 8 + Math.round(Math.sin(a + Math.PI) * 7), '#fff6c0', 1, 1);
+  }
+  if (m.kind !== TOUGH_KIND) return;
+  if (m.hp === 1) for (const [cx, cy] of CRACKS) px(ctx, x + 2 + cx, y + 2 + cy, '#20202a');
+  for (let i = 0; i < 2; i++) px(ctx, x + 4 + i * 5, y, i < m.hp ? '#ff3030' : '#3a3a4c', 3, 2);
+}
+
+// 메인 화면: 기사가 몬스터 줄을 향해 돌진했다가 돌아오기를 반복
+const homeCtx = $('homeArt').getContext('2d');
+function renderHomeArt(now) {
+  const c = homeCtx;
+  drawFloor(c, 6, save.equip.theme, now);
+  const cycle = (now / 1600) % 1;
+  const kx = cycle < 0.5 ? 0 : Math.min(1, (cycle - 0.5) * 4) * 32;
+  const skin = SKINS[save.equip.knight];
+  [[0, 3, false], [1, 4, false], [3, 5, true]].forEach(([kind, cx, golden]) => {
+    if (cycle > 0.75 && cx === 3) return; // 돌진한 첫 몬스터는 잠깐 사라진다
+    const bob = Math.round(Math.sin(now / 300 + cx));
+    drawSprite(c, MONSTERS[kind], golden ? GOLD_COLORS : MONSTER_COLORS[kind], (cx - 1) * CELL + 16, 8 + bob);
+  });
+  if (cycle >= 0.5) drawTrail(c, EFFECTS[save.equip.effect].trail, 0, 8, kx, 8);
+  drawSprite(c, skin.sprite, skin.colors, kx, 8);
+}
+
+function burst(x, y, colors, n, speed, life) {
+  const born = performance.now();
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = speed * (0.5 + Math.random());
+    particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, born, life, color: colors[i % colors.length] });
+  }
+}
+
 function render(now) {
   requestAnimationFrame(render);
-  if (!s) return;
-  for (let y = 0; y < s.size; y++)
-    for (let x = 0; x < s.size; x++) {
-      const X = x * CELL, Y = y * CELL;
-      px(X, Y, (x + y) % 2 ? '#4a4a5e' : '#525268', CELL, CELL);
-      px(X, Y + CELL - 1, '#3a3a4c', CELL, 1);
-      px(X + CELL - 1, Y, '#3a3a4c', 1, CELL);
-    }
+  const dt = Math.min(0.05, (now - (render.last ?? now)) / 1000);
+  render.last = now;
+  if (bonus) { updateBonus(now, dt); renderBonus(now); return; }
+  if (!$('home').hidden) return renderHomeArt(now);
+  if (!s || $('play').hidden) return;
+  drawFloor(ctx, s.size, save.equip.theme, now);
 
   // 힌트: 다음에 갈 방향의 몬스터까지 점선
-  if (hint && !anim) {
-    const m = targetIn(s, hint.dir);
-    if (m && Math.floor((now - hint.start) / 250) % 2 === 0) {
-      const [dx, dy] = DIRS[hint.dir];
+  if (hintDir && !anim) {
+    const m = targetIn(s, hintDir);
+    if (m && Math.floor((now - hintAt) / 250) % 2 === 0) {
+      const [dx, dy] = DIRS[hintDir];
       for (let x = s.knight.x + dx, y = s.knight.y + dy; x !== m.x || y !== m.y; x += dx, y += dy)
-        px(x * CELL + 6, y * CELL + 6, '#ffd23f', 4, 4);
-      px(m.x * CELL, m.y * CELL, 'rgba(255, 210, 63, 0.35)', CELL, CELL);
+        px(ctx, x * CELL + 6, y * CELL + 6, '#ffd23f', 4, 4);
+      px(ctx, m.x * CELL, m.y * CELL, 'rgba(255, 210, 63, 0.35)', CELL, CELL);
     }
   }
 
-  // 달려간 길에 남는 잔상
   let kx = s.knight.x * CELL, ky = s.knight.y * CELL;
   if (anim) {
     const t = Math.min(1, (now - anim.start) / anim.dur);
-    const e = t * t; // 점점 빨라지며 돌진
-    kx = (anim.from.x + (anim.to.x - anim.from.x) * e) * CELL;
-    ky = (anim.from.y + (anim.to.y - anim.from.y) * e) * CELL;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-    const x0 = anim.from.x * CELL + 6, y0 = anim.from.y * CELL + 6;
-    ctx.fillRect(Math.min(x0, kx + 6), Math.min(y0, ky + 6), Math.abs(kx - anim.from.x * CELL) + 4, Math.abs(ky - anim.from.y * CELL) + 4);
+    const [dx, dy] = DIRS[anim.dir];
+    if (anim.from.x === anim.to.x && anim.from.y === anim.to.y) {
+      const lunge = Math.sin(t * Math.PI) * 5;
+      kx += dx * lunge; ky += dy * lunge;
+    } else {
+      const e = t * t; // 점점 빨라지며 돌진
+      kx = (anim.from.x + (anim.to.x - anim.from.x) * e) * CELL;
+      ky = (anim.from.y + (anim.to.y - anim.from.y) * e) * CELL;
+      drawTrail(ctx, EFFECTS[save.equip.effect].trail, anim.from.x * CELL, anim.from.y * CELL, kx, ky);
+    }
   }
 
-  for (const m of anim ? [...s.monsters, anim.monster] : s.monsters) {
-    const bob = Math.round(Math.sin(now / 300 + m.x * 1.7 + m.y) * 1);
-    drawSprite(SPRITES.monsters[m.kind], MONSTER_COLORS[m.kind], m.x * CELL, m.y * CELL + bob);
-  }
+  // 쓰러뜨리는 중인 몬스터는 기사가 도착할 때까지 보여 준다
+  for (const m of anim?.killed ? [...s.monsters, anim.monster] : s.monsters) drawMonster(m, now);
 
   if (shake) {
     const t = (now - shake.start) / 250;
@@ -342,18 +1013,21 @@ function render(now) {
       kx += dx * off; ky += dy * off;
     }
   }
-  drawSprite(SPRITES.knight, KNIGHT_COLORS, kx, ky, facing === 'left');
+  const skin = SKINS[save.equip.knight];
+  drawSprite(ctx, skin.sprite, skin.colors, kx, ky, facing === 'left');
 
-  particles = particles.filter(p => now - p.born < 400);
+  particles = particles.filter(p => now - p.born < p.life);
   for (const p of particles) {
     const t = (now - p.born) / 1000;
-    px(Math.round(p.x + p.vx * t), Math.round(p.y + p.vy * t), p.color, 2, 2);
+    px(ctx, Math.round(p.x + p.vx * t), Math.round(p.y + p.vy * t), p.color, 2, 2);
   }
+  if (now - screenFlash < 90) px(ctx, 0, 0, 'rgba(200, 245, 255, 0.35)', canvas.width, canvas.height);
 
   if (anim && now - anim.start >= anim.dur) finishMove(now);
 }
 
-startStage(stage);
+applySettings();
+goHome();
 requestAnimationFrame(render);
 </script>
 </body>
