@@ -232,13 +232,13 @@ setTimeout(() => {
 </script>
 <script type="module">
 // 배포할 때마다 ?v= 숫자를 올린다 (GitHub Pages 캐시 때문)
-import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, EVO_LEVEL, MAX_EVO, unitStats, tameChance, displayName } from './data.js?v=3';
-import { createBattle, stepBattle, useSkill, canUse, aliveCount, killsByType, SKILLS, LANES, NECRO_D } from './battle.js?v=3';
+import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, EVO_LEVEL, MAX_EVO, unitStats, tameChance, displayName } from './data.js?v=4';
+import { createBattle, stepBattle, useSkill, canUse, aliveCount, killsByType, SKILLS, NECRO_D, ROAD_W } from './battle.js?v=4';
 import {
   loadSave, partyUnits, enemyUnits, stageEnemies, groupEnemies, tameOptions, tameAmount, tame, recordWin, recordLoss,
   stageOf, globalStage, isUnlocked, isBossStage, regionProgress, STAGE_COUNT, armySize, necroLevel,
   levelUp, levelUpCost, evolve, evolveCost, canEvolve, ROULETTE, rollRoulette, applyRoulette,
-} from './progress.js?v=3';
+} from './progress.js?v=4';
 
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'necromancer.save';
@@ -455,7 +455,8 @@ const ROAD_A = { x: 18, y: 186 }, ROAD_B = { x: 196, y: 52 };
 const ROAD_DIR = { x: ROAD_B.x - ROAD_A.x, y: ROAD_B.y - ROAD_A.y };
 const ROAD_LEN = Math.hypot(ROAD_DIR.x, ROAD_DIR.y);
 const PERP = { x: -ROAD_DIR.y / ROAD_LEN, y: ROAD_DIR.x / ROAD_LEN }; // 길에 수직 방향
-const LANE_GAP = 8, ROAD_HALF = 30;
+const ROAD_HALF = 30;
+const ROAD_SCALE = (ROAD_HALF - 4) / ROAD_W; // 전투 좌표의 길 폭 → 화면 픽셀
 const NECRO_POS = { x: 202, y: 22 };
 
 function roadPoint(d, off) {
@@ -491,8 +492,7 @@ function unitScale(u) {
 // 유닛의 화면 위치(발 기준)
 function screenPos(u) {
   if (u.necro) return { x: NECRO_POS.x, y: NECRO_POS.y + 24 };
-  const off = (u.lane - (LANES - 1) / 2) * LANE_GAP + u.jx * 3;
-  return roadPoint(u.d + u.jd * 1.5, off);
+  return roadPoint(u.d, u.y * ROAD_SCALE);
 }
 
 function updateToggles() {

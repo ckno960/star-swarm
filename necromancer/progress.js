@@ -9,12 +9,13 @@ export const ENEMY_GROWTH = 1.16; // 스테이지마다 적 수가 16%씩 늘어
 export const TAME_SHARE = 0.35, TAME_MIN = 2; // 길들이기에 성공하면 쓰러뜨린 같은 종류의 이 비율만큼(최소 2마리) 데려온다
 export const BOSS_FACTOR = 0.35; // 적 보스 힘 = 소환수 보스 기본치 × 이 값 × √(부하 수 / 8)
 // 뒤 지역 적은 레벨을 조금 더 높게. 군단이 커지고 진화가 쌓이면 뒤로 갈수록 너무 쉬워져서
-export const ENEMY_LEVEL_BONUS = [0, 0, 0, 2, 8];
+export const ENEMY_LEVEL_BONUS = [0, 0, 0, 1, 5];
 // 영혼: 스테이지를 깰 때마다 받는 보상. 처음 깨면 두 배
 export const SOUL_BASE = 12, SOUL_GROWTH = 1.05;
-// 레벨 업 비용 = LV_COST × 별 × LV_GROWTH^(레벨-1) × (진화 단계+1)
+// 레벨 업 비용 = LV_COST × 별 × LV_GROWTH^(레벨-1) × (진화 단계+1) × √마리 수
+// 마리 수를 곱하는 건, 수천 마리를 한 번에 키우는 값이 한 마리 값과 같으면 큰 군단이 너무 쉽게 강해져서다
 export const LV_COST = 3, LV_GROWTH = 1.3;
-export const EVO_COST = 100; // 진화 비용 = EVO_COST × 별 × (진화 단계+1)
+export const EVO_COST = 100; // 진화 비용 = EVO_COST × 별 × (진화 단계+1) × √마리 수
 const NECRO = { hp: 120, atk: 6, interval: 1.0 };
 // 앞줄부터 서는 순서: 튼튼한 몬스터가 앞, 급습하는 비행형은 뒤
 const FRONT_ORDER = { boss: 0, golem: 1, blob: 2, humanoid: 3, beast: 4, flyer: 5 };
@@ -204,7 +205,7 @@ export function recordLoss(save, g, killedRatio) {
 }
 
 export function levelUpCost(r) {
-  return Math.ceil(LV_COST * starsOf(r.type) * LV_GROWTH ** (r.level - 1) * (r.evo + 1));
+  return Math.ceil(LV_COST * starsOf(r.type) * LV_GROWTH ** (r.level - 1) * (r.evo + 1) * Math.sqrt(r.count));
 }
 
 export function levelUp(save, id) {
@@ -223,7 +224,7 @@ export function canEvolve(r) {
 }
 
 export function evolveCost(r) {
-  return EVO_COST * starsOf(r.type) * (r.evo + 1);
+  return Math.ceil(EVO_COST * starsOf(r.type) * (r.evo + 1) * Math.sqrt(r.count));
 }
 
 export function evolve(save, id, free = false) {
