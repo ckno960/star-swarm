@@ -1,0 +1,13 @@
+{
+  "name": "npc-hunt",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
