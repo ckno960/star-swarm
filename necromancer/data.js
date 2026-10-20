@@ -5,22 +5,26 @@ export const LEVEL_GROWTH = 0.12; // 레벨 1당 능력치 +12%
 export const MAX_LEVEL = 30;
 
 // 강함 등급(tier)마다 몸 모양과 기본 능력치가 정해져 있다. interval은 공격 간격(초)
+// 별 하나당 힘이 조금씩 더 커지게 맞췄다(√(체력×초당 피해) ≈ 17 × 별^1.15). 그래야 비싼 몬스터를 쓸 이유가 생긴다
 export const SHAPES = {
   blob: { hp: 60, atk: 6, interval: 1.2, trait: 'regen' },
-  beast: { hp: 45, atk: 7, interval: 0.7, trait: 'swift' },
-  flyer: { hp: 40, atk: 9, interval: 1.0, trait: 'ambush' },
-  humanoid: { hp: 70, atk: 10, interval: 1.1, trait: 'drain' },
-  golem: { hp: 110, atk: 12, interval: 1.8, trait: 'splash' },
-  boss: { hp: 300, atk: 10, interval: 1.4, trait: 'splash' },
+  beast: { hp: 75, atk: 13, interval: 0.7, trait: 'swift' },
+  flyer: { hp: 80, atk: 45, interval: 1.0, trait: 'ambush' },
+  humanoid: { hp: 140, atk: 55, interval: 1.1, trait: 'drain' },
+  golem: { hp: 300, atk: 70, interval: 1.8, trait: 'splash' },
+  boss: { hp: 900, atk: 60, interval: 1.4, trait: 'splash' },
 };
+// 소환할 때 드는 별. 소환수 별 합은 네크로맨서 레벨에 따른 한도를 넘을 수 없다
+export const STARS = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, boss: 8 };
+export const SPLASH_TARGETS = 2; // 광역 공격이 함께 때리는 뒤쪽 적 수
 export const TIER_SHAPES = [null, 'blob', 'beast', 'flyer', 'humanoid', 'golem'];
 
 export const TRAITS = {
-  regen: { name: '재생', desc: '1초마다 최대 체력의 2% 회복' },
+  regen: { name: '재생', desc: '계속 조금씩 체력 회복 (3초에 2%)' },
   swift: { name: '속공', desc: '공격이 빠름' },
   ambush: { name: '급습', desc: '맨 앞이 아닌 아무 적이나 공격' },
   drain: { name: '흡혈', desc: '준 피해의 30%만큼 회복' },
-  splash: { name: '광역', desc: '맨 앞 적과 함께 나머지 적에게도 30% 피해' },
+  splash: { name: '광역', desc: '맨 앞 적과 그 뒤 2마리에게도 30% 피해' },
   bolt: { name: '암흑 화살', desc: '아무 적이나 공격' },
 };
 
@@ -39,7 +43,7 @@ export const REGIONS = [
 const M = (name, region, tier, colors) => ({ name, region, tier, shape: TIER_SHAPES[tier], colors });
 const B = (name, region, colors) => ({ name, region, tier: 'boss', shape: 'boss', colors });
 export const MONSTERS = {
-  skeleton: { name: '해골 병사', region: 0, tier: 2, shape: 'humanoid', colors: { m: '#e8e6dc', d: '#a8a69c', h: '#e8e6dc', s: '#e8e6dc', w: '#7dff6a', k: '#20202a' }, starter: true },
+  skeleton: { name: '해골 병사', region: 0, tier: 2, shape: 'humanoid', stats: { hp: 100, atk: 15.7, interval: 1.1, trait: 'drain' }, colors: { m: '#e8e6dc', d: '#a8a69c', h: '#e8e6dc', s: '#e8e6dc', w: '#7dff6a', k: '#20202a' }, starter: true },
 
   slime: M('슬라임', 0, 1, { m: '#5bd65b', d: '#3a9a3a', w: '#fff', k: '#111' }),
   dog: M('들개', 0, 2, { m: '#9a6a3a', d: '#6a4422', w: '#fff', k: '#111' }),
@@ -85,8 +89,12 @@ export function levelMult(level) {
   return 1 + LEVEL_GROWTH * (level - 1);
 }
 
+export function starsOf(typeId) {
+  return STARS[MONSTERS[typeId].tier];
+}
+
 export function unitStats(typeId, level) {
-  const t = MONSTERS[typeId], base = SHAPES[t.shape];
+  const t = MONSTERS[typeId], base = t.stats ?? SHAPES[t.shape];
   const p = regionPower(t.region) * levelMult(level);
   return { hp: Math.round(base.hp * p), atk: Math.round(base.atk * p * 10) / 10, interval: base.interval, trait: base.trait };
 }
