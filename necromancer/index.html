@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>멸망의 네크로맨서</title>
+<style>
+  :root { --bg: #140f1f; --panel: #221a33; --line: #4a3a6a; --text: #f2eefa; --accent: #7dff6a; --gold: #ffd23f; --red: #ff5c5c; --purple: #b07aff; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+    font: 16px system-ui, sans-serif;
+    overscroll-behavior: none; touch-action: manipulation; -webkit-user-select: none; user-select: none;
+  }
+  body { display: flex; justify-content: center; }
+  [hidden] { display: none !important; } /* 버튼 등에 준 display 스타일이 hidden을 덮어쓰지 않게 */
+  main { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 480px; padding: 12px 16px; box-sizing: border-box; height: 100%; }
+  .panel { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; min-height: 0; flex: 1; }
+  .panel[hidden] { display: none; }
+  h1 { margin: 40px 0 0; font-size: 32px; letter-spacing: 3px; color: var(--accent); text-shadow: 3px 3px 0 #000, 0 0 12px rgba(125, 255, 106, 0.4); text-align: center; line-height: 1.2; }
+  h2 { margin: 0; font-size: 22px; color: var(--accent); text-shadow: 2px 2px 0 #000; }
+  .sub { margin: 0; opacity: 0.75; text-align: center; font-size: 14px; }
+  button {
+    font: 700 16px system-ui, sans-serif; color: var(--text); background: var(--panel);
+    border: 3px solid var(--line); border-radius: 0; min-height: 44px; padding: 0 14px; box-shadow: 3px 3px 0 #000;
+  }
+  button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  button:disabled { opacity: 0.35; }
+  button.primary { border-color: var(--accent); }
+  button.danger { border-color: var(--red); color: var(--red); }
+  button.big { width: 260px; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 20px; }
+  button.big small { font-size: 12px; font-weight: 400; opacity: 0.8; }
+  .iconBtn { position: absolute; top: 12px; right: 16px; width: 44px; padding: 0; font-size: 22px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
+  .topbar button { min-height: 38px; font-size: 14px; }
+  .topbar h2 { flex: 1; text-align: center; font-size: 20px; }
+  .topbar .spacer { width: 70px; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  #homeArt { width: 240px; height: 160px; margin: 10px 0; }
+  .muted { font-size: 13px; opacity: 0.7; text-align: center; margin: 0; line-height: 1.5; }
+  .scroll { overflow-y: auto; width: 100%; min-height: 0; flex: 1; }
+
+  #regionTabs { display: flex; gap: 6px; width: 100%; }
+  #regionTabs button { flex: 1; padding: 0; min-height: 40px; font-size: 14px; }
+  #regionTabs button.on { border-color: var(--accent); color: var(--accent); }
+  #regionInfo { width: 100%; padding: 10px; background: var(--panel); border: 3px solid var(--line); box-sizing: border-box; }
+  .bar { height: 10px; background: #000; border: 2px solid var(--line); margin-top: 6px; }
+  .bar > div { height: 100%; background: var(--red); }
+  #stageGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; }
+  #stageGrid button { min-height: 58px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 18px; }
+  #stageGrid button small { font-size: 11px; font-weight: 400; color: var(--accent); }
+  #stageGrid button.boss { border-color: #c01818; }
+  #stageGrid button.next { border-color: var(--accent); }
+
+  .lineup { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; width: 100%; }
+  .mini { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 74px; padding: 6px 2px; background: var(--panel); border: 3px solid var(--line); font-size: 12px; text-align: center; }
+  .mini canvas { width: 48px; height: 48px; }
+  .mini.empty { opacity: 0.4; justify-content: center; min-height: 84px; }
+  .label { font-weight: 700; margin-top: 4px; }
+
+  #battleHud { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+  #battleHud button { min-height: 38px; font-size: 14px; padding: 0 10px; }
+  #battleCanvas { width: 100%; border: 3px solid #000; box-sizing: border-box; }
+  #skills { display: flex; gap: 10px; width: 100%; }
+  .skill { position: relative; flex: 1; min-height: 64px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .skill small { font-size: 11px; font-weight: 400; opacity: 0.8; }
+  .skill .cd { position: absolute; left: 0; bottom: 0; height: 100%; background: rgba(0, 0, 0, 0.6); pointer-events: none; }
+  .skill.ready { border-color: var(--purple); }
+  #battleToggles { display: flex; gap: 8px; }
+  #battleToggles button { min-height: 36px; font-size: 13px; }
+  #battleToggles button.on { border-color: var(--accent); color: var(--accent); }
+
+  #tameCards { display: flex; gap: 8px; width: 100%; }
+  .card { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; background: var(--panel); border: 3px solid var(--line); font-size: 13px; text-align: center; box-shadow: 3px 3px 0 #000; }
+  .card canvas { width: 64px; height: 64px; }
+  .card .name { font-weight: 700; font-size: 14px; }
+  .card .chance { font-size: 20px; font-weight: 900; color: var(--accent); }
+  .card .owned { font-size: 11px; color: var(--gold); min-height: 14px; }
+  .card.boss { border-color: var(--gold); }
+  .card:active { transform: translate(2px, 2px); }
+  .card.dim { opacity: 0.25; }
+  .card.taming canvas { animation: wobble 0.6s ease-in-out 3; }
+  @keyframes wobble { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+  #tameResult { min-height: 52px; text-align: center; font-size: 20px; font-weight: 900; }
+  #tameResult.ok { color: var(--accent); }
+  #tameResult.fail { color: var(--red); }
+
+  #partySlots { display: flex; gap: 8px; justify-content: center; }
+  #rosterGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; }
+  #rosterGrid .mini { width: auto; position: relative; }
+  #rosterGrid .mini.inParty { border-color: var(--accent); }
+  #rosterGrid .mini.sel, #partySlots .mini.sel { outline: 3px solid var(--gold); }
+  #detail { width: 100%; padding: 10px; background: var(--panel); border: 3px solid var(--line); box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  #detail[hidden] { display: none; }
+  #detail canvas { width: 64px; height: 64px; flex: none; }
+  #detail .info { flex: 1; font-size: 13px; line-height: 1.5; }
+  #detail button { min-height: 40px; font-size: 14px; width: 100%; }
+  .xp { height: 6px; background: #000; margin-top: 2px; }
+  .xp > div { height: 100%; background: var(--accent); }
+
+  .setting { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 10px; background: var(--panel); border: 3px solid var(--line); box-sizing: border-box; }
+  .setting .desc { font-size: 12px; opacity: 0.7; }
+  .choices { display: flex; gap: 6px; }
+  .choices button { flex: 1; min-height: 38px; font-size: 14px; }
+  .choices button.on { border-color: var(--accent); color: var(--accent); }
+
+  #modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.75); z-index: 5; }
+  #modal[hidden] { display: none; }
+  #modal .box { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; background: var(--bg); border: 3px solid var(--accent); box-shadow: 4px 4px 0 #000; max-width: 300px; text-align: center; }
+  #modal .box p { margin: 0; line-height: 1.5; }
+  #modal .box button { width: 220px; }
+  #ending h1 { margin-top: 80px; color: var(--purple); }
+  #toast {
+    position: fixed; left: 50%; top: 16px; transform: translateX(-50%);
+    background: #000; border: 3px solid var(--accent); padding: 8px 16px; white-space: nowrap; pointer-events: none;
+    transition: opacity 0.2s; opacity: 0; z-index: 10;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<main>
+  <section id="home" class="panel">
+    <button id="settingsBtn" class="iconBtn" aria-label="환경설정">⚙</button>
+    <h1>멸망의<br>네크로맨서</h1>
+    <canvas id="homeArt" width="96" height="64" aria-hidden="true"></canvas>
+    <p class="sub" id="homeSub"></p>
+    <button id="adventureBtn" class="big primary">모험<small id="adventureSub"></small></button>
+    <button id="rosterBtn" class="big">소환수<small id="rosterSub"></small></button>
+    <p class="muted">마을부터 우주까지, 모든 것을 멸망시켜라.<br>쓰러뜨린 몬스터를 길들여 군단을 키우세요.</p>
+  </section>
+
+  <section id="map" class="panel" hidden>
+    <div class="topbar"><button id="mapBack">← 메인</button><h2>멸망 지도</h2><span class="spacer"></span></div>
+    <div id="regionTabs"></div>
+    <div id="regionInfo"></div>
+    <div id="stageGrid"></div>
+    <p class="muted">빨간 테두리는 보스 스테이지. 보스를 쓰러뜨리면 다음 지역이 열려요.</p>
+  </section>
+
+  <section id="prep" class="panel" hidden>
+    <div class="topbar"><button id="prepBack">← 지도</button><h2 id="prepTitle"></h2><span class="spacer"></span></div>
+    <div class="label">적</div>
+    <div class="lineup" id="prepEnemies"></div>
+    <div class="label">내 군단</div>
+    <div class="lineup" id="prepParty"></div>
+    <button id="prepEdit">편성 바꾸기</button>
+    <button id="prepStart" class="big primary">전투 시작</button>
+  </section>
+
+  <section id="battle" class="panel" hidden>
+    <div id="battleHud">
+      <button id="pauseBtn" aria-label="일시정지">❚❚</button>
+      <strong id="battleTitle"></strong>
+      <div id="battleToggles">
+        <button id="speedBtn"></button>
+        <button id="autoBtn">자동 스킬</button>
+      </div>
+    </div>
+    <canvas id="battleCanvas" width="192" height="112" role="img" aria-label="전투 화면. 왼쪽이 내 군단, 오른쪽이 적입니다."></canvas>
+    <div id="skills">
+      <button class="skill" id="blastBtn"><span>영혼 폭발</span><small>모든 적에게 큰 피해</small><div class="cd"></div></button>
+      <button class="skill" id="reviveBtn"><span>되살리기</span><small>쓰러진 소환수 부활</small><div class="cd"></div></button>
+    </div>
+    <p class="muted">소환수는 알아서 싸워요. 네크로맨서가 쓰러지면 패배!</p>
+  </section>
+
+  <section id="tame" class="panel" hidden>
+    <h2 id="tameTitle" style="margin-top:12px">길들이기!</h2>
+    <p class="sub" id="tameSub">한 마리를 골라 길들여 보세요</p>
+    <div id="tameCards"></div>
+    <div id="tameResult"></div>
+    <button id="tameNext" class="big primary" hidden>계속</button>
+    <button id="tameMap" hidden>지도로</button>
+  </section>
+
+  <section id="roster" class="panel" hidden>
+    <div class="topbar"><button id="rosterBack">← 돌아가기</button><h2>소환수</h2><span class="spacer"></span></div>
+    <div class="label">편성 (전투 순서, 앞부터)</div>
+    <div id="partySlots"></div>
+    <div id="detail" hidden></div>
+    <div class="label" id="rosterCount"></div>
+    <div class="scroll"><div id="rosterGrid"></div></div>
+  </section>
+
+  <section id="settings" class="panel" hidden>
+    <div class="topbar"><button id="settingsBack">← 돌아가기</button><h2>환경설정</h2><span class="spacer"></span></div>
+    <div id="settingList" style="display:flex;flex-direction:column;gap:10px;width:100%"></div>
+    <button id="resetData" class="danger" style="width:100%">기록 초기화</button>
+    <p class="muted">기록은 이 기기에만 저장돼요</p>
+  </section>
+
+  <section id="ending" class="panel" hidden>
+    <h1>우주가<br>멸망했다</h1>
+    <canvas id="endArt" width="96" height="64" style="width:240px;height:160px" aria-hidden="true"></canvas>
+    <p class="sub" id="endText"></p>
+    <button id="endHome" class="big primary">메인으로</button>
+  </section>
+</main>
+<div id="modal" hidden><div class="box"></div></div>
+<div id="toast"></div>
+
+<script>
+// 스크립트가 못 뜨면(예: 캐시에 남은 예전 파일과 섞임) 버튼이 먹지 않는 화면만 남으므로 새로고침을 안내한다
+setTimeout(() => {
+  if (window.necroReady) return;
+  const box = document.createElement('div');
+  box.setAttribute('role', 'alert');
+  box.style.cssText = 'position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.85);color:#fff;font:16px system-ui,sans-serif;text-align:center';
+  box.innerHTML = '<div>새 버전을 불러오지 못했어요.<br>새로고침해 주세요.</div>';
+  const b = document.createElement('button');
+  b.textContent = '새로고침';
+  b.style.cssText = 'font:700 18px system-ui,sans-serif;padding:12px 24px;color:#fff;background:#221a33;border:3px solid #7dff6a';
+  b.onclick = () => location.reload();
+  box.append(b);
+  document.body.append(box);
+}, 4000);
+</script>
+<script type="module">
+// 배포할 때마다 ?v= 숫자를 올린다 (GitHub Pages 캐시 때문)
+import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, unitStats, tameChance } from './data.js?v=1';
+import { createBattle, stepBattle, useSkill, canUse, SKILLS } from './battle.js?v=1';
+import {
+  loadSave, partyUnits, enemyUnits, stageEnemies, tameOptions, tame, grantXp, recordWin, toggleParty,
+  stageOf, globalStage, isUnlocked, isBossStage, regionProgress, xpNeed, PARTY_SIZE, STAGE_COUNT,
+} from './progress.js?v=1';
+
+const $ = id => document.getElementById(id);
+const SAVE_KEY = 'necromancer.save';
+
+// ---------- 픽셀 그림 ----------
+// 몸 모양별 12×12 그림(오른쪽을 봄). 적은 좌우를 뒤집어 왼쪽을 보게 그린다
+const SHAPE_ART = {
+  blob: ['............', '............', '............', '....mmmm....', '..mmmmmmmm..', '.mmmmmmmmmm.', '.mmmmwkmwkm.', 'mmmmmkkmkkmm', 'mmmmmmmmmmmm', 'mmmmmmmddmmm', '.mmmmmmmmmm.', '..dddddddd..'],
+  beast: ['............', '............', '.........mm.', '........mmmm', '........mwkd', '.mmmmmmmmmmm', 'mmmmmmmmmmm.', 'dmmmmmmmmmm.', '.mmmmmmmmmm.', '.mm.mm.mm.m.', '.mm.mm.mm.m.', '.dd.dd.dd.d.'],
+  flyer: ['............', 'm..........m', 'mm........mm', 'mmm..mm..mmm', 'mmmmmmmmmmmm', '.mmmmmmwkmm.', '..mmmmmmmdd.', '...mmmmmm...', '....d..d....', '............', '............', '............'],
+  humanoid: ['....hhhh....', '...hhhhhh...', '...ssssks...', '...ssssss...', '....ssss....', '..mmmmmmmm..', '.mmmmddmmmm.', '.smmmmmmmms.', '..mmmmmmmm.d', '...mm..mm...', '...mm..mm...', '..kkk..kkk..'],
+  golem: ['...mmmmmm...', '..mmmmmmmm..', '..mmmmmwkm..', '..mmmmmmmm..', 'mmmmmmmmmmmm', 'mmddmmmmddmm', 'mmmmmmmmmmmm', 'mm.mmmmmm.mm', 'dd.mmmmmm.dd', '...mm..mm...', '...mm..mm...', '..ddd..ddd..'],
+  boss: [
+    '.d............d.', '.dd..........dd.', '..dmmmmmmmmmmd..', '...mmmmmmmmmm...', '..mmmmmmmwwkmm..', '..mmmmmmmwwkmm..',
+    '..mmmmkkkkkkmm..', '.mmmmmmmmmmmmmm.', 'mmmmddmmmmddmmmm', 'mmmmmmmmmmmmmmmm', 'mm.mmmmmmmmmm.mm', 'dd.mmmmmmmmmm.dd',
+    '...mmmm..mmmm...', '...mmmm..mmmm...', '...mmm....mmm...', '..dddd....dddd..',
+  ],
+};
+const NECRO_ART = ['....pppp..g.', '...pppppp.y.', '...pkgkgp.y.', '...pkkkkp.y.', '....pppp..y.', '..ppppppwwy.', '.pppdpppp.y.', '.pppdpppp.y.', '.ppppdppp.y.', '.pppppppp.y.', '.pppppppp.y.', 'pppppppppp..'];
+const NECRO_COLORS = { p: '#4a2a6a', d: '#8a5ac0', k: '#0a0a14', g: '#7dff6a', y: '#8a6a3a', w: '#e8e6dc' };
+const WHITE = new Proxy({}, { get: () => '#ffffff' });
+
+function px(c, x, y, color, w = 1, h = 1) {
+  c.fillStyle = color;
+  c.fillRect(x, y, w, h);
+}
+
+function drawArt(c, art, colors, x, y, { flip = false, scale = 1, alpha = 1 } = {}) {
+  c.globalAlpha = alpha;
+  art.forEach((row, r) => {
+    for (let col = 0; col < row.length; col++) {
+      const ch = row[flip ? row.length - 1 - col : col];
+      if (ch !== '.' && colors[ch]) px(c, Math.round(x + col * scale), Math.round(y + r * scale), colors[ch], scale, scale);
+    }
+  });
+  c.globalAlpha = 1;
+}
+
+function artFor(typeId) {
+  if (typeId === 'necro') return { art: NECRO_ART, colors: NECRO_COLORS };
+  const t = MONSTERS[typeId];
+  return { art: SHAPE_ART[t.shape], colors: t.colors };
+}
+
+// 미리보기용 16×16 캔버스에 몬스터 하나
+function portrait(typeId, size = 16) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const c = cv.getContext('2d');
+  const { art, colors } = artFor(typeId);
+  const off = Math.floor((size - art[0].length) / 2);
+  drawArt(c, art, colors, off, off);
+  if (MONSTERS[typeId]?.tier === 'boss') drawCrown(c, MONSTERS[typeId].colors.c, 0, 0, 1);
+  return cv;
+}
+
+function drawCrown(c, color, x, y, s) {
+  for (const [cx, cy] of [[5, 0], [7, 0], [9, 0], [5, 1], [6, 1], [7, 1], [8, 1], [9, 1], [10, 1]]) px(c, x + cx * s, y + cy * s, color, s, s);
+}
+
+// 이름 끝 글자에 받침이 있으면 '이', 없으면 '가'
+function josa(word, withFinal, without) {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  return word + (code >= 0 && code <= 11171 && code % 28 ? withFinal : without);
+}
+
+function tierText(typeId) {
+  const t = MONSTERS[typeId].tier;
+  return t === 'boss' ? '👑 보스' : '★'.repeat(t) + '☆'.repeat(5 - t);
+}
+
+// ---------- 저장, 화면 전환 ----------
+
+const save = loadSave((() => { try { return localStorage.getItem(SAVE_KEY); } catch { return null; } })());
+function persist() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch {}
+}
+
+const PANELS = ['home', 'map', 'prep', 'battle', 'tame', 'roster', 'settings', 'ending'];
+function show(id) {
+  for (const p of PANELS) $(p).hidden = p !== id;
+}
+
+let toastTimer = null;
+function toast(text) {
+  $('toast').textContent = text;
+  $('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.remove('show'), 1800);
+}
+
+function openModal(html, buttons) {
+  const box = $('modal').querySelector('.box');
+  box.innerHTML = html;
+  for (const [label, fn, cls] of buttons) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    if (cls) b.className = cls;
+    b.onclick = fn;
+    box.append(b);
+  }
+  $('modal').hidden = false;
+}
+function closeModal() { $('modal').hidden = true; }
+
+function stageName(g) {
+  const { region, stage } = stageOf(g);
+  return `${REGIONS[region].name} ${isBossStage(stage) ? '보스' : stage}`;
+}
+
+// ---------- 메인 ----------
+
+function goHome() {
+  closeModal();
+  battle = null;
+  show('home');
+  const next = Math.min(save.cleared + 1, STAGE_COUNT);
+  $('homeSub').textContent = save.ended ? '우주를 멸망시켰다. 아직도 부족한가?' : `파괴한 스테이지 ${save.cleared} / ${STAGE_COUNT}`;
+  $('adventureSub').textContent = save.ended ? '어느 곳이든 다시 파괴하기' : `다음: ${stageName(next)}`;
+  $('rosterSub').textContent = `${save.roster.length}마리 · 편성 ${save.party.length}/${PARTY_SIZE}`;
+}
+
+// ---------- 지도 ----------
+
+let mapRegion = 0;
+function openMap(region = stageOf(Math.min(save.cleared + 1, STAGE_COUNT)).region) {
+  mapRegion = region;
+  show('map');
+  renderMap();
+}
+
+function renderMap() {
+  const tabs = $('regionTabs');
+  tabs.innerHTML = '';
+  REGIONS.forEach((R, i) => {
+    const b = document.createElement('button');
+    const open = isUnlocked(save, globalStage(i, 1));
+    b.textContent = open ? R.name : '🔒';
+    b.disabled = !open;
+    b.className = i === mapRegion ? 'on' : '';
+    b.onclick = () => { mapRegion = i; renderMap(); };
+    tabs.append(b);
+  });
+  const R = REGIONS[mapRegion], pct = Math.round(regionProgress(save, mapRegion) * 100);
+  $('regionInfo').innerHTML = `<strong>${R.name}</strong> · 파괴율 ${pct}%${pct === 100 ? ' 💀' : ''}<div class="bar"><div style="width:${pct}%"></div></div>`
+    + `<div class="muted" style="text-align:left;margin-top:6px">출몰: ${R.monsters.map(t => MONSTERS[t].name).join(', ')} · 보스: ${MONSTERS[R.boss].name}</div>`;
+  const grid = $('stageGrid');
+  grid.innerHTML = '';
+  for (let st = 1; st <= STAGES_PER_REGION; st++) {
+    const g = globalStage(mapRegion, st), open = isUnlocked(save, g), done = g <= save.cleared;
+    const b = document.createElement('button');
+    b.className = [isBossStage(st) ? 'boss' : '', g === save.cleared + 1 ? 'next' : ''].join(' ');
+    b.disabled = !open;
+    b.innerHTML = `${isBossStage(st) ? '💀' : st}<small>${done ? '파괴' : open ? 'NEW' : '🔒'}</small>`;
+    b.onclick = () => openPrep(g);
+    grid.append(b);
+  }
+}
+
+// ---------- 전투 준비 ----------
+
+let prepStage = 1, prepEnemies = [];
+function openPrep(g) {
+  prepStage = g;
+  const { region, stage } = stageOf(g);
+  prepEnemies = stageEnemies(region, stage, Math.random);
+  show('prep');
+  $('prepTitle').textContent = stageName(g);
+  const enemies = $('prepEnemies');
+  enemies.innerHTML = '';
+  for (const e of prepEnemies) enemies.append(miniCard(e.type, `${MONSTERS[e.type].name}`, `Lv.${e.level}`));
+  renderPrepParty();
+}
+
+function renderPrepParty() {
+  const party = $('prepParty');
+  party.innerHTML = '';
+  for (let i = 0; i < PARTY_SIZE; i++) {
+    const r = save.roster.find(o => o.id === save.party[i]);
+    if (r) party.append(miniCard(r.type, MONSTERS[r.type].name, `Lv.${r.level}`));
+    else { const d = document.createElement('div'); d.className = 'mini empty'; d.textContent = '빈 자리'; party.append(d); }
+  }
+  party.append(miniCard('necro', '네크로맨서', '맨 뒤'));
+}
+
+function miniCard(typeId, name, sub) {
+  const d = document.createElement('div');
+  d.className = 'mini';
+  d.append(portrait(typeId));
+  const n = document.createElement('div');
+  n.textContent = name;
+  const s = document.createElement('div');
+  s.textContent = sub;
+  s.style.opacity = 0.7;
+  d.append(n, s);
+  return d;
+}
+
+// ---------- 전투 ----------
+
+let battle = null, battleStage = 0, paused = false, view = null;
+const bctx = $('battleCanvas').getContext('2d');
+
+function startBattle() {
+  battleStage = prepStage;
+  battle = createBattle(partyUnits(save), enemyUnits(prepEnemies), Math.random);
+  battle.auto = save.settings.autoSkill;
+  paused = false;
+  view = { floats: [], bolts: [], fx: [], endAt: 0, destroyAt: 0, shakeAt: 0, structures: makeStructures(stageOf(battleStage).region) };
+  layoutUnits();
+  show('battle');
+  $('battleTitle').textContent = stageName(battleStage);
+  updateToggles();
+}
+
+// 아군은 왼쪽(앞 소환수가 가운데 쪽), 적은 오른쪽에 선다. 위아래로 엇갈려 겹치지 않게
+const UNIT_SCALE = 2, BOSS_SCALE = 3;
+const isBoss = u => MONSTERS[u.typeId]?.tier === 'boss';
+const unitSize = u => (isBoss(u) ? 16 * BOSS_SCALE : 12 * UNIT_SCALE);
+function layoutUnits() {
+  battle.allies.forEach((u, i) => {
+    const pos = u.necro ? { x: 2, y: 58 } : { x: 70 - i * 22, y: i % 2 ? 48 : 60 };
+    Object.assign(u, pos, { anim: {} });
+  });
+  battle.enemies.forEach((u, i) => {
+    Object.assign(u, isBoss(u) ? { x: 142, y: 36 } : { x: 98 + i * 22, y: i % 2 ? 48 : 60 }, { anim: {} });
+  });
+}
+
+function updateToggles() {
+  $('speedBtn').textContent = `속도 ×${save.settings.speed}`;
+  $('autoBtn').classList.toggle('on', !!battle?.auto);
+}
+
+$('speedBtn').onclick = () => { save.settings.speed = save.settings.speed === 1 ? 2 : 1; persist(); updateToggles(); };
+$('autoBtn').onclick = () => { battle.auto = !battle.auto; save.settings.autoSkill = battle.auto; persist(); updateToggles(); };
+$('blastBtn').onclick = () => cast('blast');
+$('reviveBtn').onclick = () => cast('revive');
+
+function cast(skill) {
+  if (!battle || paused || battle.over) return;
+  if (!canUse(battle, skill)) return toast(skill === 'revive' && battle.cooldowns.revive <= 0 ? '쓰러진 소환수가 없어요' : '아직 쓸 수 없어요');
+  handleEvents(useSkill(battle, skill), performance.now());
+}
+
+function openPause() {
+  if (!battle || battle.over) return;
+  paused = true;
+  openModal('<h2>일시정지</h2>', [
+    ['계속하기', () => { paused = false; closeModal(); }, 'primary'],
+    ['다시 시작', () => { closeModal(); openPrep(battleStage); startBattle(); }],
+    ['포기하고 지도로', () => { closeModal(); battle = null; openMap(stageOf(battleStage).region); }],
+  ]);
+}
+$('pauseBtn').onclick = openPause;
+
+function center(u) {
+  const size = unitSize(u);
+  return { x: u.x + size / 2, y: u.y + size / 2 };
+}
+
+function handleEvents(events, now) {
+  for (const e of events) {
+    if (e.type === 'attack') {
+      e.from.anim.lungeAt = now;
+      if (e.from.trait === 'bolt' || e.from.trait === 'ambush') view.bolts.push({ from: center(e.from), to: center(e.target), born: now, color: e.from.necro ? '#7dff6a' : '#ffffff' });
+    } else if (e.type === 'hit') {
+      e.target.anim.flashAt = now;
+      const c = center(e.target);
+      view.floats.push({ x: c.x + (Math.random() - 0.5) * 6, y: c.y - 8, text: String(e.dmg), color: e.target.side === 'ally' ? '#ff5c5c' : '#ffffff', born: now });
+    } else if (e.type === 'heal') {
+      const c = center(e.target);
+      view.floats.push({ x: c.x, y: c.y - 10, text: `+${e.amount}`, color: '#7dff6a', born: now });
+    } else if (e.type === 'death') {
+      e.target.anim.deadAt = now;
+    } else if (e.type === 'skill') {
+      view.fx.push({ kind: e.skill, born: now });
+      if (e.skill === 'blast') view.shakeAt = now;
+    } else if (e.type === 'revive') {
+      e.target.anim.deadAt = 0;
+      view.fx.push({ kind: 'reviveOn', target: e.target, born: now });
+    } else if (e.type === 'end') {
+      view.endAt = now;
+    }
+  }
+}
+
+// 승리 후 연출이 끝나면 결과 처리
+function finishBattle() {
+  const g = battleStage, { region, stage } = stageOf(g);
+  if (battle.result === 'lose') {
+    return openModal('<h2>패배...</h2><p>네크로맨서가 쓰러졌다.<br>소환수를 키우거나 편성을 바꿔 보세요.</p>', [
+      ['다시 도전', () => { closeModal(); openPrep(g); startBattle(); }, 'primary'],
+      ['편성 바꾸기', () => { closeModal(); openRoster('prep'); }],
+      ['지도로', () => { closeModal(); openMap(region); }],
+    ]);
+  }
+  const { first } = recordWin(save, g);
+  const ups = grantXp(save, stage);
+  persist();
+  battle = null;
+  openTame(g, first, ups);
+}
+
+// ---------- 배경과 파괴 ----------
+
+function makeStructures(region) {
+  const r = (a, b) => a + Math.floor(Math.random() * (b - a));
+  const list = [];
+  const kind = REGIONS[region].bg;
+  if (kind === 'village') {
+    for (let x = 4; x < 188; x += r(26, 40)) list.push({ type: 'house', x, w: r(16, 22), h: r(10, 16), color: '#7a5a3a', roof: '#a83a2a' });
+  } else if (kind === 'city') {
+    for (let x = 0; x < 192; x += r(16, 26)) list.push({ type: 'tower', x, w: r(12, 20), h: r(24, 50), color: '#3a3f55', win: '#ffd23f' });
+  } else if (kind === 'kingdom') {
+    list.push({ type: 'castle', x: 60, w: 72, h: 34, color: '#6a6a7a', roof: '#c02020' });
+    list.push({ type: 'house', x: 12, w: 18, h: 12, color: '#7a5a3a', roof: '#4a3a8a' }, { type: 'house', x: 156, w: 20, h: 14, color: '#7a5a3a', roof: '#4a3a8a' });
+  } else if (kind === 'planet') {
+    for (let x = 10; x < 188; x += r(30, 46)) list.push({ type: 'spire', x, w: r(8, 14), h: r(20, 40), color: '#3a6a5a', win: '#b0ff30' });
+  } else {
+    list.push({ type: 'planet', x: 30, w: 24, h: 24, color: '#4a6ac0' }, { type: 'planet', x: 130, w: 34, h: 34, color: '#c06a40' });
+  }
+  return list;
+}
+
+const SKIES = {
+  village: ['#5a8ac0', '#8ab8e0', '#4a7a3a'], city: ['#2a2a4a', '#5a4a7a', '#3a3a3a'], kingdom: ['#c07a4a', '#e0b07a', '#5a6a3a'],
+  planet: ['#3a1a4a', '#7a3a6a', '#5a3a2a'], cosmos: ['#05050f', '#15103a', '#1a1a2a'],
+};
+
+function drawBackground(c, region, now, destroyT) {
+  const kind = REGIONS[region].bg, [top, mid, ground] = SKIES[kind];
+  px(c, 0, 0, top, 192, 40);
+  px(c, 0, 40, mid, 192, 44);
+  px(c, 0, 84, ground, 192, 28);
+  if (kind === 'cosmos' || kind === 'planet' || kind === 'city')
+    for (let i = 0; i < 30; i++) px(c, (i * 53) % 192, (i * 29) % 60, i % 3 ? '#ffffff' : '#b0b0ff');
+  if (kind === 'planet') { px(c, 150, 8, '#e0d0a0', 10, 10); px(c, 168, 18, '#a0c0e0', 6, 6); }
+  for (const s of view.structures) {
+    // 파괴 중에는 건물이 흔들리며 땅으로 꺼지고 불이 붙는다
+    const sink = destroyT ? Math.min(1, destroyT * (0.8 + (s.x % 7) / 10)) * s.h : 0;
+    const shake = destroyT && destroyT < 1 ? Math.round(Math.sin(now / 30 + s.x) * 1.5) : 0;
+    const x = s.x + shake, base = 84, top = base - s.h + sink;
+    if (s.type === 'planet') {
+      const r = s.w / 2, cx = x + r, cy = 30 + sink * 2;
+      c.fillStyle = s.color;
+      c.beginPath(); c.arc(cx, cy, Math.max(0, r * (1 - (destroyT || 0) * 0.6)), 0, Math.PI * 2); c.fill();
+      continue;
+    }
+    if (top >= base) continue;
+    px(c, x, top, s.color, s.w, base - top);
+    if (s.roof && s.type === 'house') for (let i = 0; i < 6; i++) px(c, x - 2 + i, top - 6 + i, s.roof, s.w + 4 - i * 2, 1);
+    if (s.type === 'castle') {
+      for (const tx of [x - 6, x + s.w - 6]) { px(c, tx, top - 12, s.color, 12, base - top + 12); px(c, tx - 1, top - 16, s.roof, 14, 4); }
+      px(c, x + s.w / 2 - 6, base - 14, '#2a1a1a', 12, 14);
+    }
+    if (s.win) for (let wy = top + 3; wy < base - 3; wy += 6) for (let wx = x + 2; wx < x + s.w - 3; wx += 5) px(c, wx, wy, (wx + wy) % 3 ? s.win : '#000');
+  }
+  if (destroyT) {
+    for (let i = 0; i < 40; i++) {
+      const fx = (i * 37 + now / 20) % 192, fy = 84 - ((now / 15 + i * 13) % 40);
+      px(c, Math.round(fx), Math.round(fy), i % 3 ? '#ff7a1a' : '#ffd23f', 2, 2);
+    }
+    c.fillStyle = `rgba(255, 60, 20, ${0.25 * Math.min(1, destroyT)})`;
+    c.fillRect(0, 0, 192, 112);
+  }
+}
+
+function renderBattle(now) {
+  const c = bctx, b = battle;
+  if (!b) return;
+  const region = stageOf(battleStage).region;
+  const destroyT = view.destroyAt ? (now - view.destroyAt) / 1400 : 0;
+  c.save();
+  if (now - view.shakeAt < 250) c.translate(Math.round(Math.sin(now / 20) * 2), 0);
+  drawBackground(c, region, now, destroyT);
+  for (const u of [...b.allies, ...b.enemies]) drawUnit(c, u, now);
+  view.bolts = view.bolts.filter(p => now - p.born < 180);
+  for (const p of view.bolts) {
+    const t = (now - p.born) / 180;
+    px(c, Math.round(p.from.x + (p.to.x - p.from.x) * t) - 1, Math.round(p.from.y + (p.to.y - p.from.y) * t) - 1, p.color, 3, 3);
+  }
+  view.fx = view.fx.filter(f => now - f.born < 500);
+  for (const f of view.fx) {
+    const t = (now - f.born) / 500;
+    if (f.kind === 'blast') {
+      c.strokeStyle = `rgba(176, 122, 255, ${1 - t})`;
+      c.lineWidth = 3;
+      c.beginPath(); c.arc(14, 70, 20 + t * 170, -0.6, 0.6); c.stroke();
+    } else if (f.kind === 'reviveOn') {
+      const { x, y } = center(f.target);
+      for (let i = 0; i < 6; i++) px(c, x - 6 + i * 2, y + 6 - t * 24 - (i % 2) * 4, '#7dff6a', 2, 2);
+    }
+  }
+  view.floats = view.floats.filter(f => now - f.born < 700);
+  c.font = 'bold 7px monospace';
+  c.textAlign = 'center';
+  for (const f of view.floats) {
+    const t = (now - f.born) / 700;
+    c.fillStyle = '#000';
+    c.fillText(f.text, f.x + 1, f.y - t * 10 + 1);
+    c.fillStyle = f.color;
+    c.fillText(f.text, f.x, f.y - t * 10);
+  }
+  if (destroyT) {
+    c.font = 'bold 18px system-ui, sans-serif';
+    c.fillStyle = '#000';
+    c.fillText('파괴!', 97, 37);
+    c.fillStyle = '#ff5c5c';
+    c.fillText('파괴!', 96, 36);
+  }
+  c.restore();
+}
+
+function drawUnit(c, u, now) {
+  const a = u.anim;
+  if (!u.alive && a.deadAt && now - a.deadAt > 500) return;
+  const big = isBoss(u), scale = big ? BOSS_SCALE : UNIT_SCALE, size = unitSize(u);
+  const { art, colors } = artFor(u.typeId);
+  const dir = u.side === 'ally' ? 1 : -1;
+  const lunge = a.lungeAt && now - a.lungeAt < 160 ? Math.sin(((now - a.lungeAt) / 160) * Math.PI) * 6 * dir : 0;
+  const bob = MONSTERS[u.typeId]?.shape === 'flyer' ? Math.round(Math.sin(now / 200 + u.uid) * 3) : 0;
+  const dying = !u.alive ? (now - a.deadAt) / 500 : 0;
+  const flash = a.flashAt && now - a.flashAt < 90;
+  const x = u.x + lunge, y = u.y + bob + dying * 8;
+  drawArt(c, art, flash ? WHITE : colors, x, y, { flip: u.side === 'enemy', scale, alpha: 1 - dying });
+  if (big) drawCrown(c, MONSTERS[u.typeId].colors.c, x, y - 6, scale);
+  if (!u.alive) return;
+  const w = size - 4, bx = u.x + 2, by = u.y - (big ? 9 : 4);
+  px(c, bx, by, '#000', w, 2);
+  px(c, bx, by, u.side === 'ally' ? (u.necro ? '#b07aff' : '#7dff6a') : '#ff5c5c', Math.max(1, Math.round(w * u.hp / u.maxHp)), 2);
+}
+
+function updateSkillButtons() {
+  for (const [skill, id] of [['blast', 'blastBtn'], ['revive', 'reviveBtn']]) {
+    const btn = $(id), cd = battle.cooldowns[skill], max = SKILLS[skill].cooldown;
+    btn.querySelector('.cd').style.width = `${(cd / max) * 100}%`;
+    btn.classList.toggle('ready', canUse(battle, skill));
+  }
+}
+
+// ---------- 길들이기 ----------
+
+let tameState = null;
+function openTame(g, first, ups) {
+  const { region, stage } = stageOf(g);
+  const options = tameOptions(region, stage, Math.random);
+  tameState = { g, done: false };
+  show('tame');
+  $('tameTitle').textContent = isBossStage(stage) ? `${REGIONS[region].name} 멸망!` : '길들이기!';
+  const upText = ups.length ? ` · ${ups.map(u => `${MONSTERS[u.unit.type].name} Lv.${u.unit.level}`).join(', ')} 레벨 업!` : '';
+  $('tameSub').textContent = `한 마리를 골라 길들여 보세요${upText}`;
+  $('tameResult').textContent = '';
+  $('tameResult').className = '';
+  $('tameNext').hidden = $('tameMap').hidden = true;
+  const cards = $('tameCards');
+  cards.innerHTML = '';
+  for (const type of options) {
+    const t = MONSTERS[type], owned = save.roster.find(r => r.type === type);
+    const card = document.createElement('button');
+    card.className = `card${t.tier === 'boss' ? ' boss' : ''}`;
+    card.append(portrait(type));
+    card.insertAdjacentHTML('beforeend', `<div class="name">${t.name}</div><div>${tierText(type)}</div>`
+      + `<div class="chance">${Math.round(tameChance(type) * 100)}%</div><div>${TRAITS[unitStats(type, 1).trait].name}</div>`
+      + `<div class="owned">${owned ? `보유 Lv.${owned.level} → 레벨 업` : ''}</div>`);
+    card.onclick = () => tryTame(card, type, stage);
+    cards.append(card);
+  }
+}
+
+function tryTame(card, type, stage) {
+  if (tameState.done) return;
+  tameState.done = true;
+  for (const other of $('tameCards').children) if (other !== card) other.classList.add('dim');
+  card.classList.add('taming');
+  $('tameResult').textContent = '길들이는 중...';
+  const result = tame(save, type, stage, Math.random);
+  persist();
+  setTimeout(() => {
+    card.classList.remove('taming');
+    const name = MONSTERS[type].name;
+    if (result.success) {
+      $('tameResult').className = 'ok';
+      $('tameResult').innerHTML = result.isNew
+        ? `길들이기 성공!<br><small>${josa(name, '이', '가')} 소환수가 되었다 (Lv.${result.unit.level})</small>`
+        : `길들이기 성공!<br><small>${name} 레벨 업 → Lv.${result.unit.level}</small>`;
+    } else {
+      $('tameResult').className = 'fail';
+      $('tameResult').innerHTML = `실패...<br><small>${josa(name, '이', '가')} 도망쳤다</small>`;
+      card.classList.add('dim');
+    }
+    const g = tameState.g;
+    if (g === STAGE_COUNT && !save.endingSeen) {
+      $('tameNext').textContent = '계속';
+      $('tameNext').onclick = showEnding;
+    } else if (g < STAGE_COUNT) {
+      $('tameNext').textContent = `다음: ${stageName(g + 1)}`;
+      $('tameNext').onclick = () => openPrep(g + 1);
+    } else {
+      $('tameNext').textContent = '지도로';
+      $('tameNext').onclick = () => openMap(stageOf(g).region);
+    }
+    $('tameNext').hidden = false;
+    $('tameMap').hidden = false;
+  }, 1900);
+}
+$('tameMap').onclick = () => openMap(stageOf(tameState.g).region);
+
+function showEnding() {
+  save.endingSeen = true;
+  persist();
+  show('ending');
+  $('endText').textContent = `마을, 도시, 나라, 행성, 그리고 우주까지. 군단 ${save.roster.length}마리와 함께 모든 것을 멸망시켰다.`;
+}
+$('endHome').onclick = goHome;
+
+// ---------- 소환수 관리 ----------
+
+let rosterFrom = 'home', selected = null;
+function openRoster(from) {
+  rosterFrom = from;
+  selected = null;
+  show('roster');
+  renderRoster();
+}
+
+function renderRoster() {
+  const slots = $('partySlots');
+  slots.innerHTML = '';
+  for (let i = 0; i < PARTY_SIZE; i++) {
+    const r = save.roster.find(o => o.id === save.party[i]);
+    if (!r) { const d = document.createElement('div'); d.className = 'mini empty'; d.textContent = `${i + 1}번 자리`; slots.append(d); continue; }
+    const card = miniCard(r.type, MONSTERS[r.type].name, `Lv.${r.level}`);
+    if (selected === r.id) card.classList.add('sel');
+    card.onclick = () => { selected = r.id; renderRoster(); };
+    slots.append(card);
+  }
+  $('rosterCount').textContent = `보유 소환수 ${save.roster.length}마리 (눌러서 자세히 보기)`;
+  const grid = $('rosterGrid');
+  grid.innerHTML = '';
+  const order = [...save.roster].sort((a, b) => MONSTERS[b.type].region - MONSTERS[a.type].region || b.level - a.level);
+  for (const r of order) {
+    const card = miniCard(r.type, MONSTERS[r.type].name, `Lv.${r.level}`);
+    if (save.party.includes(r.id)) card.classList.add('inParty');
+    if (selected === r.id) card.classList.add('sel');
+    card.onclick = () => { selected = r.id; renderRoster(); };
+    grid.append(card);
+  }
+  renderDetail();
+}
+
+function renderDetail() {
+  const box = $('detail');
+  const r = save.roster.find(o => o.id === selected);
+  if (!r) { box.hidden = true; return; }
+  box.hidden = false;
+  const t = MONSTERS[r.type], st = unitStats(r.type, r.level), trait = TRAITS[st.trait];
+  const inParty = save.party.includes(r.id);
+  box.innerHTML = '';
+  box.append(portrait(r.type));
+  const info = document.createElement('div');
+  info.className = 'info';
+  info.innerHTML = `<strong>${t.name}</strong> Lv.${r.level} · ${tierText(r.type)}<br>`
+    + `체력 ${st.hp} · 공격 ${st.atk} · 공격 간격 ${st.interval}초<br>`
+    + `<span style="color:var(--accent)">${trait.name}</span>: ${trait.desc}<br>`
+    + `${t.starter ? '처음부터 함께한 소환수' : `출신: ${REGIONS[t.region].name}`}`
+    + `<div class="xp"><div style="width:${Math.min(100, (r.xp / xpNeed(r.level)) * 100)}%"></div></div>`;
+  const btn = document.createElement('button');
+  btn.textContent = inParty ? '편성에서 빼기' : '편성에 넣기';
+  btn.className = inParty ? '' : 'primary';
+  btn.onclick = () => {
+    const res = toggleParty(save, r.id);
+    if (!res.ok) return toast(res.reason);
+    persist();
+    renderRoster();
+  };
+  box.append(info, btn);
+}
+
+$('rosterBack').onclick = () => {
+  if (rosterFrom === 'prep') { show('prep'); renderPrepParty(); } else goHome();
+};
+
+// ---------- 환경설정 ----------
+
+const SETTINGS = [
+  { key: 'speed', label: '기본 전투 속도', desc: '전투 화면의 속도 버튼과 같아요', choices: [[1, '×1'], [2, '×2']] },
+  { key: 'autoSkill', label: '자동 스킬', desc: '켜면 스킬이 준비되는 대로 알아서 써요', choices: [[false, '끄기'], [true, '켜기']] },
+];
+let settingsFrom = 'home';
+function openSettings() {
+  show('settings');
+  const list = $('settingList');
+  list.innerHTML = '';
+  for (const opt of SETTINGS) {
+    const box = document.createElement('div');
+    box.className = 'setting';
+    box.innerHTML = `<strong>${opt.label}</strong><div class="desc">${opt.desc}</div><div class="choices"></div>`;
+    for (const [value, name] of opt.choices) {
+      const b = document.createElement('button');
+      b.textContent = name;
+      b.className = save.settings[opt.key] === value ? 'on' : '';
+      b.onclick = () => { save.settings[opt.key] = value; persist(); openSettings(); };
+      box.querySelector('.choices').append(b);
+    }
+    list.append(box);
+  }
+}
+
+$('resetData').onclick = () => openModal('<h2>기록 초기화</h2><p>소환수와 진행 상황이 모두 사라져요.<br>되돌릴 수 없어요.</p>', [
+  ['초기화', () => { try { localStorage.removeItem(SAVE_KEY); } catch {} location.reload(); }, 'danger'],
+  ['취소', closeModal, 'primary'],
+]);
+
+// ---------- 버튼 연결 ----------
+
+$('adventureBtn').onclick = () => openMap();
+$('rosterBtn').onclick = () => openRoster('home');
+$('settingsBtn').onclick = openSettings;
+$('settingsBack').onclick = goHome;
+$('mapBack').onclick = goHome;
+$('prepBack').onclick = () => openMap(stageOf(prepStage).region);
+$('prepEdit').onclick = () => openRoster('prep');
+$('prepStart').onclick = startBattle;
+addEventListener('keydown', e => {
+  if (e.code === 'Escape' && !$('battle').hidden) { if (paused) { paused = false; closeModal(); } else openPause(); }
+  if (!battle || paused || $('battle').hidden) return;
+  if (e.code === 'KeyQ' || e.code === 'Digit1') cast('blast');
+  if (e.code === 'KeyW' || e.code === 'Digit2') cast('revive');
+});
+// 다른 앱으로 넘어가면 전투를 멈춘다
+document.addEventListener('visibilitychange', () => { if (document.hidden && battle && !battle.over && !paused) openPause(); });
+
+// ---------- 메인 그림, 엔딩 그림 ----------
+
+function renderHomeArt(c, now, ending) {
+  px(c, 0, 0, ending ? '#05050f' : '#1a1030', 96, 64);
+  for (let i = 0; i < 24; i++) px(c, (i * 41) % 96, (i * 23) % 40, i % 4 ? '#6a5a9a' : '#ffffff');
+  px(c, 0, 50, ending ? '#1a1a2a' : '#2a1a3a', 96, 14);
+  if (ending) {
+    // 부서진 행성 조각이 떠다닌다
+    for (let i = 0; i < 12; i++) px(c, 48 + Math.cos(now / 900 + i) * (20 + i * 2), 26 + Math.sin(now / 900 + i) * (10 + i), i % 2 ? '#c06a40' : '#4a6ac0', 3, 3);
+  }
+  drawArt(c, NECRO_ART, NECRO_COLORS, 42, 34 + Math.round(Math.sin(now / 500)), {});
+  // 네크로맨서 주위를 도는 영혼과 소환수
+  const party = save.party.map(id => save.roster.find(r => r.id === id)).filter(Boolean);
+  party.forEach((r, i) => {
+    const { art, colors } = artFor(r.type);
+    drawArt(c, art, colors, [8, 24, 72][i], 38 + Math.round(Math.sin(now / 400 + i)), { flip: i === 2 });
+  });
+  for (let i = 0; i < 5; i++) {
+    const a = now / 700 + i * 1.26;
+    px(c, 48 + Math.cos(a) * 18, 30 + Math.sin(a) * 8, '#7dff6a', 2, 2);
+  }
+}
+
+// ---------- 메인 루프 ----------
+
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (!$('home').hidden) renderHomeArt($('homeArt').getContext('2d'), now, false);
+  if (!$('ending').hidden) renderHomeArt($('endArt').getContext('2d'), now, true);
+  if (!battle || $('battle').hidden) return;
+  if (!paused && !battle.over) handleEvents(stepBattle(battle, dt * save.settings.speed), now);
+  if (battle.over && view.endAt) {
+    // 승리하면 잠깐 뒤 지역이 무너지는 연출, 패배하면 바로 결과
+    if (battle.result === 'win' && !view.destroyAt && now - view.endAt > 500) view.destroyAt = now;
+    const wait = battle.result === 'win' ? (view.destroyAt ? now - view.destroyAt > 1800 : false) : now - view.endAt > 900;
+    if (wait && !view.finished) { view.finished = true; renderBattle(now); finishBattle(); return; }
+  }
+  renderBattle(now);
+  if (battle) updateSkillButtons();
+}
+
+goHome();
+requestAnimationFrame(frame);
+window.necroReady = true;
+</script>
+</body>
+</html>
