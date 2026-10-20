@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NPC 헌트</title>
+<style>
+  :root { --bg: #1b1b2a; --panel: #26263a; --line: #4a4a6a; --text: #f2f2f2; --accent: #ffd23f; --red: #ff5c5c; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+    font: 16px "Galmuri11", "DungGeunMo", system-ui, sans-serif;
+    overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none;
+  }
+  body { display: flex; justify-content: center; }
+  .screen { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 480px; padding: 24px 16px; box-sizing: border-box; }
+  .screen[hidden] { display: none; }
+  h1 { margin: 24px 0 4px; font-size: 36px; letter-spacing: 3px; color: var(--accent); text-shadow: 3px 3px 0 #000; }
+  .sub { margin: 0 0 16px; opacity: 0.75; text-align: center; line-height: 1.5; }
+  button, input {
+    font: inherit; color: var(--text); background: var(--panel);
+    border: 3px solid var(--line); border-radius: 0; min-height: 48px; padding: 0 16px; box-sizing: border-box;
+  }
+  button { width: 260px; font-weight: 700; box-shadow: 3px 3px 0 #000; }
+  button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  button.primary { border-color: var(--accent); }
+  button:disabled { opacity: 0.4; }
+  input { width: 260px; text-align: center; }
+  .row { display: flex; gap: 8px; width: 260px; }
+  .row input { width: auto; flex: 1; min-width: 0; text-transform: uppercase; }
+  .row button { width: auto; }
+  .label { margin-top: 12px; font-size: 13px; opacity: 0.7; }
+  #code { font-size: 44px; letter-spacing: 8px; color: var(--accent); margin: 0; }
+  #players { list-style: none; padding: 0; margin: 0; width: 260px; }
+  #players li { padding: 8px 12px; border-bottom: 2px solid var(--line); }
+  #hud { display: flex; justify-content: space-between; width: 100%; font-size: 18px; }
+  #lives { color: var(--red); letter-spacing: 2px; }
+  #board { position: relative; }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; border: 3px solid #000; }
+  #overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.65); text-align: center; font-size: 28px; gap: 8px;
+  }
+  #overlay[hidden] { display: none; }
+  #overlay small { font-size: 14px; opacity: 0.8; }
+  #controls { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 8px; }
+  #dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 4px; }
+  #dpad button, #attack { width: auto; padding: 0; min-height: 0; font-size: 22px; }
+  #attack { width: 96px; height: 96px; border-radius: 50%; border-color: var(--red); font-size: 18px; }
+  #attack.wait { opacity: 0.35; }
+  #toast {
+    position: fixed; left: 50%; top: 16px; transform: translateX(-50%);
+    background: #000; border: 3px solid var(--accent); padding: 8px 16px; white-space: nowrap; pointer-events: none;
+    transition: opacity 0.2s; opacity: 0;
+  }
+  #toast.show { opacity: 1; }
+  .hint { font-size: 12px; opacity: 0.6; text-align: center; }
+  @media (hover: hover) and (pointer: fine) { #controls { display: none; } }
+</style>
+</head>
+<body>
+
+<section id="menu" class="screen">
+  <h1>NPC 헌트</h1>
+  <p class="sub">모두가 NPC인 척하는 중.<br>바로 옆 칸의 진짜 플레이어를 찾아 찌르세요.</p>
+  <input id="name" maxlength="12" placeholder="닉네임" autocomplete="off">
+  <button id="quickBtn" class="primary">빠른 매칭</button>
+  <div class="label">친구와 하기</div>
+  <button id="createBtn">방 만들기</button>
+  <div class="row">
+    <input id="codeInput" maxlength="4" placeholder="방 코드" autocomplete="off">
+    <button id="joinBtn">입장</button>
+  </div>
+  <p class="hint">2~8명 · 목숨 3개 · 최후의 1인이 승리<br>NPC를 잘못 찌르면 내 목숨이 줄어요</p>
+</section>
+
+<section id="lobby" class="screen" hidden>
+  <div class="label" id="lobbyMode"></div>
+  <p id="code"></p>
+  <p class="sub" id="lobbyInfo"></p>
+  <ul id="players"></ul>
+  <button id="startBtn" class="primary">게임 시작</button>
+  <button id="leaveBtn">나가기</button>
+</section>
+
+<section id="game" class="screen" hidden>
+  <div id="hud"><span id="lives"></span><span id="alive"></span></div>
+  <div id="board">
+    <canvas id="canvas" width="160" height="160" role="img" aria-label="게임 화면. 10×10 칸에 플레이어와 NPC가 섞여 있습니다."></canvas>
+    <div id="overlay" hidden></div>
+  </div>
+  <div id="controls">
+    <div id="dpad">
+      <span></span><button data-dir="up" aria-label="위">▲</button><span></span>
+      <button data-dir="left" aria-label="왼쪽">◀</button><span></span><button data-dir="right" aria-label="오른쪽">▶</button>
+      <span></span><button data-dir="down" aria-label="아래">▼</button><span></span>
+    </div>
+    <button id="attack">찌르기</button>
+  </div>
+  <p class="hint">이동: 방향키/WASD · 찌르기: 스페이스 (바라보는 쪽 한 칸)<br>옆 사람 쪽으로 한 번 부딪치면 그쪽을 바라봐요</p>
+</section>
+
+<div id="toast"></div>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+const CELL = 16;
+const SKINS = [
+  { hair: '#3b2a1a', skin: '#f2c49b', shirt: '#d94a4a', pants: '#2d3a6b' },
+  { hair: '#1a1a1a', skin: '#e0ac7e', shirt: '#4a8fd9', pants: '#3b3b3b' },
+  { hair: '#c9862e', skin: '#f6d2b0', shirt: '#5bbf5b', pants: '#5a3e2b' },
+  { hair: '#6b3b8a', skin: '#c68b5e', shirt: '#f0e04a', pants: '#2b4a3e' },
+  { hair: '#8a8a8a', skin: '#f2c49b', shirt: '#b05bd9', pants: '#2d2d4a' },
+  { hair: '#7a2a1a', skin: '#a8714a', shirt: '#f08a3a', pants: '#2d3a6b' },
+];
+// 12×13 픽셀 캐릭터. h 머리, s 피부, c 옷, p 바지, b 신발
+const PERSON = [
+  '....hhhh....',
+  '...hhhhhh...',
+  '...ssssss...',
+  '...ssssss...',
+  '...ssssss...',
+  '....ssss....',
+  '..cccccccc..',
+  '.cccccccccc.',
+  '.sccccccccs.',
+  '..cccccccc..',
+  '...pp..pp...',
+  '...pp..pp...',
+  '..bbb..bbb..',
+];
+const EYES = { down: [4, 7], left: [3, 5], right: [6, 8], up: [] };
+const EVENT_TEXT = {
+  cooldown: '아직 찌를 수 없어요',
+  miss: '허공을 찔렀어요',
+  penalty: e => `NPC였어요! 목숨 -1 (남은 목숨 ${e.lives})`,
+  killPlayer: '진짜 플레이어를 찔렀어요!',
+  hurt: e => `찔렸어요! 다른 곳에서 부활 (남은 목숨 ${e.lives})`,
+  eliminated: '탈락했어요. 끝까지 지켜보세요',
+};
+
+const canvas = $('canvas'), ctx = canvas.getContext('2d');
+let ws = null, outbox = [];
+let size = 10, tickMs = 400;
+let cur = null, prev = new Map(), stateAt = 0;
+let heldDir = null, holdTimer = null, toastTimer = null, lobbyTimer = null;
+
+try { $('name').value = localStorage.getItem('npcHunt.name') ?? ''; } catch {}
+
+function show(id) {
+  for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+}
+
+function toast(text) {
+  $('toast').textContent = text;
+  $('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.remove('show'), 1800);
+}
+
+function connect() {
+  if (ws && ws.readyState <= 1) return;
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
+  ws.onopen = () => { for (const m of outbox) ws.send(m); outbox = []; };
+  ws.onmessage = e => onMessage(JSON.parse(e.data));
+  ws.onclose = () => {
+    ws = null;
+    if (!$('menu').hidden) return;
+    show('menu');
+    toast('서버와 연결이 끊겼어요');
+  };
+}
+
+function send(msg) {
+  const data = JSON.stringify(msg);
+  if (ws?.readyState === 1) ws.send(data);
+  else { outbox.push(data); connect(); }
+}
+
+function myName() {
+  const name = $('name').value.trim();
+  try { localStorage.setItem('npcHunt.name', name); } catch {}
+  return name;
+}
+
+function onMessage(m) {
+  switch (m.t) {
+    case 'lobby': return showLobby(m);
+    case 'start':
+      size = m.size; tickMs = m.tickMs; cur = null; prev = new Map();
+      canvas.width = canvas.height = size * CELL;
+      $('overlay').hidden = true;
+      fitBoard(); show('game');
+      return;
+    case 'state':
+      prev = new Map((cur?.ents ?? []).map(e => [e.id, e]));
+      cur = m; stateAt = performance.now();
+      $('lives').textContent = m.me.alive ? '♥'.repeat(m.me.lives) + '♡'.repeat(Math.max(0, 3 - m.me.lives)) : '관전 중';
+      $('alive').textContent = `남은 플레이어 ${m.alive}`;
+      $('attack').classList.toggle('wait', m.me.cooldown > 0);
+      return;
+    case 'event': {
+      const text = EVENT_TEXT[m.kind];
+      return toast(typeof text === 'function' ? text(m) : text);
+    }
+    case 'over':
+      $('overlay').innerHTML = (m.youWon ? '🏆 승리!' : m.winner ? `${escapeHtml(m.winner)} 승리` : '무승부') + '<small>잠시 후 로비로 돌아가요</small>';
+      $('overlay').hidden = false;
+      return;
+    case 'left': clearInterval(lobbyTimer); return show('menu');
+    case 'error': return toast(m.msg);
+  }
+}
+
+function showLobby(m) {
+  show('lobby');
+  $('lobbyMode').textContent = m.mode === 'friend' ? '친구 방 · 코드를 알려 주세요' : '빠른 매칭';
+  $('code').textContent = m.mode === 'friend' ? m.code : '';
+  $('code').hidden = m.mode !== 'friend';
+  $('players').innerHTML = m.players.map(n => `<li>${escapeHtml(n)}</li>`).join('');
+  $('startBtn').hidden = !(m.mode === 'friend' && m.isHost);
+  $('startBtn').disabled = m.players.length < m.min;
+  clearInterval(lobbyTimer);
+  const info = () => {
+    if (m.mode === 'friend') return m.isHost ? `${m.players.length}/${m.max}명 · ${m.min}명 이상이면 시작할 수 있어요` : `${m.players.length}/${m.max}명 · 방장이 시작하길 기다리는 중`;
+    if (m.startsIn === null) return `다른 플레이어를 기다리는 중 (${m.players.length}/${m.max})`;
+    const left = Math.max(0, Math.ceil((endsAt - performance.now()) / 1000));
+    return `${left}초 뒤 시작 (${m.players.length}/${m.max})`;
+  };
+  const endsAt = performance.now() + (m.startsIn ?? 0);
+  $('lobbyInfo').textContent = info();
+  if (m.startsIn !== null) lobbyTimer = setInterval(() => { $('lobbyInfo').textContent = info(); }, 250);
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+}
+
+$('quickBtn').onclick = () => send({ t: 'quick', name: myName() });
+$('createBtn').onclick = () => send({ t: 'create', name: myName() });
+$('joinBtn').onclick = () => {
+  const code = $('codeInput').value.trim();
+  if (code.length === 4) send({ t: 'join', code, name: myName() });
+  else toast('방 코드 4자리를 입력하세요');
+};
+$('startBtn').onclick = () => send({ t: 'start' });
+$('leaveBtn').onclick = () => send({ t: 'leave' });
+
+// 누르고 있는 동안 틱보다 자주 보내서 매 틱 한 칸씩 끊김 없이 걷게 한다
+function hold(dir) {
+  heldDir = dir;
+  send({ t: 'move', dir });
+  clearInterval(holdTimer);
+  holdTimer = setInterval(() => heldDir && send({ t: 'move', dir: heldDir }), tickMs / 2);
+}
+function release(dir) {
+  if (dir && dir !== heldDir) return;
+  heldDir = null;
+  clearInterval(holdTimer);
+}
+function attack() { send({ t: 'attack' }); }
+
+const KEYS = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
+addEventListener('keydown', e => {
+  if ($('game').hidden || e.target.tagName === 'INPUT') return;
+  if (KEYS[e.code]) { e.preventDefault(); if (!e.repeat) hold(KEYS[e.code]); }
+  else if ((e.code === 'Space' || e.code === 'KeyJ') && !e.repeat) { e.preventDefault(); attack(); }
+});
+addEventListener('keyup', e => { if (KEYS[e.code]) release(KEYS[e.code]); });
+addEventListener('blur', () => release());
+for (const b of document.querySelectorAll('#dpad button')) {
+  b.addEventListener('pointerdown', e => { e.preventDefault(); hold(b.dataset.dir); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, () => release(b.dataset.dir));
+}
+$('attack').addEventListener('pointerdown', e => { e.preventDefault(); attack(); });
+
+function fitBoard() {
+  const avail = Math.min(innerWidth - 32 - 6, innerHeight - 330, 640);
+  const scale = Math.max(1, avail / (size * CELL));
+  canvas.style.width = canvas.style.height = `${Math.floor(size * CELL * scale)}px`;
+}
+addEventListener('resize', fitBoard);
+
+function px(x, y, color, w = 1, h = 1) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+}
+
+function drawPerson(x, y, skinIdx, dir, walking, frame) {
+  const pal = SKINS[skinIdx % SKINS.length];
+  const colors = { h: pal.hair, s: pal.skin, c: pal.shirt, p: pal.pants, b: '#222' };
+  const ox = Math.round(x) + 2, oy = Math.round(y) + 2;
+  PERSON.forEach((row, r) => {
+    for (let c = 0; c < row.length; c++) {
+      let ch = row[c];
+      if (ch === '.') continue;
+      if (dir === 'up' && ch === 's' && r <= 4) ch = 'h'; // 뒷모습은 얼굴 대신 머리카락
+      // 걷는 중에는 한쪽 다리를 번갈아 올린다
+      if (walking && r >= 10 && ((frame && c < 6) || (!frame && c >= 6))) { if (r === 12) continue; }
+      px(ox + c, oy + r, colors[ch]);
+    }
+  });
+  for (const c of EYES[dir]) px(ox + c, oy + 3, '#000');
+}
+
+function drawBody(b) {
+  const pal = SKINS[b.skin % SKINS.length];
+  const x = b.x * CELL, y = b.y * CELL;
+  px(x + 2, y + 10, '#8a1f1f', 12, 4);
+  px(x + 1, y + 11, '#8a1f1f', 14, 2);
+  px(x + 3, y + 8, pal.shirt, 7, 4);
+  px(x + 10, y + 8, pal.skin, 3, 4);
+  px(x + 1, y + 9, pal.pants, 2, 2);
+}
+
+function render(now) {
+  requestAnimationFrame(render);
+  if ($('game').hidden) return;
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      px(x * CELL, y * CELL, (x + y) % 2 ? '#5a8f4a' : '#64994f', CELL, CELL);
+      px(x * CELL + 3, y * CELL + 5, '#4f8040');
+      px(x * CELL + 11, y * CELL + 12, '#4f8040');
+    }
+  if (!cur) return;
+  for (const b of cur.bodies) drawBody(b);
+  const t = Math.min(1, (now - stateAt) / tickMs);
+  const frame = Math.floor(now / 150) % 2 === 0;
+  const placed = cur.ents.map(e => {
+    const p = prev.get(e.id) ?? e;
+    const moving = p.x !== e.x || p.y !== e.y;
+    return { e, x: (p.x + (e.x - p.x) * t) * CELL, y: (p.y + (e.y - p.y) * t) * CELL, walking: moving && t < 1 };
+  }).sort((a, b) => a.y - b.y); // 아래쪽 캐릭터를 나중에 그려 겹칠 때 앞에 오게
+  for (const { e, x, y, walking } of placed) drawPerson(x, y, e.skin, e.dir, walking, frame);
+  // 내 캐릭터 표시는 내 화면에만 그린다
+  const mine = placed.find(p => p.e.id === cur.me.id);
+  if (mine && Math.floor(now / 400) % 2 === 0) {
+    const cx = Math.round(mine.x) + 8, cy = Math.round(mine.y);
+    px(cx - 2, cy, '#fff', 5, 1); px(cx - 1, cy + 1, '#fff', 3, 1); px(cx, cy + 2, '#fff');
+  }
+}
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
