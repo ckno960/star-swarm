@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   defaultSave, loadSave, starsFor, recordClear, recordDaily, bonusBalls, bonusAvailable, buy, equip, spend,
-  titleFor, dayIndex, shareText, canHintFree, STAR_COINS, GOLD_COINS, DAILY_COINS, SHOP,
+  titleFor, dayIndex, shareText, canHintFree, STAR_COINS, GOLD_COINS, DAILY_COINS, SHOP, DEFAULT_SETTINGS,
 } from './meta.js';
 
 const clear = (save, stage, stars, golden = false) => recordClear(save, { stage, stars, golden, monsters: [] });
@@ -121,4 +121,13 @@ test('예전 저장 키를 이어받는다', () => {
   const again = loadSave(k => (k === 'knightLine.save' ? JSON.stringify(s) : null));
   assert.equal(again.coins, 80);
   assert.equal(loadSave(k => (k === 'knightLine.save' ? '{깨짐' : null)).coins, 0);
+});
+
+test('환경설정: 기본값이 있고, 예전 저장에도 빠진 항목을 채운다', () => {
+  assert.deepEqual(defaultSave().settings, DEFAULT_SETTINGS);
+  const saved = { ...defaultSave(), settings: { speed: 'fast' } };
+  const s = loadSave(k => (k === 'knightLine.save' ? JSON.stringify(saved) : null));
+  assert.deepEqual(s.settings, { ...DEFAULT_SETTINGS, speed: 'fast' });
+  const old = loadSave(k => (k === 'knightLine.save' ? JSON.stringify({ coins: 5 }) : null));
+  assert.deepEqual(old.settings, DEFAULT_SETTINGS);
 });

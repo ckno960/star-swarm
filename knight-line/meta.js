@@ -41,8 +41,12 @@ export function defaultSave() {
     equip: { knight: 'knight.basic', effect: 'effect.basic', theme: 'theme.dungeon' },
     kills: {},
     daily: { lastDay: 0, streak: 0, results: {} },
+    settings: { ...DEFAULT_SETTINGS },
   };
 }
+
+// speed: 기사 돌진 속도, flash: 번쩍이는 연출, dpad: 화면 방향 버튼(auto는 터치 기기에서만)
+export const DEFAULT_SETTINGS = { speed: 'normal', flash: true, dpad: 'auto' };
 
 // get(key) → 문자열 또는 null. 예전 버전의 낱개 키(knightLine.cleared 등)도 이어받는다
 export function loadSave(get) {
@@ -51,7 +55,10 @@ export function loadSave(get) {
     const raw = get('knightLine.save');
     if (raw) {
       const s = JSON.parse(raw);
-      return { ...base, ...s, equip: { ...base.equip, ...s.equip }, daily: { ...base.daily, ...s.daily } };
+      return {
+        ...base, ...s,
+        equip: { ...base.equip, ...s.equip }, daily: { ...base.daily, ...s.daily }, settings: { ...base.settings, ...s.settings },
+      };
     }
   } catch { /* 깨진 저장은 새로 시작 */ }
   const num = k => Number(get(`knightLine.${k}`)) || 0;
