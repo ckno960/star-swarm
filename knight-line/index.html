@@ -194,18 +194,35 @@
 <div id="modal" hidden><div class="box"></div></div>
 <div id="toast"></div>
 
+<script>
+// 스크립트가 못 뜨면(예: 캐시에 남은 예전 파일과 섞임) 버튼이 먹지 않는 화면만 남으므로 새로고침을 안내한다
+setTimeout(() => {
+  if (window.knightReady) return;
+  const box = document.createElement('div');
+  box.setAttribute('role', 'alert');
+  box.style.cssText = 'position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.85);color:#fff;font:16px system-ui,sans-serif;text-align:center';
+  box.innerHTML = '<div>새 버전을 불러오지 못했어요.<br>새로고침해 주세요.</div>';
+  const b = document.createElement('button');
+  b.textContent = '새로고침';
+  b.style.cssText = 'font:700 18px system-ui,sans-serif;padding:12px 24px;color:#fff;background:#26263a;border:3px solid #ffd23f';
+  b.onclick = () => location.reload();
+  box.append(b);
+  document.body.append(box);
+}, 4000);
+</script>
 <script type="module">
+// 배포할 때마다 ?v= 숫자를 올린다. GitHub Pages가 파일을 10분 정도 캐시해서, 새 화면이 예전 game.js를 받으면 멈추기 때문
 import {
   createStage, createDaily, move, undo, targetIn, isCleared, isStuck, hint, goldenLast, DIRS, TOUGH_FROM_STAGE, TOUGH_KIND,
-} from './game.js';
+} from './game.js?v=4';
 import {
   createBoard, dropBall, stepBoard, isFinished, spinReels,
   BOARD_W, BOARD_H, BALL_R, SLOTS, SLOT_W, SLOT_TOP, SYMBOLS,
-} from './pachinko.js';
+} from './pachinko.js?v=4';
 import {
   loadSave, starsFor, recordClear, recordKills, recordDaily, bonusAvailable, bonusBalls, canHintFree, spend, buy, equip,
   titleFor, totalKills, dayIndex, shareText, SHOP, CATEGORIES, BESTIARY, BADGES, HINT_COST, GOLD_COINS, BONUS_EVERY,
-} from './meta.js';
+} from './meta.js?v=4';
 
 const $ = id => document.getElementById(id);
 const CELL = 16, MAX_HELD_SPINS = 4;
@@ -1029,6 +1046,7 @@ function render(now) {
 applySettings();
 goHome();
 requestAnimationFrame(render);
+window.knightReady = true;
 </script>
 </body>
 </html>
