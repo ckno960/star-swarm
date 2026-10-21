@@ -78,17 +78,22 @@
   #panel {
     position: absolute; left: 0; right: 0; bottom: 0; height: 24%; min-height: 150px;
     background: var(--slate); border-top: 4px solid var(--ink); box-shadow: inset 0 4px 0 #74809e;
-    display: flex; justify-content: space-between; align-items: center; padding: 0 20px env(safe-area-inset-bottom);
+    display: flex; justify-content: center; align-items: center; padding: 0 20px env(safe-area-inset-bottom);
   }
   .bigBtn {
-    height: 74%; aspect-ratio: 1 / 1; max-width: 42%; padding: 0;
+    height: 74%; width: 72%; max-width: 300px; padding: 0;
     background: var(--cream); border: 4px solid var(--ink); border-radius: 20px;
     box-shadow: 0 7px 0 var(--ink), inset 0 -7px 0 var(--cream2);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-    color: var(--ink); font: 900 15px system-ui, sans-serif; transition: opacity 0.15s, filter 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    color: var(--ink); font: 900 30px system-ui, sans-serif; transition: opacity 0.15s, filter 0.15s, background 0.1s;
     touch-action: none;
   }
-  .bigBtn svg { width: 50%; height: auto; }
+  .bigBtn svg { height: 62%; width: auto; }
+  .bigBtn .smashIcon, .bigBtn.smash .jumpIcon { display: none; }
+  .bigBtn.smash .smashIcon { display: flex; }
+  .bigBtn .jumpIcon, .bigBtn .smashIcon { height: 100%; align-items: center; gap: 10px; }
+  .bigBtn .jumpIcon { display: flex; }
+  .bigBtn.smash { background: #ffe58a; box-shadow: 0 7px 0 var(--ink), inset 0 -7px 0 #e0b040; }
   .bigBtn.press { transform: translateY(6px); box-shadow: 0 1px 0 var(--ink), inset 0 -3px 0 var(--cream2); }
   .bigBtn.dim { filter: saturate(0.4) brightness(0.85); }
   .bigBtn.glow { animation: glow 0.6s ease-in-out infinite; }
@@ -161,13 +166,9 @@
   <div id="hint" hidden></div>
 
   <div id="panel" hidden>
-    <button id="btnL" class="bigBtn" aria-label="점프">
-      <svg viewBox="0 0 40 40"><path d="M20 5 L35 27 L26 27 L26 35 L14 35 L14 27 L5 27 Z" fill="#e04848" stroke="#2b2638" stroke-width="3" stroke-linejoin="round"/></svg>
-      점프
-    </button>
-    <button id="btnR" class="bigBtn" aria-label="내려찍기">
-      <svg viewBox="0 0 40 40"><path d="M14 4 L26 4 L26 16 L35 16 L20 33 L5 16 L14 16 Z" fill="#e04848" stroke="#2b2638" stroke-width="3" stroke-linejoin="round"/><path d="M6 37 L12 34 M34 37 L28 34 M20 39 L20 36" stroke="#2b2638" stroke-width="3" stroke-linecap="round"/></svg>
-      찍기
+    <button id="btn" class="bigBtn" aria-label="점프">
+      <span class="jumpIcon"><svg viewBox="0 0 40 40"><path d="M20 5 L35 27 L26 27 L26 35 L14 35 L14 27 L5 27 Z" fill="#e04848" stroke="#2b2638" stroke-width="3" stroke-linejoin="round"/></svg>점프</span>
+      <span class="smashIcon"><svg viewBox="0 0 40 40"><path d="M14 4 L26 4 L26 16 L35 16 L20 33 L5 16 L14 16 Z" fill="#e04848" stroke="#2b2638" stroke-width="3" stroke-linejoin="round"/><path d="M6 37 L12 34 M34 37 L28 34 M20 39 L20 36" stroke="#2b2638" stroke-width="3" stroke-linecap="round"/></svg>찍기</span>
     </button>
   </div>
 
@@ -1133,11 +1134,12 @@ function updateHud() {
   hpEl.className = hf < 0.25 ? 'low' : hf < 0.55 ? 'mid' : '';
   $('timerFill').style.width = `${(G.timeLeft / s.time) * 100}%`;
   $('timer').classList.toggle('low', G.timeLeft / s.time < 0.25 && mode === 'play');
-  const ground = G.phase === 'ready' || G.phase === 'intro';
-  $('btnL').classList.toggle('glow', G.phase === 'ready');
-  $('btnR').classList.toggle('glow', G.phase === 'air' && !G.smashed);
-  $('btnL').classList.toggle('dim', !ground);
-  $('btnR').classList.toggle('dim', ground);
+  // 버튼 하나: 땅에서는 점프, 뛰는 순간부터 찍기로 바뀜
+  const btn = $('btn'), smashing = ['crouch', 'air', 'dive'].includes(G.phase);
+  btn.classList.toggle('smash', smashing);
+  btn.setAttribute('aria-label', smashing ? '내려찍기' : '점프');
+  btn.classList.toggle('glow', G.phase === 'ready' || (G.phase === 'air' && !G.smashed));
+  btn.classList.toggle('dim', !(G.phase === 'ready' || ((G.phase === 'air' || G.phase === 'crouch') && !G.smashed)));
   if (mode === 'play' && !save.cleared[0] && G.info.index === 0) {
     const hint = $('hint');
     if (G.phase === 'ready') { hint.hidden = false; hint.textContent = '바늘이 정중앙에 올 때 누르세요!'; }
@@ -1255,7 +1257,7 @@ function showSettings() {
 }
 
 // ---------- 연결 ----------
-for (const id of ['btnL', 'btnR']) {
+for (const id of ['btn']) {
   const b = $(id);
   b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.classList.add('press'); action(); });
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => b.classList.remove('press'));
