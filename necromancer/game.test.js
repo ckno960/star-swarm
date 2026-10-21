@@ -5,7 +5,7 @@ import { createBattle, stepBattle, useSkill, canUse, simulate, necro, killsByTyp
 import {
   defaultSave, loadSave, stageEnemies, tameOptions, tame, tameAmount, recordWin, recordLoss, partyUnits, enemyUnits, groupEnemies,
   stageOf, globalStage, isUnlocked, regionProgress, STAGE_COUNT, armySize, enemyCount, necroLevel, stageSouls,
-  levelUp, levelUpCost, evolve, canEvolve, evolveCost, rollRoulette, applyRoulette, ROULETTE, TAME_MIN,
+  levelUp, levelUpCost, evolve, canEvolve, evolveCost, rollRoulette, applyRoulette, rouletteAvailable, ROULETTE, TAME_MIN,
 } from './progress.js';
 
 function seeded(seed = 1) {
@@ -174,11 +174,15 @@ test('길들이기: 성공하면 쓰러뜨린 같은 종류의 일부를 데려�
   tame(s, 'dog', 6, { dog: 10 }, fixed(0));
   assert.equal(s.roster.find(r => r.type === 'dog').count, before + tameAmount('dog', { dog: 10 }));
   assert.equal(partyUnits(s).filter(u => u.typeId === 'dog').length, s.roster.find(r => r.type === 'dog').count);
-  // 보스는 한 마리, 또 길들이면 레벨 업
+  // 보스는 한 마리, 종류마다 한 번만
   assert.equal(tame(s, 'chief', 10, {}, fixed(0)).amount, 1);
   const again = tame(s, 'chief', 10, {}, fixed(0));
-  assert.equal(again.levelUp, 2);
+  assert.deepEqual([again.success, again.already], [false, true]);
   assert.equal(s.roster.find(r => r.type === 'chief').count, 1);
+  // 이미 길들인 보스는 후보에서 빠진다
+  const bossList = [{ type: 'slime' }, { type: 'dog' }, { type: 'chief' }];
+  assert.ok(!tameOptions(bossList, seeded(1), s).includes('chief'));
+  assert.ok(tameOptions(bossList, seeded(1), defaultSave()).includes('chief'));
 });
 
 test('보상: 스테이지를 깨면 영혼, 처음 깨면 두 배. 져도 쓰러뜨린 만큼 조금', () => {
@@ -225,6 +229,16 @@ test('진화: 레벨 10부터, 진화하면 레벨 1로 돌아가고 더 강해�
   assert.equal(evolve(s, r.id).ok, false);
   // 보스는 진화하지 않는다
   assert.equal(canEvolve({ type: 'chief', level: 20, evo: 0 }), false);
+});
+
+test('룰렛: 보스 스테이지를 처음 깰 때 한 번만', () => {
+  const s = defaultSave();
+  assert.equal(rouletteAvailable(s, 5), false);
+  assert.ok(rouletteAvailable(s, 10));
+  applyRoulette(s, 0, 10, seeded(1));
+  assert.equal(rouletteAvailable(s, 10), false);
+  assert.ok(rouletteAvailable(s, 20));
+  assert.deepEqual(loadSave(JSON.stringify({ cleared: 3 })).roulettes, {});
 });
 
 test('룰렛: 모든 칸이 나올 수 있고, 각 칸이 실제로 상을 준다', () => {
