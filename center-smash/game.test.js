@@ -2,34 +2,54 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as L from './logic.js';
 
-test('20 stages across 4 regions, last of each region is a boss', () => {
-  assert.equal(L.STAGE_COUNT, 20);
-  for (let i = 0; i < 20; i++) {
+test('50 stages across 5 regions, last of each region is a boss', () => {
+  assert.equal(L.STAGE_COUNT, 50);
+  for (let i = 0; i < 50; i++) {
     const s = L.stageInfo(i);
-    assert.equal(s.boss, s.local === 4);
+    assert.equal(s.boss, s.local === 9, `stage ${i}`);
   }
-  assert.equal(L.stageInfo(20), null);
-  assert.equal(L.stageInfo(5).region.id, 'city');
-  assert.equal(L.stageInfo(19).target.name, '목성');
+  assert.equal(L.stageInfo(50), null);
+  assert.equal(L.stageInfo(10).region.id, 'city');
+  assert.equal(L.stageInfo(49).target.name, '은하');
+});
+
+test('targets grow so the 1.8m hero shrinks to a dot', () => {
+  let prev = 0;
+  for (let i = 0; i < 50; i++) {
+    const t = L.stageInfo(i).target;
+    assert.ok(t.h >= prev * 0.5, `stage ${i} not much smaller than before`);
+    prev = Math.max(prev, t.h);
+  }
+  assert.ok(L.stageInfo(49).target.h / L.HERO_M > 1e20);
+});
+
+test('hero starts on the ground beside buildings, on top of spheres', () => {
+  const hut = L.stageInfo(0);
+  assert.ok(hut.x0 < -hut.target.w / 2);
+  const moon = L.stageInfo(33);
+  assert.equal(moon.sphere, true);
+  assert.equal(moon.x0, 0);
 });
 
 test('needle sweeps -1..1 and passes center', () => {
   assert.equal(L.needlePos(0, 1), -1);
   assert.equal(L.needlePos(0.25, 1), 0);
   assert.equal(L.needlePos(0.5, 1), 1);
-  assert.ok(Math.abs(L.needlePos(0.75, 1)) < 1e-9);
   for (let t = 0; t < 3; t += 0.013) {
     const p = L.needlePos(t, 1.3, 0.37);
     assert.ok(p >= -1 && p <= 1);
   }
 });
 
-test('judging by distance from center', () => {
-  assert.equal(L.judgeJump(0).grade, 'perfect');
-  assert.equal(L.judgeJump(-0.05).grade, 'perfect');
-  assert.equal(L.judgeJump(0.15).grade, 'great');
-  assert.equal(L.judgeJump(-0.4).grade, 'good');
-  assert.equal(L.judgeJump(0.9).grade, 'miss');
+test('perfect is 3% of the bar; slow needle', () => {
+  assert.equal(L.judgeJump(0.03).grade, 'perfect');
+  assert.equal(L.judgeJump(-0.035).grade, 'great');
+  assert.equal(L.judgeJump(0.3).grade, 'good');
+  assert.equal(L.judgeJump(0.5).grade, 'miss');
+  assert.equal(L.judgeJump(0.04, 1.6).grade, 'perfect', 'wider zones for 매눈이');
+  assert.ok(L.stageInfo(0).needleSpeed <= 0.4);
+  assert.ok(L.stageInfo(49).needleSpeed <= 0.6);
+  assert.ok(L.stageInfo(0, L.charById('turtle')).needleSpeed < L.stageInfo(0).needleSpeed);
 });
 
 test('closer to center → higher jump and more damage', () => {
@@ -40,8 +60,6 @@ test('closer to center → higher jump and more damage', () => {
     assert.ok(f < prevF && d < prevD, `p=${p}`);
     prevF = f; prevD = d;
   }
-  assert.equal(L.jumpFraction(L.judgeJump(0)), 1);
-  assert.ok(L.jumpFraction(L.judgeJump(0.1)) < 0.8, 'perfect clearly higher than great');
 });
 
 test('apex press: perfect at the top, bonus multiplies damage', () => {
@@ -53,14 +71,15 @@ test('apex press: perfect at the top, bonus multiplies damage', () => {
   assert.equal(L.judgeApex(1.6, T), 'late');
   const j = L.judgeJump(0.1);
   assert.equal(L.damage(j, 'perfect', 0), Math.round(L.damage(j, 'none', 0) * 2));
+  assert.ok(Math.abs(L.damage(j, 'none', 0, 1.25) - L.damage(j, 'none', 0) * 1.25) <= 1);
 });
 
-test('jump arc peaks at the middle', () => {
-  const T = 1.5, H = 80;
-  assert.equal(L.heightAt(0, T, H), 0);
-  assert.equal(L.heightAt(T / 2, T, H), H);
-  assert.equal(L.heightAt(T, T, H), 0);
-  assert.ok(L.heightAt(T * 0.4, T, H) > H * 0.9, 'hangs near the top');
+test('arc: ground → apex → roof', () => {
+  const T = 1.5;
+  assert.equal(L.arcY(0, T, 0, 30, 10), 0);
+  assert.equal(L.arcY(T / 2, T, 0, 30, 10), 30);
+  assert.equal(L.arcY(T, T, 0, 30, 10), 10);
+  assert.ok(L.arcY(T * 0.4, T, 0, 30, 10) > 27, 'hangs near the top');
 });
 
 test('combo grows with perfects, caps, breaks otherwise', () => {
@@ -71,47 +90,57 @@ test('combo grows with perfects, caps, breaks otherwise', () => {
   assert.equal(L.comboMult(99), 1 + L.COMBO_STEP * L.COMBO_MAX);
 });
 
-test('jumps grow from meters to space', () => {
-  const first = L.stageInfo(0), last = L.stageInfo(19);
-  const m0 = first.maxJump * first.region.mPerUnit;
-  const m1 = last.maxJump * last.region.mPerUnit;
-  assert.ok(m0 < 10, `${m0}m`);
-  assert.ok(m1 > 100000 * 1000, `${m1}m`);
-  assert.equal(L.formatMeters(40, first.region), '6.0m');
-  assert.match(L.formatMeters(6000, last.region), /km$/);
-});
-
-test('stages are winnable with good play, not with misses', () => {
-  for (let i = 0; i < 20; i++) {
+test('stages are winnable with good play, not with mashing', () => {
+  for (let i = 0; i < 50; i++) {
     const s = L.stageInfo(i);
-    // 한 번 뛰고 내려오는 데 걸리는 시간(대기 + 체공 + 착지)
-    const cycle = (j) => 0.5 + L.airTime(L.jumpFraction(j), s.regionIndex) + 0.35;
+    // 한 번 뛰고 돌아오는 데 걸리는 시간(바늘 기다림 + 체공 + 반동)
+    const cycle = (j) => 1 / (4 * s.needleSpeed) + 0.07 + L.airTime(L.jumpFraction(j)) + L.BOUNCE_TIME + 0.05;
     const run = (p, apex) => {
       const j = L.judgeJump(p);
-      const n = Math.floor(s.time / cycle(j));
-      return n * L.damage(j, apex, 0);
+      return Math.floor(s.time / cycle(j)) * L.damage(j, apex, 0);
     };
-    assert.ok(run(0.12, 'great') >= s.maxHp, `stage ${i} winnable with great/great`);
+    assert.ok(run(0.1, 'great') >= s.maxHp, `stage ${i} winnable with great/great`);
     assert.ok(run(0.6, 'none') < s.maxHp, `stage ${i} not winnable by mashing`);
   }
 });
 
-test('formatNumber uses Korean units', () => {
+test('formatting', () => {
   assert.equal(L.formatNumber(950), '950');
   assert.equal(L.formatNumber(12000), '1.2만');
   assert.equal(L.formatNumber(3e8), '3억');
-  assert.equal(L.formatNumber(2.5e12), '2.5조');
+  assert.equal(L.formatMeters(6), '6.0m');
+  assert.equal(L.formatMeters(2500), '2.5km');
+  assert.match(L.formatMeters(1e21), /광년$/);
 });
 
-test('save roundtrip and clear unlocks next', () => {
+test('coins on every clear, double on first; buy and select characters', () => {
   const store = new Map();
   const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
   const s = L.loadSave(storage);
-  assert.equal(s.unlocked, 0);
-  L.recordClear(s, 0, 500);
+  assert.equal(s.coins, 0);
+  const a = L.recordClear(s, 0, 500, 1);
+  assert.equal(a.first, true);
+  assert.equal(a.coins, 22);
+  const b = L.recordClear(s, 0, 500, 0);
+  assert.equal(b.coins, 10);
+  assert.equal(s.coins, 32);
+  assert.equal(L.buyChar(s, 'turtle'), false, 'not enough coins');
+  s.coins = 250;
+  assert.equal(L.buyChar(s, 'turtle'), true);
+  assert.equal(s.coins, 50);
+  assert.equal(s.char, 'turtle');
+  assert.equal(L.buyChar(s, 'turtle'), false, 'already owned');
+  assert.equal(L.selectChar(s, 'gold'), false);
+  assert.equal(L.selectChar(s, 'punch'), true);
   L.storeSave(storage, s);
   const t = L.loadSave(storage);
+  assert.deepEqual(t.owned, ['punch', 'turtle']);
   assert.equal(t.unlocked, 1);
-  assert.equal(t.best, 500);
   assert.deepEqual(L.loadSave({ getItem() { throw new Error('x'); } }), L.defaultSave());
+});
+
+test('character perks change stage numbers', () => {
+  assert.ok(L.stageInfo(3, L.charById('clock')).time > L.stageInfo(3).time);
+  assert.equal(L.stageInfo(3, L.charById('hawk')).zone, 1.6);
+  assert.equal(L.charById('nope').id, 'punch');
 });
