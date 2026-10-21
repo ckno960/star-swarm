@@ -6,6 +6,7 @@ import {
   defaultSave, loadSave, stageEnemies, tameOptions, tame, tameAmount, recordWin, recordLoss, partyUnits, enemyUnits, groupEnemies,
   stageOf, globalStage, isUnlocked, regionProgress, STAGE_COUNT, armySize, enemyCount, necroLevel, stageSouls,
   levelUp, levelUpCost, evolve, canEvolve, evolveCost, rollRoulette, applyRoulette, rouletteAvailable, ROULETTE, TAME_MIN,
+  stageLineup, stageTameOptions, tameAvailable,
 } from './progress.js';
 
 function seeded(seed = 1) {
@@ -183,6 +184,31 @@ test('길들이기: 성공하면 쓰러뜨린 같은 종류의 일부를 데려�
   const bossList = [{ type: 'slime' }, { type: 'dog' }, { type: 'chief' }];
   assert.ok(!tameOptions(bossList, seeded(1), s).includes('chief'));
   assert.ok(tameOptions(bossList, seeded(1), defaultSave()).includes('chief'));
+});
+
+test('길들이기: 스테이지마다 성공은 한 번뿐 (실패는 다시 도전 가능)', () => {
+  const s = defaultSave();
+  assert.ok(tameAvailable(s, 4));
+  assert.equal(tame(s, 'dog', 4, { dog: 10 }, fixed(0.99), 4).success, false);
+  assert.ok(tameAvailable(s, 4), '실패하면 다시 할 수 있다');
+  assert.ok(tame(s, 'dog', 4, { dog: 10 }, fixed(0), 4).success);
+  assert.equal(tameAvailable(s, 4), false);
+  assert.equal(s.tamed[4], 'dog');
+  const again = tame(s, 'crow', 4, { crow: 10 }, fixed(0), 4);
+  assert.deepEqual([again.success, again.stageDone], [false, true]);
+  assert.ok(tameAvailable(s, 5));
+  assert.deepEqual(loadSave(JSON.stringify({ cleared: 3 })).tamed, {});
+});
+
+test('스테이지 구성과 길들이기 후보는 미리 정해져 있어 다시 해도 같다', () => {
+  for (const g of [1, 7, 10, 23, 50]) {
+    assert.deepEqual(stageLineup(g), stageLineup(g));
+    const { region, stage } = stageOf(g);
+    assert.equal(stageLineup(g).length, stageEnemies(region, stage, Math.random).length);
+    const list = stageLineup(g);
+    assert.deepEqual(stageTameOptions(g, list, defaultSave()), stageTameOptions(g, list, defaultSave()));
+  }
+  assert.notDeepEqual(stageLineup(23).map(e => e.type), stageLineup(24).map(e => e.type).slice(0, stageLineup(23).length));
 });
 
 test('보상: 스테이지를 깨면 영혼, 처음 깨면 두 배. 져도 쓰러뜨린 만큼 조금', () => {

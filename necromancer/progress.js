@@ -6,16 +6,16 @@ import {
 
 export const STAGE_COUNT = REGIONS.length * STAGES_PER_REGION;
 export const ENEMY_GROWTH = 1.16; // 스테이지마다 적 수가 16%씩 늘어 마지막엔 약 2,900마리
-export const TAME_SHARE = 0.35, TAME_MIN = 2; // 길들이기에 성공하면 쓰러뜨린 같은 종류의 이 비율만큼(최소 2마리) 데려온다
+export const TAME_SHARE = 0.35, TAME_MIN = 3; // 길들이기에 성공하면 쓰러뜨린 같은 종류의 이 비율만큼(최소 3마리) 데려온다. 스테이지마다 한 번뿐이라 넉넉하게
 export const BOSS_FACTOR = 0.35; // 적 보스 힘 = 소환수 보스 기본치 × 이 값 × √(부하 수 / 8)
 // 뒤 지역 적은 레벨을 조금 더 높게. 군단이 커지고 진화가 쌓이면 뒤로 갈수록 너무 쉬워져서
-export const ENEMY_LEVEL_BONUS = [0, 0, 0, 1, 5];
+export const ENEMY_LEVEL_BONUS = [0, 0, 0, 0, 3];
 // 영혼: 스테이지를 깰 때마다 받는 보상. 처음 깨면 두 배
-export const SOUL_BASE = 12, SOUL_GROWTH = 1.05;
-// 레벨 업 비용 = LV_COST × 별 × LV_GROWTH^(레벨-1) × (진화 단계+1) × √마리 수
+export const SOUL_BASE = 12, SOUL_GROWTH = 1.08;
+// 레벨 업 비용 = LV_COST × 별 × LV_GROWTH^(레벨-1) × (진화 단계+1) × 마리 수^COUNT_EXP
 // 마리 수를 곱하는 건, 수천 마리를 한 번에 키우는 값이 한 마리 값과 같으면 큰 군단이 너무 쉽게 강해져서다
-export const LV_COST = 3, LV_GROWTH = 1.3;
-export const EVO_COST = 100; // 진화 비용 = EVO_COST × 별 × (진화 단계+1) × √마리 수
+export const LV_COST = 3, LV_GROWTH = 1.3, COUNT_EXP = 0.4;
+export const EVO_COST = 100; // 진화 비용 = EVO_COST × 별 × (진화 단계+1) × 마리 수^COUNT_EXP
 const NECRO = { hp: 120, atk: 6, interval: 1.0 };
 // 앞줄부터 서는 순서: 튼튼한 몬스터가 앞, 급습하는 비행형은 뒤
 const FRONT_ORDER = { boss: 0, golem: 1, blob: 2, humanoid: 3, beast: 4, flyer: 5 };
@@ -38,6 +38,7 @@ export function defaultSave() {
     nextId: 2,
     souls: 0,
     roulettes: {}, // 룰렛을 이미 돌린 보스 스테이지 (보스마다 한 번)
+    tamed: {}, // 길들이기에 성공한 스테이지 → 길들인 종류 (스테이지마다 한 번)
     settings: { speed: 1, autoSkill: false },
     ended: false,
   };
@@ -56,6 +57,7 @@ export function loadSave(raw) {
     for (const k of ['army', 'autoArmy', 'party']) delete save[k];
     save.souls ??= 0;
     save.roulettes ??= {};
+    save.tamed ??= {};
     return save;
   } catch {
     return base;
@@ -99,6 +101,32 @@ export function partyUnits(save) {
   }
   units.push(necroUnit(save));
   return units;
+}
+
+// 시드가 같으면 같은 수열을 내는 난수. 스테이지 구성을 미리 정해 두는 데 쓴다
+export function seeded(seed) {
+  let x = (seed * 2654435761) >>> 0 || 1;
+  return () => {
+    x = (x + 0x6d2b79f5) | 0;
+    let t = Math.imul(x ^ (x >>> 15), 1 | x);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// 스테이지의 적 구성은 미리 정해져 있어서 다시 해도 똑같이 나온다
+export function stageLineup(g) {
+  const { region, stage } = stageOf(g);
+  return stageEnemies(region, stage, seeded(g * 7919 + 13));
+}
+
+// 길들이기 후보도 스테이지마다 정해져 있다
+export function stageTameOptions(g, enemyList, save) {
+  return tameOptions(enemyList, seeded(g * 104729 + 7), save);
+}
+
+export function tameAvailable(save, g) {
+  return !save.tamed[g];
 }
 
 export function enemyCount(g) {
@@ -167,12 +195,15 @@ export function tameAmount(type, kills) {
   return Math.max(TAME_MIN, Math.round((kills[type] ?? 0) * TAME_SHARE));
 }
 
-// 길들이기를 시도한다. 성공하면 그만큼 군단에 더한다. 보스는 종류마다 한 번만 길들일 수 있다
-export function tame(save, type, stage, kills, rand) {
+// 길들이기를 시도한다. 성공하면 그만큼 군단에 더한다.
+// 스테이지마다 성공은 한 번뿐이고(g를 넘기면 기록), 보스는 종류마다 한 번만 길들일 수 있다
+export function tame(save, type, stage, kills, rand, g = null) {
   const chance = tameChance(type);
   const owned = save.roster.find(r => r.type === type);
+  if (g !== null && !tameAvailable(save, g)) return { success: false, chance, stageDone: true };
   if (owned && MONSTERS[type].tier === 'boss') return { success: false, chance, already: true };
   if (rand() >= chance) return { success: false, chance };
+  if (g !== null) save.tamed[g] = type;
   const amount = tameAmount(type, kills);
   if (owned) {
     owned.count += amount;
@@ -205,7 +236,7 @@ export function recordLoss(save, g, killedRatio) {
 }
 
 export function levelUpCost(r) {
-  return Math.ceil(LV_COST * starsOf(r.type) * LV_GROWTH ** (r.level - 1) * (r.evo + 1) * Math.sqrt(r.count));
+  return Math.ceil(LV_COST * starsOf(r.type) * LV_GROWTH ** (r.level - 1) * (r.evo + 1) * r.count ** COUNT_EXP);
 }
 
 export function levelUp(save, id) {
@@ -224,7 +255,7 @@ export function canEvolve(r) {
 }
 
 export function evolveCost(r) {
-  return Math.ceil(EVO_COST * starsOf(r.type) * (r.evo + 1) * Math.sqrt(r.count));
+  return Math.ceil(EVO_COST * starsOf(r.type) * (r.evo + 1) * r.count ** COUNT_EXP);
 }
 
 export function evolve(save, id, free = false) {
