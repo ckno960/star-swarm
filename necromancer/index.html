@@ -255,13 +255,14 @@ setTimeout(() => {
 </script>
 <script type="module">
 // 배포할 때마다 ?v= 숫자를 올린다 (GitHub Pages 캐시 때문)
-import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, EVO_LEVEL, MAX_EVO, unitStats, tameChance, displayName } from './data.js?v=5';
-import { createBattle, stepBattle, useSkill, canUse, aliveCount, killsByType, SKILLS, NECRO_D, ROAD_W } from './battle.js?v=5';
+import { MONSTERS, REGIONS, TRAITS, STAGES_PER_REGION, EVO_LEVEL, MAX_EVO, unitStats, tameChance, displayName } from './data.js?v=6';
+import { createBattle, stepBattle, useSkill, canUse, aliveCount, killsByType, SKILLS, NECRO_D, ROAD_W } from './battle.js?v=6';
 import {
   necroUnit, loadSave, partyUnits, enemyUnits, stageEnemies, groupEnemies, tameOptions, tameAmount, tame, recordWin, recordLoss,
   stageOf, globalStage, isUnlocked, isBossStage, regionProgress, STAGE_COUNT, armySize, necroLevel,
   levelUp, levelUpCost, evolve, evolveCost, canEvolve, ROULETTE, rollRoulette, applyRoulette, rouletteAvailable,
-} from './progress.js?v=5';
+  stageLineup, stageTameOptions, tameAvailable,
+} from './progress.js?v=6';
 
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'necromancer.save';
@@ -442,7 +443,7 @@ function renderMap() {
     const b = document.createElement('button');
     b.className = [isBossStage(st) ? 'boss' : '', g === save.cleared + 1 ? 'next' : ''].join(' ');
     b.disabled = !open;
-    b.innerHTML = `${isBossStage(st) ? '💀' : st}<small>${done ? '파괴' : open ? 'NEW' : '🔒'}</small>`;
+    b.innerHTML = `${isBossStage(st) ? '💀' : st}<small>${save.tamed[g] ? '길들임' : done ? '파괴' : open ? 'NEW' : '🔒'}</small>`;
     b.onclick = () => openPrep(g);
     grid.append(b);
   }
@@ -454,7 +455,7 @@ let prepStage = 1, prepEnemies = [];
 function openPrep(g) {
   prepStage = g;
   const { region, stage } = stageOf(g);
-  prepEnemies = stageEnemies(region, stage, Math.random);
+  prepEnemies = stageLineup(g); // 스테이지마다 정해진 구성. 다시 해도 같다
   show('prep');
   $('prepTitle').textContent = stageName(g);
   $('prepEnemyLabel').textContent = `적 ${fmt(prepEnemies.length)}마리`;
@@ -993,12 +994,15 @@ let tameState = null;
 function openTame(g, win, kills) {
   const { region, stage } = stageOf(g);
   // 이번 전투에서 실제로 만난 적들 중에서만 후보가 나온다
-  const options = tameOptions(battleEnemies, Math.random, save);
+  // 이 스테이지에서 이미 길들였으면 후보 없이 넘어간다 (스테이지마다 한 번)
+  const done = !tameAvailable(save, g);
+  const options = done ? [] : stageTameOptions(g, battleEnemies, save);
   tameState = { g, done: false, kills };
   show('tame');
-  $('tameTitle').textContent = isBossStage(stage) ? `${REGIONS[region].name} 멸망!` : '길들이기!';
-  const bossNote = isBossStage(stage) && save.roster.some(r => r.type === REGIONS[region].boss) ? '<br>보스는 이미 길들여서 후보에서 빠졌어요' : '';
-  $('tameSub').innerHTML = `보상 <span class="souls">영혼 +${fmt(win.souls)}</span>${win.first ? ' (첫 클리어 2배)' : ''}<br>이번 전투에서 만난 몬스터 중 하나를 길들여 보세요${bossNote}`;
+  const bossNote = !done && isBossStage(stage) && save.roster.some(r => r.type === REGIONS[region].boss) ? '<br>보스는 이미 길들여서 후보에서 빠졌어요' : '';
+  const ask = done ? `<br>이 스테이지에서는 이미 ${josa(MONSTERS[save.tamed[g]].name, '을', '를')} 길들였어요 (스테이지마다 한 번)` : '<br>이번 전투에서 만난 몬스터 중 하나를 길들여 보세요 (성공은 스테이지마다 한 번)';
+  $('tameTitle').textContent = isBossStage(stage) ? `${REGIONS[region].name} 멸망!` : done ? '스테이지 클리어!' : '길들이기!';
+  $('tameSub').innerHTML = `보상 <span class="souls">영혼 +${fmt(win.souls)}</span>${win.first ? ' (첫 클리어 2배)' : ''}${ask}${bossNote}`;
   $('tameResult').textContent = '';
   $('tameResult').className = '';
   for (const id of ['tameNext', 'tameMap', 'tameRetry', 'retryAsk', 'rouletteGo']) $(id).hidden = true;
@@ -1027,6 +1031,10 @@ function openTame(g, win, kills) {
     card.append(pick);
     cards.append(card);
   }
+  if (!options.length) {
+    if (rouletteAvailable(save, g)) $('rouletteGo').hidden = false;
+    else showAfterStage();
+  }
 }
 
 function tryTame(card, type, stage) {
@@ -1035,7 +1043,7 @@ function tryTame(card, type, stage) {
   for (const other of $('tameCards').children) if (other !== card) other.classList.add('dim');
   card.classList.add('taming');
   $('tameResult').textContent = '길들이는 중...';
-  const result = tame(save, type, stage, tameState.kills, Math.random);
+  const result = tame(save, type, stage, tameState.kills, Math.random, tameState.g);
   persist();
   setTimeout(() => {
     card.classList.remove('taming');
@@ -1045,7 +1053,7 @@ function tryTame(card, type, stage) {
       $('tameResult').innerHTML = `길들이기 성공!<br><small>${josa(name, '이', '가')} ${fmt(result.amount)}마리 합류 (군단 ${fmt(armySize(save))}마리)</small>`;
     } else {
       $('tameResult').className = 'fail';
-      $('tameResult').innerHTML = `실패...<br><small>${josa(name, '이', '가')} 도망쳤다</small>`;
+      $('tameResult').innerHTML = `실패...<br><small>${josa(name, '이', '가')} 도망쳤다. 다시 하기로 또 도전할 수 있어요</small>`;
       card.classList.add('dim');
     }
     if (rouletteAvailable(save, tameState.g)) $('rouletteGo').hidden = false; // 보스를 처음 깼으면 룰렛부터
