@@ -2,9 +2,9 @@
 // 길이는 모두 실제 m 단위. 주인공은 1.8m 그대로이고, 대상이 커질수록 화면이 넓어져 주인공이 점처럼 작아진다.
 
 // 바늘 판정: 바늘 위치 p는 -1(왼쪽 끝) ~ 1(오른쪽 끝), 0이 정중앙.
-// PERFECT는 리듬게임처럼 시간으로 정한다: 바늘이 정중앙을 지나는 순간 ±25ms.
+// PERFECT는 리듬게임처럼 시간으로 정한다: 바늘이 정중앙을 지나는 순간 ±16ms(60fps 한 프레임).
 // 바늘 빠르기와 상관없이 같은 타이밍 감각이 되고, 막대 위 PERFECT 칸은 바늘이 빠를수록 넓게 그려진다.
-export const PERFECT_MS = 0.025;
+export const PERFECT_MS = 0.016;
 export const PERFECT_ZONE = 0.03;   // 바늘 빠르기를 모를 때 쓰는 기본 폭
 export const GREAT_ZONE = 0.15;
 export const GOOD_ZONE = 0.4;
@@ -14,8 +14,8 @@ export const APEX_PERFECT = 0.07;
 export const APEX_GREAT = 0.16;
 export const APEX_OK = 0.32;
 
-export const ACC_PERFECT_MULT = 3;
-export const APEX_MULT = { perfect: 2, great: 1.5, ok: 1.15, early: 1, late: 1, none: 1 };
+export const ACC_PERFECT_MULT = 8;
+export const APEX_MULT = { perfect: 3, great: 1.5, ok: 1.15, early: 1, late: 1, none: 1 };
 export const DOUBLE_MULT = { perfect: 1.6, great: 1.35, ok: 1.15, early: 1.05, late: 1.05 };
 export const COMBO_STEP = 0.1;
 export const COMBO_MAX = 5;
@@ -212,8 +212,8 @@ export function stageInfo(index, char = CHARACTERS[0]) {
         zone: char.zone || 1,
         // 대상 꼭대기 위로 더 뛸 수 있는 높이(PERFECT 기준)
         extra: sphere ? target.h * 2 : target.h * 1.6 + 6,
-        // 주인공이 서 있는 곳: 건물은 왼쪽 옆 땅, 구는 표면 꼭대기
-        x0: sphere ? 0 : -(target.w / 2 + Math.max(3, target.w * 0.35)),
+        // 주인공이 서 있는 곳: 건물은 바로 앞 땅(수직으로 뛰어 꼭대기를 찍음), 구는 표면 꼭대기
+        x0: 0,
         label: `${region.name} ${i + 1}`,
       };
     }

@@ -23,9 +23,9 @@ test('targets grow so the 1.8m hero shrinks to a dot', () => {
   assert.ok(L.stageInfo(49).target.h / L.HERO_M > 1e20);
 });
 
-test('hero starts on the ground beside buildings, on top of spheres', () => {
+test('hero starts on the ground in front of buildings (vertical jumps), on top of spheres', () => {
   const hut = L.stageInfo(0);
-  assert.ok(hut.x0 < -hut.target.w / 2);
+  assert.equal(hut.x0, 0);
   const moon = L.stageInfo(33);
   assert.equal(moon.sphere, true);
   assert.equal(moon.x0, 0);
@@ -47,14 +47,14 @@ test('perfect is 3% of the bar; slow needle', () => {
   assert.equal(L.judgeJump(0.3).grade, 'good');
   assert.equal(L.judgeJump(0.5).grade, 'miss');
   assert.equal(L.judgeJump(0.04, 1.6).grade, 'perfect', 'wider zones for 매눈이');
-  // 리듬게임식 PERFECT: 바늘 빠르기와 상관없이 정중앙 ±25ms
+  // 리듬게임식 PERFECT: 바늘 빠르기와 상관없이 정중앙 ±16ms
   for (const i of [0, 25, 49]) {
     const sp = L.stageInfo(i).needleSpeed;
     const at = (ms) => L.judgeJump(L.needlePos(0.25 / sp + ms / 1000, sp), 1, sp).grade;
     assert.equal(at(0), 'perfect');
-    assert.equal(at(24), 'perfect', `stage ${i} +24ms`);
-    assert.equal(at(-24), 'perfect', `stage ${i} -24ms`);
-    assert.notEqual(at(28), 'perfect', `stage ${i} +28ms`);
+    assert.equal(at(15), 'perfect', `stage ${i} +15ms`);
+    assert.equal(at(-15), 'perfect', `stage ${i} -15ms`);
+    assert.notEqual(at(18), 'perfect', `stage ${i} +18ms`);
   }
   assert.ok(L.stageInfo(0).needleSpeed <= 0.4);
   assert.ok(L.stageInfo(49).needleSpeed <= 0.6);
@@ -79,7 +79,9 @@ test('apex press: perfect at the top, bonus multiplies damage', () => {
   assert.equal(L.judgeApex(0.3, T), 'early');
   assert.equal(L.judgeApex(1.6, T), 'late');
   const j = L.judgeJump(0.1);
-  assert.equal(L.damage(j, 'perfect', 0), Math.round(L.damage(j, 'none', 0) * 2));
+  assert.ok(Math.abs(L.damage(j, 'perfect', 0) - L.damage(j, 'none', 0) * 3) <= 2);
+  // PERFECT + PERFECT는 GREAT + GREAT의 10배 가까이
+  assert.ok(L.damage(L.judgeJump(0), 'perfect', 0) > L.damage(j, 'great', 0) * 8);
   assert.ok(Math.abs(L.damage(j, 'none', 0, 1.25) - L.damage(j, 'none', 0) * 1.25) <= 1);
 });
 
