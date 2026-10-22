@@ -23,8 +23,9 @@
   #hud { position: absolute; left: 0; right: 0; top: 0; padding: calc(10px + env(safe-area-inset-top)) 12px 0; pointer-events: none; }
   .topRow { display: flex; gap: 8px; align-items: center; }
   #timer { flex: 1; height: 24px; background: var(--cream); border: 3px solid var(--ink); border-radius: 6px; padding: 3px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
-  #timerFill { height: 100%; width: 100%; background: linear-gradient(#ffb04a, #e8602a); border-radius: 2px; }
-  #timer.low #timerFill { background: linear-gradient(#ff6a6a, #c41c1c); animation: blink 0.4s steps(2) infinite; }
+  #timerFill { height: 100%; width: 100%; background: linear-gradient(#7dff9b, #2fbf5a); border-radius: 2px; transition: width 0.15s; }
+  #timerFill.mid { background: linear-gradient(#ffe066, #e0a020); }
+  #timerFill.low { background: linear-gradient(#ff7a7a, #d02a2a); }
   @keyframes blink { 50% { opacity: 0.45; } }
   .sqBtn {
     pointer-events: auto; width: 42px; height: 42px; padding: 0; display: flex; align-items: center; justify-content: center;
@@ -34,10 +35,25 @@
   .sqBtn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
   #score { margin-top: 6px; text-align: center; font: 900 54px/1.05 system-ui, sans-serif; letter-spacing: 1px; }
   #stageLine { margin-top: 2px; text-align: center; font: 800 14px system-ui, sans-serif; }
-  #hpWrap { width: 62%; margin: 5px auto 0; height: 12px; background: var(--ink); border-radius: 4px; padding: 2px; }
-  #hpFill { height: 100%; width: 100%; background: linear-gradient(#7dff9b, #2fbf5a); border-radius: 2px; transition: width 0.15s; }
-  #hpFill.mid { background: linear-gradient(#ffe066, #e0a020); }
-  #hpFill.low { background: linear-gradient(#ff7a7a, #d02a2a); }
+  #hudCoins { margin-top: 4px; text-align: center; font: 900 16px system-ui, sans-serif; color: #fff3a0; }
+  .sideBtn { pointer-events: auto; width: 58px; height: 58px; flex: none; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    background: var(--cream); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 0 4px 0 var(--ink); color: var(--ink); font: 900 12px system-ui, sans-serif; }
+  .sideBtn b { font-size: 20px; line-height: 1; }
+  .sideBtn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+  .sideBtn.can { background: #fff3b0; animation: glow 0.8s ease-in-out infinite; }
+  .bigBtn .autoBar { position: absolute; left: 10px; right: 10px; bottom: 9px; height: 6px; border-radius: 3px; background: rgba(43, 38, 56, 0.18); overflow: hidden; }
+  .bigBtn .autoBar i { display: block; height: 100%; width: 0; background: #8a7aa8; }
+  .bigBtn .autoTag { position: absolute; right: 12px; top: 8px; font: 900 11px system-ui, sans-serif; color: #8a7aa8; }
+  #upgrades { justify-content: flex-start; padding-top: calc(16px + env(safe-area-inset-top)); background: var(--slate2); overflow-y: auto; }
+  #upgrades .head { width: 100%; max-width: 360px; display: flex; align-items: center; justify-content: space-between; }
+  #upgrades h2 { margin: 0; font: 900 24px system-ui, sans-serif; }
+  .upCard { width: 100%; max-width: 360px; display: flex; gap: 10px; align-items: center; padding: 12px; background: var(--cream); color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35); }
+  .upCard .info { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .upCard .info b { font-size: 17px; }
+  .upCard .info span { font-size: 13px; line-height: 1.4; }
+  .upCard .btn { width: 104px; min-height: 48px; font-size: 15px; flex: none; padding: 0 6px; }
+  .upCard .btn:disabled { opacity: 0.45; }
+  .upNote { width: 100%; max-width: 360px; font: 700 13px/1.5 system-ui, sans-serif; text-align: center; opacity: 0.9; }
   #combo { margin-top: 6px; text-align: center; font: 900 15px system-ui, sans-serif; color: var(--gold); min-height: 18px; }
 
   /* 판정 문구 */
@@ -66,6 +82,7 @@
   }
   .dmg { position: absolute; transform: translate(-50%, -50%); font: 900 22px system-ui, sans-serif; pointer-events: none; animation: dmgUp 0.9s ease-out forwards; white-space: nowrap; }
   .dmg.crit { font-size: 32px; color: var(--gold); }
+  .dmg.auto { font-size: 16px; color: #e0e0f0; }
   @keyframes dmgUp { 0% { transform: translate(-50%, -20%) scale(0.5); opacity: 0; } 15% { transform: translate(-50%, -80%) scale(1.3); opacity: 1; } 30% { transform: translate(-50%, -90%) scale(1); } 100% { transform: translate(-50%, -260%); opacity: 0; } }
   #hLabel { position: absolute; left: 30px; font: 900 14px system-ui, sans-serif; pointer-events: none; white-space: nowrap; }
   #hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(24% + 64px); padding: 6px 12px; background: rgba(43, 38, 56, 0.85); border: 2px solid var(--cream); border-radius: 8px; font: 800 14px system-ui, sans-serif; pointer-events: none; white-space: nowrap; animation: bob 1s ease-in-out infinite; }
@@ -78,10 +95,10 @@
   #panel {
     position: absolute; left: 0; right: 0; bottom: 0; height: 24%; min-height: 150px;
     background: var(--slate); border-top: 4px solid var(--ink); box-shadow: inset 0 4px 0 #74809e;
-    display: flex; justify-content: center; align-items: center; padding: 0 20px env(safe-area-inset-bottom);
+    display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 12px env(safe-area-inset-bottom);
   }
   .bigBtn {
-    height: 74%; width: 72%; max-width: 300px; padding: 0;
+    position: relative; height: 74%; flex: 1; max-width: 260px; padding: 0;
     background: var(--cream); border: 4px solid var(--ink); border-radius: 20px;
     box-shadow: 0 7px 0 var(--ink), inset 0 -7px 0 var(--cream2);
     display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -169,12 +186,12 @@
 
   <div id="hud" hidden>
     <div class="topRow">
-      <div id="timer"><div id="timerFill"></div></div>
+      <div id="timer" aria-label="남은 체력"><div id="timerFill"></div></div>
       <button id="pauseBtn" class="sqBtn" aria-label="일시정지">❚❚</button>
     </div>
     <div id="score" class="ol">0</div>
     <div id="stageLine" class="ol2"></div>
-    <div id="hpWrap"><div id="hpFill"></div></div>
+    <div id="hudCoins" class="ol2"></div>
     <div id="combo" class="ol2"></div>
   </div>
   <div id="judgeBox"></div>
@@ -184,10 +201,13 @@
   <div id="hint" hidden></div>
 
   <div id="panel" hidden>
+    <button id="upBtnGame" class="sideBtn" aria-label="강화"><b>⬆</b>강화</button>
     <button id="btn" class="bigBtn" aria-label="점프">
+      <span class="autoTag">AUTO</span><span class="autoBar"><i id="autoFill"></i></span>
       <span class="jumpIcon"><svg viewBox="0 0 40 40"><path d="M20 5 L35 27 L26 27 L26 35 L14 35 L14 27 L5 27 Z" fill="#e04848" stroke="#2b2638" stroke-width="3" stroke-linejoin="round"/></svg><span id="jumpWord">점프</span></span>
       <span class="smashIcon"><svg viewBox="0 0 40 40"><path d="M14 4 L26 4 L26 16 L35 16 L20 33 L5 16 L14 16 Z" fill="#e04848" stroke="#2b2638" stroke-width="3" stroke-linejoin="round"/><path d="M6 37 L12 34 M34 37 L28 34 M20 39 L20 36" stroke="#2b2638" stroke-width="3" stroke-linecap="round"/></svg>찍기</span>
     </button>
+    <button id="shopBtnGame" class="sideBtn" aria-label="캐릭터"><b>☺</b>캐릭터</button>
   </div>
 
   <div id="home" class="screen">
@@ -198,19 +218,19 @@
       <div class="sub ol2">정중앙을 맞혀 하늘 높이 뛰고<br>최고점에서 내려찍어 부숴라!</div>
     </div>
     <div class="menu">
-      <div class="how">① 바늘이 <b style="color:#ffd23f">정중앙</b>일 때 버튼 → 높이 점프<br>② <b style="color:#ffd23f">최고점</b>에서 한 번 더 → 강하게 내려찍기<br>마을 → 도시 → 나라 → 행성 → 우주를 차례로 부숩니다</div>
+      <div class="how">가만히 두어도 <b style="color:#ffd23f">자동으로</b> 뛰어 부숩니다<br>직접 누르면 훨씬 빨라요: ① 바늘이 <b style="color:#ffd23f">정중앙</b>일 때 점프<br>② <b style="color:#ffd23f">최고점</b>에서 한 번 더 → 강하게 내려찍기</div>
       <div class="best ol2" id="bestLine"></div>
       <button id="startBtn" class="btn main"></button>
       <div style="display:flex;gap:10px">
-        <button id="stagesBtn" class="btn">스테이지</button>
+        <button id="upBtn" class="btn">강화</button>
         <button id="shopBtn" class="btn">캐릭터</button>
       </div>
     </div>
   </div>
 
-  <div id="stages" class="screen" hidden>
-    <div class="head"><h2 class="ol2">스테이지</h2><button id="stagesBack" class="sqBtn" aria-label="닫기">✕</button></div>
-    <div id="stageList" style="display:flex;flex-direction:column;gap:6px;width:100%;align-items:center;padding-bottom:16px"></div>
+  <div id="upgrades" class="screen" hidden>
+    <div class="head"><h2 class="ol2">강화</h2><span id="upCoins" class="ol2"></span><button id="upBack" class="sqBtn" aria-label="닫기">✕</button></div>
+    <div id="upList" style="display:flex;flex-direction:column;gap:10px;width:100%;align-items:center;padding-bottom:16px"></div>
   </div>
 
   <div id="shop" class="screen" hidden>
@@ -227,7 +247,7 @@
   setTimeout(function () { if (!window.smashReady) document.getElementById('reload').hidden = false; }, 4000);
 </script>
 <script type="module">
-import * as L from './logic.js?v=3';
+import * as L from './logic.js?v=4';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
@@ -727,11 +747,11 @@ function setupCamera() {
   cam.view = view; cam.cx = cx; cam.cy = cy; cam.focus = null;
 }
 
-function newGame(index, carryScore = 0) {
+function newGame(index) {
   const info = L.stageInfo(index, curChar());
   G = {
-    info, char: curChar(), hp: info.maxHp, timeLeft: info.time, phase: 'intro', t: 0,
-    score: carryScore, scoreAtStart: carryScore, combo: 0, maxCombo: 0, perfects: 0,
+    info, char: curChar(), hp: index === save.unlocked && save.hpLeft ? Math.min(info.maxHp, save.hpLeft) : info.maxHp, phase: 'intro', t: 0,
+    combo: 0, maxCombo: 0, autoT: 0, manual: false,
     needleT: 0, needlePhase: 0, lastP: -1, jump: null, arc: null, hop: null,
     hx: info.x0, hy: 0, apex: null, smashed: false, doubled: false, mult: 1,
     diveFrom: 0, diveT: 0, diveD: 0, freeze: 0, slow: 0, collapse: 0, peak: 0, charge: null, crack: 0, crater: 0, mega: false, gaugeMax: 1,
@@ -744,9 +764,9 @@ function newGame(index, carryScore = 0) {
   updateHud();
 }
 
-function startStage(index, carry) {
+function startStage(index) {
   mode = 'play'; paused = false;
-  newGame(index, carry);
+  newGame(index);
   showScreen(null);
   $('hud').hidden = false; $('panel').hidden = false;
   judge('READY', 'go', `${G.info.label} · ${G.info.target.name}`);
@@ -762,22 +782,24 @@ function action() {
     if (G.char.double && !G.doubled) doubleJump(); else smash();
   }
 }
-function startJump() {
+// 직접 점프: 바늘 자리로 판정. 자동 점프: 강화된 정확도로, 찍기 없이 떨어진다.
+function startJump(auto = false) {
   const s = G.info;
-  const p = L.needlePos(G.needleT, s.needleSpeed, G.needlePhase);
-  const j = L.judgeJump(p, s.zone, s.needleSpeed);
+  let p = L.needlePos(G.needleT, s.needleSpeed, G.needlePhase), j;
+  if (auto) { j = L.autoJump(save); p = (1 - L.autoAcc(save)) * (Math.random() < 0.5 ? -1 : 1); }
+  else j = L.judgeJump(p, s.zone, s.needleSpeed);
+  G.manual = !auto;
   const frac = L.jumpFraction(j);
   const top = targetTop();
   G.lastP = p;
   G.jump = { j, frac };
   G.arc = { t: 0, T: L.airTime(frac), y0: 0, apex: top + frac * s.extra, end: top, xs: s.x0, xe: 0 };
   G.gaugeMax = top + s.extra;
-  G.smashed = false; G.doubled = false; G.apex = null; G.peak = 0; G.mult = G.char.power || 1; G.mega = false;
+  G.smashed = false; G.doubled = false; G.apex = null; G.peak = 0; G.mult = L.powerMult(save, G.char); G.mega = false;
   hero.pose = 'stand';
   if (j.grade === 'perfect') {
     // 정지 → 기 모으기 → 폭발하듯 도약
     G.phase = 'charge'; G.t = 0; G.charge = { dur: 0.85 };
-    G.perfects++;
     cam.focus = { x: G.hx, y: G.hy + L.HERO_M * 0.6, view: L.HERO_M * 4.2 };
     judge('PERFECT', 'perfect', '점프');
     sfxText('쿠구구구…', G.hx, G.hy + L.HERO_M * 2.2, '');
@@ -807,7 +829,6 @@ function smash() {
   G.apex = apex; G.smashed = true;
   const u = mpp();
   if (apex === 'perfect') {
-    G.perfects++;
     G.phase = 'apexCharge'; G.t = 0; G.charge = { dur: 0.6 };
     cam.focus = { x: G.hx, y: G.hy, view: L.HERO_M * 6 };
     judge('PERFECT', 'perfect', '최고점');
@@ -858,9 +879,9 @@ function domAt(el, x, y) {
   el.style.top = `${Math.max(TOP_SAFE, Math.min(GY, sy)) * cssScale}px`;
   $('fx').appendChild(el);
 }
-function popDamage(text, crit) {
+function popDamage(text, crit, manual = true) {
   const el = document.createElement('div');
-  el.className = 'dmg ol' + (crit ? ' crit' : '');
+  el.className = 'dmg ol' + (crit ? ' crit' : '') + (manual ? '' : ' auto');
   el.textContent = text;
   domAt(el, (Math.random() - 0.5) * 20 * mpp(), targetTop() + 12 * mpp());
   setTimeout(() => el.remove(), 950);
@@ -901,7 +922,8 @@ function launch() {
     cam.shake = Math.max(cam.shake, 1 + 3 * f);
     sfx.jump(f);
     const g = jp.j.grade;
-    if (g === 'great') judge('GREAT', 'great', '점프');
+    if (!G.manual) { /* 자동 점프는 판정 문구 없음 */ }
+    else if (g === 'great') judge('GREAT', 'great', '점프');
     else if (g === 'good') judge('GOOD', 'good', '점프');
     else { judge('MISS', 'miss', '점프'); sfx.miss(); }
   }
@@ -926,7 +948,11 @@ function impact() {
   G.maxCombo = Math.max(G.maxCombo, G.combo);
   G.hp = Math.max(0, G.hp - dmg);
   const shown = dmg * G.info.region.hpUnit;
-  G.score += shown;
+  const earned = L.hitCoins(G.info.index, dmg, G.info.maxHp);
+  coinFrac += earned;
+  const whole = Math.floor(coinFrac);
+  if (whole > 0) { save.coins += whole; coinFrac -= whole; }
+  save.hpLeft = G.hp > 0 ? G.hp : null;
   const m = dmg / L.BASE_DAMAGE, f = Math.min(1, m / 5);
   const top = targetTop(), crit = apex === 'perfect', t = G.info.target, u = mpp();
   G.freeze = 0.05 + 0.13 * f + (crit ? 0.1 : 0);
@@ -945,7 +971,7 @@ function impact() {
     ring(0, top, 6 * u, 300 * u, '#fff2a0', 5, 0.6, true);
     sfxText('쾅!!', 0, top + 30 * u, 'big');
   }
-  popDamage(L.formatNumber(shown), crit || jp.j.grade === 'perfect');
+  popDamage(L.formatNumber(shown), crit || jp.j.grade === 'perfect', G.manual);
   sfx.impact(f); buzz(Math.round(20 + 50 * f));
   $('combo').textContent = G.combo >= 2 ? `PERFECT 콤보 ×${G.combo}  (+${Math.round((L.comboMult(G.combo) - 1) * 100)}%)` : '';
   // 반동으로 살짝 튀어 올랐다가 원래 자리 땅으로
@@ -964,8 +990,6 @@ function update(rdt) {
   let dt = rdt;
   if (G.slow > 0) { G.slow -= rdt; dt = rdt * 0.3; }
   const s = G.info;
-  const counting = ['ready', 'crouch', 'air', 'dive', 'bounce'].includes(G.phase);
-  if (counting) G.timeLeft = Math.max(0, G.timeLeft - dt);
 
   if (G.hop) {
     const hp = G.hop;
@@ -984,11 +1008,12 @@ function update(rdt) {
   switch (G.phase) {
     case 'intro':
       G.t += dt;
-      if (G.t >= 1.1) { G.phase = 'ready'; G.needleT = 0; G.needlePhase = 0; judge('GO!', 'go'); }
+      if (G.t >= 1.1) { G.phase = 'ready'; G.needleT = 0; G.needlePhase = 0; G.autoT = 0; judge('GO!', 'go'); }
       break;
     case 'ready':
       G.needleT += dt;
-      if (G.timeLeft <= 0) fail();
+      G.autoT += dt;
+      if (G.autoT >= L.autoDelay(save, G.char)) startJump(true);
       break;
     case 'crouch':
       G.t += dt;
@@ -1053,10 +1078,7 @@ function update(rdt) {
       break;
     }
     case 'bounce':
-      if (!G.hop) {
-        if (G.timeLeft <= 0) { fail(); break; }
-        G.phase = 'ready'; G.needleT = 0; G.needlePhase = Math.random() < 0.5 ? 0 : 0.5;
-      }
+      if (!G.hop) { G.phase = 'ready'; G.needleT = 0; G.needlePhase = Math.random() < 0.5 ? 0 : 0.5; G.autoT = 0; }
       break;
     case 'destroy': {
       G.t += dt;
@@ -1079,6 +1101,11 @@ function update(rdt) {
         }
       }
       if (G.t >= 1.7 && !G.hop) { G.phase = 'done'; showClear(); }
+      break;
+    }
+    case 'done': {
+      G.t += dt;
+      if (G.next != null && G.t >= 1.7 + 1.6) startStage(G.next);
       break;
     }
   }
@@ -1414,13 +1441,16 @@ function drawGauge() {
 function updateHud() {
   if (!G) return;
   const s = G.info;
-  $('score').textContent = L.formatNumber(G.score);
+  // 큰 숫자 = 남은 체력, 위 막대 = 체력
+  $('score').textContent = L.formatNumber(Math.ceil(G.hp) * s.region.hpUnit);
   $('stageLine').textContent = `${s.label}${s.boss ? ' 보스' : ''} · ${s.target.name}`;
-  const hf = G.hp / s.maxHp, hpEl = $('hpFill');
+  const hf = G.hp / s.maxHp, hpEl = $('timerFill');
   hpEl.style.width = `${hf * 100}%`;
   hpEl.className = hf < 0.25 ? 'low' : hf < 0.55 ? 'mid' : '';
-  $('timerFill').style.width = `${(G.timeLeft / s.time) * 100}%`;
-  $('timer').classList.toggle('low', G.timeLeft / s.time < 0.25 && mode === 'play');
+  $('hudCoins').innerHTML = `<span class="coin"></span>${L.formatNumber(save.coins)}`;
+  $('autoFill').style.width = G.phase === 'ready' ? `${Math.min(1, G.autoT / L.autoDelay(save, G.char)) * 100}%` : '0';
+  const cheapest = Math.min(...L.UPGRADES.map((u) => L.upgradeCost(u.id, save.upgrades[u.id] || 0)));
+  $('upBtnGame').classList.toggle('can', save.coins >= cheapest);
   // 버튼 하나: 땅에서는 점프, 뛰는 순간 찍기로 바뀜(깡총이는 공중에서 먼저 2단 점프)
   const btn = $('btn');
   const canDouble = G.char.double && !G.doubled && ['crouch', 'charge', 'air'].includes(G.phase);
@@ -1433,7 +1463,7 @@ function updateHud() {
   btn.classList.toggle('dim', !(live || ((G.phase === 'crouch' || G.phase === 'charge') && !G.smashed)));
   const hint = $('hint');
   if (mode === 'play' && !save.cleared[0] && s.index === 0) {
-    if (G.phase === 'ready') { hint.hidden = false; hint.textContent = '바늘이 정중앙에 올 때 누르세요!'; }
+    if (G.phase === 'ready') { hint.hidden = false; hint.textContent = '가만히 둬도 뛰지만, 정중앙에서 누르면 훨씬 세요!'; }
     else if (G.phase === 'air' && !G.smashed) { hint.hidden = false; hint.textContent = '최고점(빨간 선)에서 한 번 더!'; }
     else hint.hidden = true;
   } else if (mode === 'play' && G.char.double && G.phase === 'air' && !G.doubled && !save.cleared['bunnyHint']) {
@@ -1443,7 +1473,7 @@ function updateHud() {
 
 // ---------- 화면 전환 ----------
 function showScreen(id) {
-  for (const s of ['home', 'stages', 'shop', 'modal']) $(s).hidden = s !== id;
+  for (const s of ['home', 'upgrades', 'shop', 'modal']) $(s).hidden = s !== id;
 }
 function modal(html, buttons) {
   const card = $('modalCard');
@@ -1463,31 +1493,35 @@ function goHome() {
   newGame(save.unlocked);
   G.phase = 'idle';
   const s = L.stageInfo(save.unlocked);
-  $('startBtn').innerHTML = `${save.cleared[0] ? '이어하기' : '시작하기'}<small>${s.label} · ${s.target.name}</small>`;
-  $('bestLine').textContent = save.best ? `최고 점수 ${L.formatNumber(save.best)}` : '';
+  const left = Math.ceil((save.hpLeft ?? s.maxHp) / s.maxHp * 100);
+  $('startBtn').innerHTML = save.done ? '우주 정복 완료!<small>다시 은하를 부수러 가기</small>' : `${save.cleared[0] ? '이어하기' : '시작하기'}<small>${s.label} · ${s.target.name} (체력 ${left}%)</small>`;
+  const n = Object.keys(save.cleared).filter((k) => /^\d+$/.test(k)).length;
+  $('bestLine').textContent = n ? `부순 곳 ${n} / ${L.STAGE_COUNT}` : '';
   $('homeCoins').textContent = save.coins.toLocaleString('en-US');
   showScreen('home');
 }
-function showStages() {
-  const list = $('stageList');
+function showUpgrades() {
+  $('upCoins').innerHTML = `<span class="coin"></span>${L.formatNumber(save.coins)}`;
+  const list = $('upList');
   list.innerHTML = '';
-  L.REGIONS.forEach((reg, ri) => {
-    const box = document.createElement('div'); box.className = 'region';
-    box.innerHTML = `<h3 class="ol2">${reg.name}</h3>`;
-    const row = document.createElement('div'); row.className = 'row';
-    reg.targets.forEach((t, i) => {
-      const idx = L.REGIONS.slice(0, ri).reduce((n, r) => n + r.targets.length, 0) + i;
-      const b = document.createElement('button');
-      b.className = t.boss ? 'boss' : '';
-      b.disabled = idx > save.unlocked;
-      b.innerHTML = idx > save.unlocked ? '🔒' : `${i + 1}<small>${save.cleared[idx] ? '★' : t.boss ? '보스' : ''}</small>`;
-      b.title = t.name;
-      b.addEventListener('click', () => { sfx.tick(); startStage(idx, 0); });
-      row.appendChild(b);
-    });
-    box.appendChild(row); list.appendChild(box);
-  });
-  showScreen('stages');
+  const now = {
+    power: () => `피해 ×${L.formatNumber(L.powerMult(save) * 100) / 100 >= 100 ? L.formatNumber(L.powerMult(save)) : L.powerMult(save).toFixed(2)}`,
+    auto: () => `대기 ${L.autoDelay(save).toFixed(2)}초`,
+    aim: () => `정확도 ${Math.round(L.autoAcc(save) * 100)}%`,
+  };
+  for (const u of L.UPGRADES) {
+    const lv = save.upgrades[u.id] || 0, cost = L.upgradeCost(u.id, lv);
+    const card = document.createElement('div'); card.className = 'upCard';
+    card.innerHTML = `<div class="info"><b>${u.name} <small>Lv.${lv}${u.max < 999 ? ` / ${u.max}` : ''}</small></b><span>${u.desc}</span><span>지금: ${now[u.id]()}</span></div>`;
+    const b = document.createElement('button'); b.className = 'btn main';
+    if (cost === Infinity) { b.textContent = '최대'; b.disabled = true; }
+    else { b.innerHTML = `<span class="coin"></span>${L.formatNumber(cost)}`; b.disabled = save.coins < cost; b.onclick = () => { if (L.buyUpgrade(save, u.id)) { persist(); sfx.coin(); showUpgrades(); } }; }
+    card.appendChild(b); list.appendChild(card);
+  }
+  const note = document.createElement('div'); note.className = 'upNote ol2';
+  note.innerHTML = `자동으로 초당 약 ${L.formatNumber(L.autoDps(save, curChar()))} 피해<br>코인은 때릴 때마다, 부술 때 한 번 더 받아요. 꺼 둔 동안(최대 8시간)도 자동으로 부숴요`;
+  list.appendChild(note);
+  showScreen('upgrades');
 }
 function showShop() {
   $('shopCoins').innerHTML = `<span class="coin"></span>${save.coins.toLocaleString('en-US')}`;
@@ -1520,47 +1554,26 @@ function showShop() {
   }
   showScreen('shop');
 }
+// 부수면 코인을 받고 잠시 뒤 다음 대상으로 자동으로 넘어간다
 function showClear() {
-  const s = G.info, last = s.index === L.STAGE_COUNT - 1;
-  if (!G.got) {
-    G.got = L.recordClear(save, s.index, G.score, G.perfects);
-    if (G.char.double) save.cleared.bunnyHint = true;
-    persist();
-    sfx.coin();
-  }
-  const got = G.got;
+  const s = G.info;
+  const coins = L.recordClear(save, s.index);
+  persist();
+  sfx.coin();
   $('hint').hidden = true;
-  const stats = `<div class="stats"><span>남은 시간</span><b>${G.timeLeft.toFixed(1)}초</b><span>Perfect</span><b>${G.perfects}번</b><span>최고 콤보</span><b>${G.maxCombo}</b><span>점수</span><b>${L.formatNumber(G.score)}</b><span>코인</span><b><span class="coin"></span>+${got.coins}${got.first ? ' (처음 ×2)' : ''}</b></div>`;
-  if (last) {
-    modal(`<h2>우주 정복!</h2><p>은하까지 부숴 버렸어요.<br>당신은 이제 우주 최강의 점퍼!</p>${stats}`, [['처음으로', 'main', goHome]]);
+  if (s.index === L.STAGE_COUNT - 1) {
+    modal('<h2>우주 정복!</h2><p>은하까지 부숴 버렸어요.<br>당신은 이제 우주 최강의 점퍼!</p>', [['다시 은하 부수기', 'main', () => startStage(s.index)], ['처음으로', '', goHome]]);
     return;
   }
   const next = L.stageInfo(s.index + 1);
-  modal(`<h2>파괴!</h2><p><b>${s.target.name}</b>을(를) 부쉈어요${next.regionIndex !== s.regionIndex ? `<br>${s.region.name} 정복! 다음은 <b>${next.region.name}</b>` : ''}</p>${stats}`, [
-    ['다음 스테이지 ▶', 'main', () => startStage(s.index + 1, G.score)],
-    ['다시 하기', '', () => startStage(s.index, G.scoreAtStart)],
-    ['캐릭터', '', showShop],
-    ['처음으로', '', goHome],
-  ]);
-}
-function fail() {
-  if (G.phase === 'fail') return;
-  G.phase = 'fail';
-  $('hint').hidden = true;
-  sfx.miss();
-  const left = Math.ceil((G.hp / G.info.maxHp) * 100);
-  modal(`<h2>시간 초과!</h2><p><b>${G.info.target.name}</b>이(가) 아직 ${left}% 남았어요.<br>정중앙과 최고점을 노려 보세요!<br><small>코인으로 캐릭터를 사면 더 쉬워져요</small></p>`, [
-    ['다시 하기', 'main', () => startStage(G.info.index, G.scoreAtStart)],
-    ['캐릭터', '', showShop],
-    ['처음으로', '', goHome],
-  ]);
+  banner('파괴!', `${s.target.name}을(를) 부쉈어요 · <span class="coin"></span>+${L.formatNumber(coins)}${next.regionIndex !== s.regionIndex ? `<br>${s.region.name} 정복! 다음은 ${next.region.name}` : ''}`);
+  G.next = s.index + 1;
 }
 function pause() {
-  if (mode !== 'play' || paused || ['fail', 'done', 'destroy'].includes(G.phase)) return;
+  if (mode !== 'play' || paused || ['done', 'destroy'].includes(G.phase)) return;
   paused = true;
   modal('<h2>일시정지</h2>' + settingsHtml(), [
     ['계속하기', 'main', () => { paused = false; showScreen(null); }],
-    ['다시 하기', '', () => startStage(G.info.index, G.scoreAtStart)],
     ['처음으로', '', goHome],
   ]);
   bindSettings();
@@ -1575,7 +1588,7 @@ function bindSettings() {
 }
 function showSettings() {
   modal('<h2>환경설정</h2>' + settingsHtml(), [
-    ['기록 지우기', 'red', () => modal('<h2>기록 지우기</h2><p>스테이지 진행, 최고 점수, 코인, 캐릭터가<br>모두 지워져요.</p>', [
+    ['기록 지우기', 'red', () => modal('<h2>기록 지우기</h2><p>진행, 코인, 강화, 캐릭터가<br>모두 지워져요.</p>', [
       ['지우기', 'red', () => { Object.assign(save, L.defaultSave(), { sound: save.sound, vibrate: save.vibrate }); persist(); goHome(); }],
       ['취소', '', showSettings],
     ])],
@@ -1599,13 +1612,46 @@ window.addEventListener('keydown', (e) => {
   }
 });
 $('pauseBtn').addEventListener('click', pause);
-$('startBtn').addEventListener('click', () => { sfx.tick(); startStage(save.unlocked, 0); });
-$('stagesBtn').addEventListener('click', () => { sfx.tick(); showStages(); });
+$('startBtn').addEventListener('click', () => { sfx.tick(); startStage(save.unlocked); });
+$('upBtn').addEventListener('click', () => { sfx.tick(); showUpgrades(); });
 $('shopBtn').addEventListener('click', () => { sfx.tick(); showShop(); });
-$('stagesBack').addEventListener('click', goHome);
-$('shopBack').addEventListener('click', () => (mode === 'play' && G && G.phase === 'done' ? showClear() : mode === 'play' && G && G.phase === 'fail' ? (G.phase = 'x', fail()) : goHome()));
+$('upBtnGame').addEventListener('click', () => { sfx.tick(); showUpgrades(); });
+$('shopBtnGame').addEventListener('click', () => { sfx.tick(); showShop(); });
+// 게임 중에 연 화면은 닫으면 게임으로(그동안에도 자동으로 계속 부순다)
+const backTo = () => (mode === 'play' ? showScreen(null) : goHome());
+$('upBack').addEventListener('click', backTo);
+$('shopBack').addEventListener('click', () => {
+  // 캐릭터를 바꾸면 능력이 바로 적용되도록 지금 대상을 이어서 다시 시작
+  if (mode === 'play' && G && G.char.id !== save.char && !['destroy', 'done'].includes(G.phase)) { save.hpLeft = G.hp; startStage(G.info.index); }
+  else backTo();
+});
 $('gear').addEventListener('click', showSettings);
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (G && mode === 'play') save.hpLeft = G.phase === 'done' ? null : G.hp; persist(); pause(); }
+  else applyOffline();
+});
+// 자리를 비운 동안의 자동 진행
+let coinFrac = 0;
+function applyOffline() {
+  const now = Date.now(), away = (now - (save.lastSeen || now)) / 1000;
+  save.lastSeen = now;
+  if (away < 30) return;
+  if (G && mode === 'play' && !['destroy', 'done'].includes(G.phase)) save.hpLeft = G.hp;
+  const r = L.offlineProgress(save, away, curChar());
+  persist();
+  if (r.coins <= 0 && r.stages <= 0) return;
+  const h = Math.floor(r.seconds / 3600), m = Math.floor((r.seconds % 3600) / 60);
+  const wasPlaying = mode === 'play';
+  if (wasPlaying) { paused = true; }
+  modal(`<h2>다녀오셨어요!</h2><p>자리를 비운 ${h ? `${h}시간 ` : ''}${m}분 동안<br>자동으로 ${r.stages ? `<b>${r.stages}곳</b>을 부수고` : '열심히 때리고'}<br><span class="coin"></span><b>${L.formatNumber(r.coins)}</b> 코인을 벌었어요</p>`, [
+    ['좋아요', 'main', () => (wasPlaying ? startStage(save.unlocked) : goHome())],
+  ]);
+}
+setInterval(() => {
+  if (G && mode === 'play' && !['destroy', 'done'].includes(G.phase)) save.hpLeft = G.hp;
+  save.lastSeen = Date.now();
+  persist();
+}, 3000);
 
 let last = performance.now();
 function frame(now) {
@@ -1619,6 +1665,7 @@ function frame(now) {
 }
 resize();
 goHome();
+applyOffline();
 requestAnimationFrame(frame);
 window.smashReady = true;
 window.__smash = { get G() { return G; }, action, startStage, cam, save };

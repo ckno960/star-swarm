@@ -2,9 +2,9 @@
 // 길이는 모두 실제 m 단위. 주인공은 1.8m 그대로이고, 대상이 커질수록 화면이 넓어져 주인공이 점처럼 작아진다.
 
 // 바늘 판정: 바늘 위치 p는 -1(왼쪽 끝) ~ 1(오른쪽 끝), 0이 정중앙.
-// PERFECT는 리듬게임처럼 시간으로 정한다: 바늘이 정중앙을 지나는 순간 ±40ms.
+// PERFECT는 리듬게임처럼 시간으로 정한다: 바늘이 정중앙을 지나는 순간 ±25ms.
 // 바늘 빠르기와 상관없이 같은 타이밍 감각이 되고, 막대 위 PERFECT 칸은 바늘이 빠를수록 넓게 그려진다.
-export const PERFECT_MS = 0.04;
+export const PERFECT_MS = 0.025;
 export const PERFECT_ZONE = 0.03;   // 바늘 빠르기를 모를 때 쓰는 기본 폭
 export const GREAT_ZONE = 0.15;
 export const GOOD_ZONE = 0.4;
@@ -23,13 +23,93 @@ export const BASE_DAMAGE = 100;
 export const HERO_M = 1.8;
 export const BOUNCE_TIME = 0.55;
 
+// ---------- 방치형 ----------
+// 시간 제한 없이 자동으로 계속 뛰어 부순다. 직접 누르면 기다리지 않고 바로 뛰고, 정중앙·최고점을 맞혀 훨씬 세게 때린다.
+export const HP_BASE = 3000;      // 첫 대상 체력(피해 단위)
+export const HP_GROWTH = 1.33;    // 스테이지마다 체력 ×1.33
+export const BOSS_HP = 2;
+export const COIN_BASE = 20;      // 첫 대상에서 버는 코인
+export const COIN_GROWTH = 1.3;
+export const HIT_COIN_SHARE = 0.5; // 때릴 때마다 (준 피해 / 체력) × 스테이지 코인 × 0.5, 부수면 스테이지 코인을 한 번 더
+export const AUTO_DELAY = 1.2;    // 자동 점프 전에 땅에서 기다리는 시간(초)
+export const AUTO_ACC = 0.55;     // 자동 점프의 정확도(1이 정중앙)
+export const OFFLINE_CAP = 8 * 3600;
+
+export const UPGRADES = [
+  { id: 'power', name: '힘', desc: '모든 피해 +15%', base: 15, growth: 1.17, max: 999 },
+  { id: 'auto', name: '자동 점프 속도', desc: '자동 점프 대기 시간 -8%', base: 30, growth: 1.4, max: 12 },
+  { id: 'aim', name: '자동 조준', desc: '자동 점프가 정중앙에 더 가까워져요', base: 50, growth: 1.5, max: 10 },
+];
+export const upgradeById = (id) => UPGRADES.find((u) => u.id === id);
+export function upgradeCost(id, lv) {
+  const u = upgradeById(id);
+  return lv >= u.max ? Infinity : Math.round(u.base * u.growth ** lv);
+}
+export function buyUpgrade(save, id) {
+  const lv = save.upgrades[id] || 0, cost = upgradeCost(id, lv);
+  if (save.coins < cost) return false;
+  save.coins -= cost;
+  save.upgrades[id] = lv + 1;
+  return true;
+}
+export const powerMult = (save, char = CHARACTERS[0]) => 1.15 ** (save.upgrades.power || 0) * (char.power || 1);
+export const autoDelay = (save, char = CHARACTERS[0]) => AUTO_DELAY * 0.92 ** (save.upgrades.auto || 0) * (char.autoDelay || 1);
+export const autoAcc = (save) => Math.min(0.9, AUTO_ACC + 0.03 * (save.upgrades.aim || 0));
+
+// 자동 점프 판정: 정확도만큼 정중앙에서 벗어난 자리에서 뛴다. 찍기는 하지 않고 그냥 떨어진다.
+export function autoJump(save) {
+  return judgeJump(1 - autoAcc(save));
+}
+export function stageCoins(index) {
+  const boss = index % 10 === 9;
+  return Math.round(COIN_BASE * COIN_GROWTH ** index * (boss ? 2 : 1));
+}
+export function hitCoins(index, dmg, maxHp) {
+  return stageCoins(index) * HIT_COIN_SHARE * Math.min(dmg, maxHp) / maxHp;
+}
+// 자동만으로 1초에 주는 피해
+export function autoDps(save, char = CHARACTERS[0]) {
+  const j = autoJump(save);
+  const dmg = damage(j, 'none', 0, powerMult(save, char));
+  return dmg / (autoDelay(save, char) + 0.07 + airTime(jumpFraction(j)) + BOUNCE_TIME);
+}
+// 자리를 비운 동안: 자동 피해로 지금 대상부터 차례로 부수고 코인을 번다(최대 8시간)
+export function offlineProgress(save, seconds, char = CHARACTERS[0]) {
+  let left = Math.min(OFFLINE_CAP, Math.max(0, seconds));
+  const out = { seconds: left, stages: 0, coins: 0 };
+  while (left > 0 && save.unlocked < STAGE_COUNT) {
+    const info = stageInfo(save.unlocked, char);
+    if (!info) break;
+    const hp = save.hpLeft ?? info.maxHp;
+    const dps = autoDps(save, char);
+    const need = hp / dps;
+    if (need > left) {
+      const dmg = dps * left;
+      save.hpLeft = hp - dmg;
+      out.coins += hitCoins(info.index, dmg, info.maxHp);
+      left = 0;
+    } else {
+      out.coins += hitCoins(info.index, hp, info.maxHp) + stageCoins(info.index);
+      save.cleared[info.index] = true;
+      out.stages++;
+      left -= need;
+      save.hpLeft = null;
+      if (save.unlocked >= STAGE_COUNT - 1) { save.done = true; break; }
+      save.unlocked++;
+    }
+  }
+  out.coins = Math.floor(out.coins);
+  save.coins += out.coins;
+  return out;
+}
+
 export const CHARACTERS = [
   { id: 'punch', name: '주먹이', desc: '기본 캐릭터', price: 0 },
-  { id: 'turtle', name: '거북 도사', desc: '바늘이 30% 느리게 움직여요', price: 200, needle: 0.7 },
-  { id: 'hawk', name: '매눈이', desc: '가운데 판정 영역(PERFECT·GREAT·GOOD)이 1.6배 넓어요', price: 400, zone: 1.6 },
-  { id: 'clock', name: '시계 소녀', desc: '제한 시간이 30% 늘어나요', price: 400, time: 1.3 },
-  { id: 'bunny', name: '깡총이', desc: '2단 점프! 공중에서 한 번 더 누르면 더 높이 뛰고, 최고점에 맞출수록 피해가 커져요(최대 ×1.6)', price: 800, double: true },
-  { id: 'gold', name: '황금 주먹', desc: '피해 +25%, 바늘 15% 느림, 판정 영역 1.25배', price: 2000, power: 1.25, needle: 0.85, zone: 1.25 },
+  { id: 'turtle', name: '거북 도사', desc: '바늘이 30% 느리게 움직여요', price: 300, needle: 0.7 },
+  { id: 'clock', name: '태엽 소녀', desc: '자동 점프가 40% 빨라요(대기 시간 -40%)', price: 1500, autoDelay: 0.6 },
+  { id: 'hawk', name: '매눈이', desc: '가운데 판정 영역(PERFECT·GREAT·GOOD)이 1.6배 넓어요', price: 4000, zone: 1.6 },
+  { id: 'bunny', name: '깡총이', desc: '2단 점프! 공중에서 한 번 더 누르면 더 높이 뛰고, 최고점에 맞출수록 피해가 커져요(최대 ×1.6)', price: 20000, double: true },
+  { id: 'gold', name: '황금 주먹', desc: '피해 ×2, 바늘 15% 느림, 판정 영역 1.25배', price: 300000, power: 2, needle: 0.85, zone: 1.25 },
 ];
 export const charById = (id) => CHARACTERS.find((c) => c.id === id) || CHARACTERS[0];
 
@@ -123,12 +203,11 @@ export function stageInfo(index, char = CHARACTERS[0]) {
     if (i < region.targets.length) {
       const target = region.targets[i];
       const sphere = isSphere(target);
-      const need = (7 + 0.12 * index) * (target.boss ? 1.4 : 1);
       return {
         index, regionIndex: r, region, local: i, target, sphere,
         boss: !!target.boss,
-        maxHp: Math.round(need * BASE_DAMAGE),
-        time: ((target.boss ? 22 : 16) + 0.08 * index) * (char.time || 1),
+        maxHp: Math.round(HP_BASE * HP_GROWTH ** index * (target.boss ? BOSS_HP : 1)),
+        coins: stageCoins(index),
         needleSpeed: (0.35 + 0.004 * index) * (char.needle || 1),  // 초당 왕복 횟수 (정중앙 통과 속도 = 4 × 이 값)
         zone: char.zone || 1,
         // 대상 꼭대기 위로 더 뛸 수 있는 높이(PERFECT 기준)
@@ -214,11 +293,6 @@ export function nextCombo(combo, jump, apex) {
   return jump.grade === 'perfect' || apex === 'perfect' ? combo + 1 : 0;
 }
 
-// 클리어 보상 코인: 뒤 스테이지일수록 많고, 처음 깨면 두 배, Perfect마다 +2
-export function coinReward(index, first, perfects) {
-  return Math.round((10 + 2 * index) * (first ? 2 : 1)) + 2 * perfects;
-}
-
 const LIGHT_YEAR_KM = 9.4607e12;
 export function formatMeters(m) {
   if (m < 1000) return `${m < 100 ? m.toFixed(1) : Math.round(m)}m`;
@@ -246,7 +320,7 @@ export function formatNumber(n) {
 
 export const SAVE_KEY = 'centerSmash.save';
 export function defaultSave() {
-  return { unlocked: 0, best: 0, cleared: {}, coins: 0, owned: ['punch'], char: 'punch', sound: true, vibrate: true };
+  return { unlocked: 0, hpLeft: null, done: false, total: 0, cleared: {}, coins: 0, owned: ['punch'], char: 'punch', upgrades: { power: 0, auto: 0, aim: 0 }, lastSeen: 0, sound: true, vibrate: true };
 }
 export function loadSave(storage) {
   try {
@@ -254,7 +328,9 @@ export function loadSave(storage) {
     if (!raw) return defaultSave();
     const s = { ...defaultSave(), ...JSON.parse(raw) };
     s.unlocked = Math.max(0, Math.min(STAGE_COUNT - 1, s.unlocked | 0));
-    s.coins = Math.max(0, s.coins | 0);
+    s.coins = Math.max(0, Math.floor(+s.coins || 0));
+    s.upgrades = { power: 0, auto: 0, aim: 0, ...(s.upgrades || {}) };
+    if (typeof s.hpLeft !== 'number' || !(s.hpLeft > 0)) s.hpLeft = null;
     if (!Array.isArray(s.owned)) s.owned = ['punch'];
     if (!s.owned.includes('punch')) s.owned.unshift('punch');
     if (!s.owned.includes(s.char)) s.char = 'punch';
@@ -266,15 +342,15 @@ export function loadSave(storage) {
 export function storeSave(storage, save) {
   try { storage && storage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* 저장 불가 */ }
 }
-// 클리어 기록 + 코인 지급. 받은 코인 수를 돌려준다.
-export function recordClear(save, index, score, perfects) {
-  const first = !save.cleared[index];
-  const coins = coinReward(index, first, perfects);
+// 부순 기록 + 코인. 받은 코인 수를 돌려준다.
+export function recordClear(save, index) {
+  const coins = stageCoins(index);
   save.cleared[index] = true;
-  save.unlocked = Math.min(STAGE_COUNT - 1, Math.max(save.unlocked, index + 1));
-  save.best = Math.max(save.best, score);
   save.coins += coins;
-  return { coins, first };
+  save.hpLeft = null;
+  if (index >= STAGE_COUNT - 1) save.done = true;
+  else save.unlocked = Math.max(save.unlocked, index + 1);
+  return coins;
 }
 export function buyChar(save, id) {
   const c = charById(id);

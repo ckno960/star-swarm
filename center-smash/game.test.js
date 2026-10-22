@@ -47,14 +47,14 @@ test('perfect is 3% of the bar; slow needle', () => {
   assert.equal(L.judgeJump(0.3).grade, 'good');
   assert.equal(L.judgeJump(0.5).grade, 'miss');
   assert.equal(L.judgeJump(0.04, 1.6).grade, 'perfect', 'wider zones for 매눈이');
-  // 리듬게임식 PERFECT: 바늘 빠르기와 상관없이 정중앙 ±40ms
+  // 리듬게임식 PERFECT: 바늘 빠르기와 상관없이 정중앙 ±25ms
   for (const i of [0, 25, 49]) {
     const sp = L.stageInfo(i).needleSpeed;
     const at = (ms) => L.judgeJump(L.needlePos(0.25 / sp + ms / 1000, sp), 1, sp).grade;
     assert.equal(at(0), 'perfect');
-    assert.equal(at(39), 'perfect', `stage ${i} +39ms`);
-    assert.equal(at(-39), 'perfect', `stage ${i} -39ms`);
-    assert.notEqual(at(45), 'perfect', `stage ${i} +45ms`);
+    assert.equal(at(24), 'perfect', `stage ${i} +24ms`);
+    assert.equal(at(-24), 'perfect', `stage ${i} -24ms`);
+    assert.notEqual(at(28), 'perfect', `stage ${i} +28ms`);
   }
   assert.ok(L.stageInfo(0).needleSpeed <= 0.4);
   assert.ok(L.stageInfo(49).needleSpeed <= 0.6);
@@ -99,20 +99,6 @@ test('combo grows with perfects, caps, breaks otherwise', () => {
   assert.equal(L.comboMult(99), 1 + L.COMBO_STEP * L.COMBO_MAX);
 });
 
-test('stages are winnable with good play, not with mashing', () => {
-  for (let i = 0; i < 50; i++) {
-    const s = L.stageInfo(i);
-    // 한 번 뛰고 돌아오는 데 걸리는 시간(바늘 기다림 + 체공 + 반동)
-    const cycle = (j) => 1 / (4 * s.needleSpeed) + 0.07 + L.airTime(L.jumpFraction(j)) + L.BOUNCE_TIME + 0.05;
-    const run = (p, apex) => {
-      const j = L.judgeJump(p);
-      return Math.floor(s.time / cycle(j)) * L.damage(j, apex, 0);
-    };
-    assert.ok(run(0.1, 'great') >= s.maxHp, `stage ${i} winnable with great/great`);
-    assert.ok(run(0.6, 'none') < s.maxHp, `stage ${i} not winnable by mashing`);
-  }
-});
-
 test('formatting', () => {
   assert.equal(L.formatNumber(950), '950');
   assert.equal(L.formatNumber(12000), '1.2만');
@@ -122,34 +108,71 @@ test('formatting', () => {
   assert.match(L.formatMeters(1e21), /광년$/);
 });
 
-test('coins on every clear, double on first; buy and select characters', () => {
+test('character perks change stage numbers', () => {
+  const sv = L.defaultSave();
+  assert.ok(L.autoDelay(sv, L.charById('clock')) < L.autoDelay(sv));
+  assert.equal(L.powerMult(sv, L.charById('gold')), 2);
+  assert.equal(L.stageInfo(3, L.charById('hawk')).zone, 1.6);
+  assert.equal(L.charById('nope').id, 'punch');
+});
+
+test('idle: HP and coins grow, upgrades cost more each level', () => {
+  assert.ok(L.stageInfo(1).maxHp > L.stageInfo(0).maxHp);
+  assert.equal(L.stageInfo(9).maxHp, Math.round(L.HP_BASE * L.HP_GROWTH ** 9 * 2));
+  assert.ok(L.stageCoins(21) > L.stageCoins(20) * 1.2);
+  assert.ok(L.upgradeCost('power', 5) > L.upgradeCost('power', 4));
+  assert.equal(L.upgradeCost('auto', 12), Infinity);
+  const s = L.defaultSave();
+  s.coins = 100;
+  assert.equal(L.buyUpgrade(s, 'power'), true);
+  assert.equal(s.upgrades.power, 1);
+  assert.equal(s.coins, 85);
+  assert.equal(L.buyUpgrade(s, 'aim'), true);
+  assert.equal(L.buyUpgrade(s, 'aim'), false, 'not enough coins');
+});
+
+test('manual play beats auto by a clear margin', () => {
+  const s = L.defaultSave();
+  const auto = L.autoDps(s);
+  // 직접: 기다리지 않고 바로 뛰고(바늘 기다림 평균 0.6초), GREAT 점프 + GREAT 찍기, 찍으면 내려오는 시간이 짧다
+  const j = L.judgeJump(0.1);
+  const manual = L.damage(j, 'great', 0) / (0.6 + 0.07 + L.airTime(L.jumpFraction(j)) * 0.75 + L.BOUNCE_TIME);
+  assert.ok(manual > auto * 3, `${manual} vs ${auto}`);
+  // 자동만으로도 첫 대상은 몇 분 안에 부순다
+  const t = L.stageInfo(0).maxHp / auto;
+  assert.ok(t > 60 && t < 240, `${t}s`);
+  // 자동 강화가 자동 피해를 올린다
+  s.upgrades = { power: 5, auto: 5, aim: 5 };
+  assert.ok(L.autoDps(s) > auto * 3);
+});
+
+test('offline progress destroys stages and pays coins, capped at 8 hours', () => {
+  const s = L.defaultSave();
+  const r = L.offlineProgress(s, 3600);
+  assert.ok(r.stages >= 5 && r.stages < 30, `${r.stages} stages`);
+  assert.ok(r.coins > 0 && s.coins === r.coins);
+  assert.equal(s.unlocked, r.stages);
+  assert.ok(s.hpLeft > 0);
+  const t = L.defaultSave();
+  assert.equal(L.offlineProgress(t, 1e9).seconds, L.OFFLINE_CAP);
+});
+
+test('clear pays stage coins and moves on; saves round-trip', () => {
   const store = new Map();
   const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
   const s = L.loadSave(storage);
-  assert.equal(s.coins, 0);
-  const a = L.recordClear(s, 0, 500, 1);
-  assert.equal(a.first, true);
-  assert.equal(a.coins, 22);
-  const b = L.recordClear(s, 0, 500, 0);
-  assert.equal(b.coins, 10);
-  assert.equal(s.coins, 32);
-  assert.equal(L.buyChar(s, 'turtle'), false, 'not enough coins');
-  s.coins = 250;
+  s.hpLeft = 123;
+  assert.equal(L.recordClear(s, 0), L.stageCoins(0));
+  assert.equal(s.unlocked, 1);
+  assert.equal(s.hpLeft, null);
+  s.coins = 400;
   assert.equal(L.buyChar(s, 'turtle'), true);
-  assert.equal(s.coins, 50);
   assert.equal(s.char, 'turtle');
-  assert.equal(L.buyChar(s, 'turtle'), false, 'already owned');
-  assert.equal(L.selectChar(s, 'gold'), false);
-  assert.equal(L.selectChar(s, 'punch'), true);
+  assert.equal(L.buyChar(s, 'turtle'), false);
   L.storeSave(storage, s);
   const t = L.loadSave(storage);
   assert.deepEqual(t.owned, ['punch', 'turtle']);
-  assert.equal(t.unlocked, 1);
+  assert.equal(t.coins, 100);
+  assert.equal(t.upgrades.power, 0);
   assert.deepEqual(L.loadSave({ getItem() { throw new Error('x'); } }), L.defaultSave());
-});
-
-test('character perks change stage numbers', () => {
-  assert.ok(L.stageInfo(3, L.charById('clock')).time > L.stageInfo(3).time);
-  assert.equal(L.stageInfo(3, L.charById('hawk')).zone, 1.6);
-  assert.equal(L.charById('nope').id, 'punch');
 });
