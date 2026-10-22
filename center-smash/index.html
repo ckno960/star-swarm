@@ -227,7 +227,7 @@
   setTimeout(function () { if (!window.smashReady) document.getElementById('reload').hidden = false; }, 4000);
 </script>
 <script type="module">
-import * as L from './logic.js?v=2';
+import * as L from './logic.js?v=3';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
@@ -765,7 +765,7 @@ function action() {
 function startJump() {
   const s = G.info;
   const p = L.needlePos(G.needleT, s.needleSpeed, G.needlePhase);
-  const j = L.judgeJump(p, s.zone);
+  const j = L.judgeJump(p, s.zone, s.needleSpeed);
   const frac = L.jumpFraction(j);
   const top = targetTop();
   G.lastP = p;
@@ -1373,7 +1373,7 @@ function drawBar() {
   R(ctx, x0 - 2, y - 2, bw + 4, h + 4, '#f6ecd0');
   const zone = (z, col) => R(ctx, W / 2 - Math.min(1, z) * bw / 2, y, Math.min(1, z) * bw, h, col);
   zone(1, '#d05050'); zone(L.GOOD_ZONE * s.zone, '#f0c040'); zone(L.GREAT_ZONE * s.zone, '#6ad06a');
-  const pw = Math.max(2, L.PERFECT_ZONE * s.zone * bw);
+  const pw = Math.max(2, L.perfectZone(s.needleSpeed, s.zone) * bw);
   R(ctx, W / 2 - pw / 2, y, pw, h, '#fff6b0');
   R(ctx, W / 2 - pw / 2 - 1, y, 1, h, '#b08000'); R(ctx, W / 2 + pw / 2, y, 1, h, '#b08000');
   ctx.fillStyle = '#ffd23f';

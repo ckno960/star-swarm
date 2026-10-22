@@ -47,6 +47,15 @@ test('perfect is 3% of the bar; slow needle', () => {
   assert.equal(L.judgeJump(0.3).grade, 'good');
   assert.equal(L.judgeJump(0.5).grade, 'miss');
   assert.equal(L.judgeJump(0.04, 1.6).grade, 'perfect', 'wider zones for 매눈이');
+  // 리듬게임식 PERFECT: 바늘 빠르기와 상관없이 정중앙 ±40ms
+  for (const i of [0, 25, 49]) {
+    const sp = L.stageInfo(i).needleSpeed;
+    const at = (ms) => L.judgeJump(L.needlePos(0.25 / sp + ms / 1000, sp), 1, sp).grade;
+    assert.equal(at(0), 'perfect');
+    assert.equal(at(39), 'perfect', `stage ${i} +39ms`);
+    assert.equal(at(-39), 'perfect', `stage ${i} -39ms`);
+    assert.notEqual(at(45), 'perfect', `stage ${i} +45ms`);
+  }
   assert.ok(L.stageInfo(0).needleSpeed <= 0.4);
   assert.ok(L.stageInfo(49).needleSpeed <= 0.6);
   assert.ok(L.stageInfo(0, L.charById('turtle')).needleSpeed < L.stageInfo(0).needleSpeed);

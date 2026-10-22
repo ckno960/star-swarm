@@ -2,8 +2,10 @@
 // 길이는 모두 실제 m 단위. 주인공은 1.8m 그대로이고, 대상이 커질수록 화면이 넓어져 주인공이 점처럼 작아진다.
 
 // 바늘 판정: 바늘 위치 p는 -1(왼쪽 끝) ~ 1(오른쪽 끝), 0이 정중앙.
-// 막대 전체 폭이 2이므로 PERFECT 폭 0.06 = 막대의 3%
-export const PERFECT_ZONE = 0.03;
+// PERFECT는 리듬게임처럼 시간으로 정한다: 바늘이 정중앙을 지나는 순간 ±40ms.
+// 바늘 빠르기와 상관없이 같은 타이밍 감각이 되고, 막대 위 PERFECT 칸은 바늘이 빠를수록 넓게 그려진다.
+export const PERFECT_MS = 0.04;
+export const PERFECT_ZONE = 0.03;   // 바늘 빠르기를 모를 때 쓰는 기본 폭
 export const GREAT_ZONE = 0.15;
 export const GOOD_ZONE = 0.4;
 
@@ -147,11 +149,17 @@ export function needlePos(t, speed, phase = 0) {
   return x < 0.5 ? -1 + 4 * x : 3 - 4 * x;
 }
 
-export function judgeJump(p, zone = 1) {
+// 바늘이 정중앙에서 ±PERFECT_MS 안에 있을 때의 위치 폭(정중앙 통과 속도 = 4 × speed)
+export function perfectZone(speed, zone = 1) {
+  return PERFECT_MS * 4 * speed * zone;
+}
+
+export function judgeJump(p, zone = 1, speed = null) {
   const off = Math.abs(p);
   const acc = Math.max(0, 1 - off);
+  const pz = speed ? perfectZone(speed, zone) : PERFECT_ZONE * zone;
   let grade = 'miss';
-  if (off <= PERFECT_ZONE * zone) grade = 'perfect';
+  if (off <= pz) grade = 'perfect';
   else if (off <= GREAT_ZONE * zone) grade = 'great';
   else if (off <= GOOD_ZONE * zone) grade = 'good';
   return { grade, acc };
