@@ -247,7 +247,7 @@
   setTimeout(function () { if (!window.smashReady) document.getElementById('reload').hidden = false; }, 4000);
 </script>
 <script type="module">
-import * as L from './logic.js?v=4';
+import * as L from './logic.js?v=5';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
@@ -674,7 +674,7 @@ function decor() {
   const info = G.info, r = info.regionIndex;
   if (decorCache && decorCache.stage === info.index) return decorCache;
   const rand = seeded(info.index * 101 + 5), items = [];
-  const t = info.target, left = info.x0 - 2, right = t.w / 2 + 2;
+  const t = info.target, left = -t.w / 2 - 2, right = t.w / 2 + 2;
   const sprite = (w, h, draw) => {
     const ppm = Math.min(G.ppm0, 240 / Math.max(w, h));
     const [c, g] = mk(w * ppm + 2, h * ppm + 2); draw(g, c.width, c.height);
@@ -738,9 +738,8 @@ function setupCamera() {
   let view, cy = 0, cx = 0;
   if (info.sphere) { view = t.h * 0.6; cy = -t.h * 0.25; }
   else {
-    const span = t.w / 2 - info.x0 + 4;
+    const span = t.w + 8;
     view = Math.max(9, t.h * 1.5 + 3, span * AREA() / (W - 16));
-    cx = (info.x0 + t.w / 2) / 2;
   }
   G.base = { view, cx, cy };
   G.ppm0 = AREA() / view;
@@ -751,7 +750,7 @@ function newGame(index) {
   const info = L.stageInfo(index, curChar());
   G = {
     info, char: curChar(), hp: index === save.unlocked && save.hpLeft ? Math.min(info.maxHp, save.hpLeft) : info.maxHp, phase: 'intro', t: 0,
-    combo: 0, maxCombo: 0, autoT: 0, manual: false,
+    combo: 0, maxCombo: 0, autoT: 0, manual: false, aim: false, aimIdle: 0,
     needleT: 0, needlePhase: 0, lastP: -1, jump: null, arc: null, hop: null,
     hx: info.x0, hy: 0, apex: null, smashed: false, doubled: false, mult: 1,
     diveFrom: 0, diveT: 0, diveD: 0, freeze: 0, slow: 0, collapse: 0, peak: 0, charge: null, crack: 0, crater: 0, mega: false, gaugeMax: 1,
@@ -774,13 +773,32 @@ function startStage(index) {
 }
 
 // ---------- 입력 ----------
+// 자동일 때 누르면: 게이지가 나오고 주인공이 바로 시작 자리(건물 앞 땅)로 돌아와 직접 조작이 시작된다.
+// 직접 조작 중: 땅에서 누르면 점프, 공중에서 누르면 찍기. 4초 동안 안 누르면 다시 자동.
+const AIM_IDLE = 4;
 function action() {
   if (mode !== 'play' || paused || !G) return;
   audio();
+  if (['intro', 'charge', 'apexCharge', 'destroy', 'done'].includes(G.phase)) return;
+  if (!G.aim) { takeControl(); return; }
+  G.aimIdle = 0;
   if (G.phase === 'ready') startJump();
-  else if (G.phase === 'air' && !G.smashed) {
+  else if (G.phase === 'air' && !G.smashed && G.manual) {
     if (G.char.double && !G.doubled) doubleJump(); else smash();
   }
+}
+function takeControl() {
+  G.aim = true; G.aimIdle = 0;
+  if (G.phase !== 'ready' || G.hop) {
+    const u = mpp();
+    burst(G.hx, G.hy + L.HERO_M * 0.5, 10, ['#ffffff', '#e8e0d0'], 50 * u, 0.35, { size: 2 });
+    G.hop = null; G.arc = null; G.charge = null; cam.focus = null;
+    G.phase = 'ready'; G.hx = G.info.x0; G.hy = 0;
+    hero.pose = 'stand'; hero.angle = 0; hero.sq = -0.3; hero.sqv = 0;
+    burst(G.hx, L.HERO_M * 0.5, 10, ['#ffffff', '#ffd23f'], 50 * u, 0.35, { size: 2 });
+  }
+  G.needleT = 0; G.needlePhase = Math.random() < 0.5 ? 0 : 0.5;
+  sfx.tick();
 }
 // 직접 점프: 바늘 자리로 판정. 자동 점프: 강화된 정확도로, 찍기 없이 떨어진다.
 function startJump(auto = false) {
@@ -1011,9 +1029,14 @@ function update(rdt) {
       if (G.t >= 1.1) { G.phase = 'ready'; G.needleT = 0; G.needlePhase = 0; G.autoT = 0; judge('GO!', 'go'); }
       break;
     case 'ready':
-      G.needleT += dt;
-      G.autoT += dt;
-      if (G.autoT >= L.autoDelay(save, G.char)) startJump(true);
+      if (G.aim) {
+        G.needleT += dt;
+        G.aimIdle += dt;
+        if (G.aimIdle >= AIM_IDLE) { G.aim = false; G.autoT = 0; }
+      } else {
+        G.autoT += dt;
+        if (G.autoT >= L.autoDelay(save, G.char)) startJump(true);
+      }
       break;
     case 'crouch':
       G.t += dt;
@@ -1393,6 +1416,7 @@ function drawHero(pose, x, footY, ppm, angle, sq, tint = null, extra = 1) {
 }
 
 function drawBar() {
+  if (!G.aim) return;   // 자동일 때는 게이지를 숨긴다
   const s = G.info, bw = 150, x0 = Math.round((W - bw) / 2), y = BAR_Y, h = 10;
   const active = G.phase === 'ready';
   const p = active ? L.needlePos(G.needleT, s.needleSpeed, G.needlePhase) : G.phase === 'intro' || G.phase === 'idle' ? -1 : G.lastP;
@@ -1412,7 +1436,7 @@ function drawBar() {
 }
 
 function drawGauge() {
-  const show = ['crouch', 'charge', 'air', 'apexCharge', 'dive', 'bounce'].includes(G.phase) && G.arc;
+  const show = G.aim && G.manual && ['crouch', 'charge', 'air', 'apexCharge', 'dive', 'bounce'].includes(G.phase) && G.arc;
   const lab = $('hLabel');
   if (!show) { lab.hidden = true; return; }
   const gx = 6, gw = 9, gt = Math.round(H * 0.25), gb = GY - 10, gh = gb - gt;
@@ -1448,25 +1472,30 @@ function updateHud() {
   hpEl.style.width = `${hf * 100}%`;
   hpEl.className = hf < 0.25 ? 'low' : hf < 0.55 ? 'mid' : '';
   $('hudCoins').innerHTML = `<span class="coin"></span>${L.formatNumber(save.coins)}`;
-  $('autoFill').style.width = G.phase === 'ready' ? `${Math.min(1, G.autoT / L.autoDelay(save, G.char)) * 100}%` : '0';
+  $('autoFill').style.width = G.phase === 'ready' && !G.aim ? `${Math.min(1, G.autoT / L.autoDelay(save, G.char)) * 100}%` : '0';
+  document.querySelector('.autoTag').style.visibility = G.aim ? 'hidden' : 'visible';
+  document.querySelector('.autoBar').style.visibility = G.aim ? 'hidden' : 'visible';
   const cheapest = Math.min(...L.UPGRADES.map((u) => L.upgradeCost(u.id, save.upgrades[u.id] || 0)));
   $('upBtnGame').classList.toggle('can', save.coins >= cheapest);
   // 버튼 하나: 땅에서는 점프, 뛰는 순간 찍기로 바뀜(깡총이는 공중에서 먼저 2단 점프)
   const btn = $('btn');
-  const canDouble = G.char.double && !G.doubled && ['crouch', 'charge', 'air'].includes(G.phase);
-  const smashing = !canDouble && ['crouch', 'charge', 'air', 'apexCharge', 'dive'].includes(G.phase);
+  const mine = G.aim && G.manual;
+  const canDouble = mine && G.char.double && !G.doubled && ['crouch', 'charge', 'air'].includes(G.phase);
+  const smashing = mine && !canDouble && ['crouch', 'charge', 'air', 'apexCharge', 'dive'].includes(G.phase);
   btn.classList.toggle('smash', smashing);
   $('jumpWord').textContent = canDouble ? '2단 점프' : '점프';
   btn.setAttribute('aria-label', smashing ? '내려찍기' : canDouble ? '2단 점프' : '점프');
-  const live = G.phase === 'ready' || (G.phase === 'air' && !G.smashed);
+  const busy = ['intro', 'charge', 'apexCharge', 'destroy', 'done'].includes(G.phase);
+  const live = !busy && (!G.aim || G.phase === 'ready' || (G.phase === 'air' && !G.smashed && G.manual));
   btn.classList.toggle('glow', live);
-  btn.classList.toggle('dim', !(live || ((G.phase === 'crouch' || G.phase === 'charge') && !G.smashed)));
+  btn.classList.toggle('dim', !(live || (mine && G.phase === 'crouch')));
   const hint = $('hint');
   if (mode === 'play' && !save.cleared[0] && s.index === 0) {
-    if (G.phase === 'ready') { hint.hidden = false; hint.textContent = '가만히 둬도 뛰지만, 정중앙에서 누르면 훨씬 세요!'; }
-    else if (G.phase === 'air' && !G.smashed) { hint.hidden = false; hint.textContent = '최고점(빨간 선)에서 한 번 더!'; }
+    if (!G.aim) { hint.hidden = false; hint.textContent = '가만히 둬도 뛰지만, 눌러서 직접 하면 훨씬 세요!'; }
+    else if (G.phase === 'ready') { hint.hidden = false; hint.textContent = '바늘이 정중앙에 올 때 누르세요!'; }
+    else if (G.phase === 'air' && !G.smashed && G.manual) { hint.hidden = false; hint.textContent = '최고점(빨간 선)에서 한 번 더!'; }
     else hint.hidden = true;
-  } else if (mode === 'play' && G.char.double && G.phase === 'air' && !G.doubled && !save.cleared['bunnyHint']) {
+  } else if (mode === 'play' && mine && G.char.double && G.phase === 'air' && !G.doubled && !save.cleared['bunnyHint']) {
     hint.hidden = false; hint.textContent = '최고점에서 누르면 2단 점프, 한 번 더 누르면 찍기!';
   } else hint.hidden = true;
 }
@@ -1558,6 +1587,7 @@ function showShop() {
 function showClear() {
   const s = G.info;
   const coins = L.recordClear(save, s.index);
+  if (G.char.double) save.cleared.bunnyHint = true;
   persist();
   sfx.coin();
   $('hint').hidden = true;
