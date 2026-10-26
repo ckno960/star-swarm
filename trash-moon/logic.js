@@ -123,13 +123,110 @@ export function addTrash(save, tons) {
 export function progress(mass) {
   return Math.max(0, Math.min(1, Math.log10(1 + mass) / Math.log10(1 + END_MASS)));
 }
+// ---------- 물리 ----------
+// 행성은 실제 천체의 반지름·질량을 따라 자라고(단계 사이는 로그로 이어짐),
+// 지구 쪽으로 정지 상태에서 떨어지는 자유 낙하 궤적을 따라 다가온다(처음엔 거의 그대로, 끝에서 급격히 빨라짐).
+export const G = 6.674e-11;
+export const EARTH = { radiusKm: 6371, massKg: 5.972e24 };
+export const BODY_DATA = {
+  pluto: { radiusKm: 1188, massKg: 1.303e22 },
+  europa: { radiusKm: 1561, massKg: 4.80e22 },
+  moon: { radiusKm: 1737, massKg: 7.342e22 },
+  io: { radiusKm: 1822, massKg: 8.93e22 },
+  mercury: { radiusKm: 2440, massKg: 3.301e23 },
+  titan: { radiusKm: 2575, massKg: 1.345e23 },
+  ganymede: { radiusKm: 2634, massKg: 1.482e23 },
+  mars: { radiusKm: 3390, massKg: 6.417e23 },
+  venus: { radiusKm: 6052, massKg: 4.867e24 },
+  neptune: { radiusKm: 24622, massKg: 1.024e26 },
+  uranus: { radiusKm: 25362, massKg: 8.681e25 },
+  saturn: { radiusKm: 58232, massKg: 5.683e26 },
+  jupiter: { radiusKm: 69911, massKg: 1.898e27 },
+};
+export const MOON_ANGULAR_DIAMETER = 0.5181 * Math.PI / 180;   // 지구에서 본 보름달 지름(라디안)
+
+// 지금 행성의 반지름(km)과 질량(kg)
+export function bodyAt(p) {
+  const st = planetStage(p), a = BODY_DATA[st.type.id], b = st.next ? BODY_DATA[st.next.id] : a;
+  const k = st.next ? Math.max(0, Math.min(1, (p - st.type.from) / (st.next.from - st.type.from))) : 0;
+  return { radiusKm: a.radiusKm * (b.radiusKm / a.radiusKm) ** k, massKg: a.massKg * (b.massKg / a.massKg) ** k, stage: st };
+}
+
+// 자유 낙하: 정지 상태 거리 D0에서 떨어질 때, 거리 비 x = D/D0까지 걸린 시간의 비율(0~1, 전체 낙하 시간 대비)
+export function fallTimeFraction(x) {
+  return (Math.sqrt(x * (1 - x)) + Math.acos(Math.sqrt(x))) / (Math.PI / 2);
+}
+// 목성만 한 행성과 지구 표면이 맞닿는 중심 거리 비
+export const CONTACT_X = (EARTH.radiusKm + BODY_DATA.jupiter.radiusKm) / START_KM;
+// 진행도 → 중심 거리 비(낙하 궤적 위에서 진행도만큼의 시간이 흐른 자리)
+export function fallX(p) {
+  if (p <= 0) return 1;
+  if (p >= 1) return CONTACT_X;
+  const target = Math.max(0, Math.min(1, p)) * fallTimeFraction(CONTACT_X);
+  let lo = CONTACT_X, hi = 1;
+  for (let i = 0; i < 50; i++) { const mid = (lo + hi) / 2; if (fallTimeFraction(mid) > target) lo = mid; else hi = mid; }
+  return (lo + hi) / 2;
+}
+export function centerDistanceKm(p) {
+  return START_KM * fallX(p);
+}
+// "지구까지": 두 천체 표면 사이 거리(0이 되면 충돌)
 export function distanceKm(p) {
-  return START_KM * (1 - p) ** 1.5;
+  if (p >= 1) return 0;
+  return Math.max(0, centerDistanceKm(p) - EARTH.radiusKm - bodyAt(p).radiusKm);
 }
-// 화면에 보이는 반지름(px): 처음엔 낮달처럼 작은 점, 끝에는 화면 폭만큼
-export function apparentRadius(p, maxR, minR = 3) {
-  return minR * (maxR / minR) ** (p ** 0.95);
+// 접근 속도(km/s): 정지 상태에서 끌려온 물체의 속도 v = √(2G(M지구+M행성)(1/D − 1/D0))
+export function speedKms(p) {
+  const D = centerDistanceKm(p) * 1000, D0 = START_KM * 1000, M = EARTH.massKg + bodyAt(p).massKg;
+  return Math.sqrt(Math.max(0, 2 * G * M * (1 / D - 1 / D0))) / 1000;
 }
+// 지구에서 보이는 크기: 각반지름 θ = asin(R/D), 화면 반지름 = 초점거리(px) × tan θ
+export function angularRadius(p) {
+  return Math.asin(Math.min(0.999, bodyAt(p).radiusKm / centerDistanceKm(p)));
+}
+export function screenRadius(p, focal) {
+  return focal * Math.tan(angularRadius(p));
+}
+// 휴대폰 카메라쯤 되는 가로 화각(도)에서 초점거리(px)
+export const focalPx = (screenWidth, hfovDeg = 60) => (screenWidth / 2) / Math.tan(hfovDeg * Math.PI / 360);
+export const moonTimes = (p) => (2 * angularRadius(p)) / MOON_ANGULAR_DIAMETER;   // 보름달의 몇 배로 보이는지
+export const earthMasses = (p) => bodyAt(p).massKg / EARTH.massKg;
+
+// ---------- 뉴스 특보 ----------
+// 행성이 이 거리(지구까지 km)를 지날 때마다 앵커가 나와 소식을 전한다
+export const BROADCASTS = [375000, 365000, 350000, 320000, 280000, 240000, 200000, 160000, 120000, 80000, 50000, 25000, 10000, 2000];
+export function formatKm(km) { return Math.round(km).toLocaleString('en-US'); }
+export function formatSpeed(kms) { return kms < 1 ? `${Math.round(kms * 1000)}m/s` : `${kms < 10 ? kms.toFixed(2) : kms.toFixed(1)}km/s`; }
+export function formatTimes(x) { return x < 10 ? x.toFixed(1) : Math.round(x).toLocaleString('en-US'); }
+export function massText(p) {
+  const em = earthMasses(p);
+  if (em >= 1) return `지구 질량의 ${formatTimes(em)}배`;
+  const pct = em * 100;
+  return `지구 질량의 ${pct < 1 ? pct.toFixed(2) : pct < 10 ? pct.toFixed(1) : Math.round(pct)}%`;
+}
+export function broadcastFor(km, p) {
+  const name = planetStage(p).type.name;
+  const v = formatSpeed(speedKms(p)), mt = formatTimes(moonTimes(p)), mass = massText(p), at = `${formatKm(km)}km`;
+  const lines = {
+    375000: ['쓰레기를 먹고 자라는 천체가 관측됐습니다.', `지금은 ${name}만 한 크기, ${mass}입니다.`, '아직은 맨눈으로 거의 보이지 않습니다.'],
+    365000: [`천체가 지구 쪽으로 움직이기 시작했습니다. 거리 ${at}.`, `지구 중력에 끌려 ${v}로 다가오고 있습니다.`],
+    350000: [`${name}급으로 자란 천체, 지구까지 ${at}입니다.`, `접근 속도는 ${v}. 계속 빨라지고 있습니다.`],
+    320000: [`천체가 계속 커지고 있습니다. 질량은 ${mass}.`, `하늘에서는 보름달의 ${mt}배 크기로 보입니다.`],
+    280000: [`${at} 지점을 통과했습니다.`, `접근 속도 ${v}. 가까워질수록 중력이 강해져 더 빨라집니다.`],
+    240000: [`${name}급 행성, 지구까지 ${at}.`, `보름달의 ${mt}배 크기. 해안가에서는 밀물이 비정상적으로 높습니다.`],
+    200000: [`행성이 달 궤도 안쪽 깊숙이 들어왔습니다. 거리 ${at}.`, `접근 속도 ${v}, 질량은 ${mass}.`],
+    160000: [`지구까지 ${at}. 곳곳에서 지진이 관측되고 있습니다.`, `하늘의 행성은 보름달의 ${mt}배입니다.`],
+    120000: [`${at}. 행성의 중력이 지구를 잡아당기고 있습니다.`, `접근 속도 ${v}. 정부는 대피 명령을 내렸습니다.`],
+    80000: [`지구까지 ${at}. 하늘의 절반을 행성이 덮었습니다.`, `보름달의 ${mt}배, ${v}로 떨어지고 있습니다.`],
+    50000: [`${at}. 대기권 밖에서 파편이 불덩이가 되어 쏟아집니다.`, `접근 속도 ${v}.`],
+    25000: [`긴급 속보입니다. 지구까지 ${at}.`, `행성이 조석 마찰로 달아오르고 있습니다. 속도 ${v}.`],
+    10000: [`${at}… 충돌이 임박했습니다.`, '시청자 여러분, 지금까지 함께해 주셔서 감사했습니다.'],
+    2000: [`…${at}.`, '안녕히 계세요, 지구.'],
+  }[km] || [`지구까지 ${at}.`];
+  const head = { 375000: '정체불명 천체 관측', 10000: '충돌 임박', 2000: '마지막 방송' }[km] || `${name}급 행성 지구까지 ${at}`;
+  return { head, lines };
+}
+
 export function currentNews(p) {
   let n = EVENTS[0];
   for (const e of EVENTS) if (p >= e.p) n = e;
@@ -173,7 +270,7 @@ export function formatRate(r) {
 
 export const SAVE_KEY = 'trashMoon.save';
 export function defaultSave() {
-  return { mass: 0, money: 0, sent: 0, owned: LAUNCHERS.map(() => 0), tapLv: 0, seen: 1, earths: 0, best: 0, time: 0, lastSeen: 0, sound: true, vibrate: true };
+  return { mass: 0, money: 0, sent: 0, owned: LAUNCHERS.map(() => 0), tapLv: 0, seen: 1, earths: 0, best: 0, time: 0, lastSeen: 0, news: -1, sound: true, vibrate: true };
 }
 export function loadSave(storage) {
   try {

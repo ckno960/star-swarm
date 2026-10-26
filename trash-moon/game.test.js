@@ -2,22 +2,59 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as L from './logic.js';
 
-test('distance counts down from 384,400km to 0 as mass grows', () => {
-  assert.equal(L.distanceKm(L.progress(0)), L.START_KM);
-  assert.equal(L.progress(L.END_MASS), 1);
+test('distance follows a gravitational free fall and ends at surface contact', () => {
+  assert.equal(Math.round(L.distanceKm(0)), L.START_KM - L.EARTH.radiusKm - L.BODY_DATA.pluto.radiusKm);
   assert.equal(L.distanceKm(1), 0);
   let prev = Infinity;
-  for (const m of [1, 10, 1e3, 1e6, 1e9, 1e11]) {
-    const d = L.distanceKm(L.progress(m));
-    assert.ok(d < prev, `${m}`);
-    prev = d;
-  }
+  for (let p = 0; p <= 1.0001; p += 0.01) { const d = L.distanceKm(Math.min(1, p)); assert.ok(d <= prev, `p=${p}`); prev = d; }
+  // 처음엔 느리고 끝에서 빠르다: 앞 절반 동안 움직인 거리 < 뒤 10% 동안 움직인 거리
+  const early = L.distanceKm(0) - L.distanceKm(0.5), late = L.distanceKm(0.9) - L.distanceKm(1);
+  assert.ok(early < late, `${early} vs ${late}`);
+  // 자유 낙하 시간 비율: 시작 0, 중심까지 1
+  assert.equal(L.fallTimeFraction(1), 0);
+  assert.ok(Math.abs(L.fallTimeFraction(0) - 1) < 1e-12);
 });
 
-test('planet starts as a dot and ends as wide as the screen', () => {
-  assert.equal(L.apparentRadius(0, 200), 3);
-  assert.ok(Math.abs(L.apparentRadius(1, 200) - 200) < 1e-9);
-  assert.ok(L.apparentRadius(0.5, 200) < 40, 'small at half way');
+test('approach speed from gravity: v = sqrt(2GM(1/D - 1/D0))', () => {
+  assert.equal(L.speedKms(0), 0);
+  let prev = -1;
+  for (const p of [0.1, 0.3, 0.5, 0.7, 0.9, 1]) { const v = L.speedKms(p); assert.ok(v > prev); prev = v; }
+  // 맞닿을 때 속도는 목성의 탈출 속도(59.5km/s)보다 조금 느리다
+  const vEnd = L.speedKms(1);
+  assert.ok(vEnd > 45 && vEnd < 59.5, `${vEnd}`);
+  const D = L.centerDistanceKm(1) * 1000, D0 = L.START_KM * 1000, M = L.EARTH.massKg + L.BODY_DATA.jupiter.massKg;
+  assert.ok(Math.abs(vEnd - Math.sqrt(2 * L.G * M * (1 / D - 1 / D0)) / 1000) < 1e-9);
+});
+
+test('apparent size from real radius and distance: theta = asin(R/D)', () => {
+  const f = L.focalPx(390);
+  assert.ok(Math.abs(f - 195 / Math.tan(Math.PI / 6)) < 1e-9);
+  // 처음엔 점(달보다 작게), 충돌 직전엔 보름달의 200배가 넘고 화면보다 크다
+  assert.ok(L.moonTimes(0) < 1);
+  assert.ok(L.screenRadius(0, f) < 2);
+  assert.ok(L.moonTimes(0.999) > 200);
+  assert.ok(L.screenRadius(0.995, f) > 390);
+  const p = 0.9, R = L.bodyAt(p).radiusKm, D = L.centerDistanceKm(p);
+  assert.ok(Math.abs(L.screenRadius(p, f) - f * Math.tan(Math.asin(R / D))) < 1e-9);
+});
+
+test('planet grows through real bodies with real radius and mass', () => {
+  assert.equal(L.bodyAt(0).radiusKm, L.BODY_DATA.pluto.radiusKm);
+  assert.equal(L.bodyAt(1).massKg, L.BODY_DATA.jupiter.massKg);
+  let prev = 0;
+  for (let p = 0; p <= 1; p += 0.02) { const r = L.bodyAt(p).radiusKm; assert.ok(r >= prev - 1e-6, `p=${p}`); prev = r; }
+  assert.match(L.massText(0), /%$/);
+  assert.match(L.massText(1), /318배$/);
+});
+
+test('news broadcasts at distance milestones quote computed numbers', () => {
+  assert.ok(L.BROADCASTS.length >= 10);
+  for (let i = 1; i < L.BROADCASTS.length; i++) assert.ok(L.BROADCASTS[i] < L.BROADCASTS[i - 1]);
+  const b = L.broadcastFor(120000, 0.855);
+  assert.match(b.head, /120,000km/);
+  assert.ok(b.lines.some((l) => /km\/s/.test(l)));
+  assert.equal(L.formatSpeed(0.25), '250m/s');
+  assert.equal(L.formatSpeed(12.345), '12.3km/s');
 });
 
 test('sending trash adds mass and money; tap power doubles', () => {

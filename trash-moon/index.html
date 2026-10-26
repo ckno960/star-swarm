@@ -41,6 +41,25 @@
   #money { flex: none; width: 34%; display: flex; flex-direction: column; justify-content: center; padding: 6px 10px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; }
   #money small { font: 700 11px system-ui, sans-serif; color: #a8a0c8; }
   #money b { font: 900 20px system-ui, sans-serif; color: var(--gold); font-variant-numeric: tabular-nums; }
+  #money span { font: 700 11px system-ui, sans-serif; color: #c8c4dc; }
+  #speedBox b { color: #ffd23f; }
+
+  /* 뉴스 특보 */
+  #tv { position: absolute; left: 7%; right: 7%; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden; background: #000; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(255, 255, 255, 0.15); animation: tvIn 0.35s ease-out; }
+  #tv.out { animation: tvOut 0.35s ease-in forwards; }
+  @keyframes tvIn { from { transform: scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes tvOut { to { transform: scale(0.9); opacity: 0; } }
+  #tvc { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .tvLive { position: absolute; left: 10px; top: 9px; padding: 2px 7px; background: #e02a2a; border-radius: 4px; font: 900 11px system-ui, sans-serif; letter-spacing: 1px; }
+  .tvLive::before { content: '● '; animation: blinkDot 1s steps(2) infinite; }
+  @keyframes blinkDot { 50% { opacity: 0.2; } }
+  .tvLogo { position: absolute; right: 10px; top: 8px; font: 900 13px system-ui, sans-serif; letter-spacing: 1px; text-shadow: 0 1px 3px #000; }
+  .tvLogo small { font-size: 10px; opacity: 0.8; }
+  .tvSub { position: absolute; left: 6%; right: 6%; bottom: 26%; min-height: 1.4em; padding: 4px 8px; text-align: center; font: 800 14px/1.4 system-ui, sans-serif; background: rgba(0, 0, 0, 0.55); border-radius: 6px; }
+  .tvLower { position: absolute; left: 0; right: 0; bottom: 0; height: 21%; display: flex; align-items: stretch; background: linear-gradient(#f4f6fa, #d8dee8); color: #10182a; }
+  .tvLower .tag { flex: none; display: flex; align-items: center; padding: 0 10px; background: #d0202a; color: #fff; font: 900 15px system-ui, sans-serif; }
+  .tvLower .head { flex: 1; display: flex; align-items: center; padding: 0 10px; font: 900 15px system-ui, sans-serif; white-space: nowrap; overflow: hidden; }
+  .tvSkip { position: absolute; right: 8px; bottom: 23%; font: 700 10px system-ui, sans-serif; opacity: 0.6; }
   #launch {
     position: relative; flex: 1; min-height: 76px; padding: 0; display: flex; align-items: center; justify-content: center; gap: 8px;
     background: linear-gradient(#ff7a5a, #e8402a); color: #fff; border: none; border-radius: 16px; box-shadow: 0 6px 0 #8a1a10, 0 10px 24px rgba(255, 80, 40, 0.35);
@@ -85,17 +104,25 @@
   <div id="top">
     <div id="title" class="ol">쓰레기 행성이 지구에 떨어지면</div>
     <div id="dist">지구까지 <b id="km">384,400</b> km</div>
-    <div id="stats">질량 <b id="mass">0</b>톤 · 초당 <b id="rate">0</b>톤 · 크기 <b id="kind">달급</b></div>
+    <div id="stats"><span id="speedBox">접근 속도 <b id="speed">0m/s</b></span> · <b id="massx">질량</b> · <b id="kind">명왕성급</b></div>
     <button id="gear" aria-label="환경설정">⚙</button>
   </div>
   <div id="news"><span class="tag">속보</span><span class="txt" id="newsTxt"></span></div>
   <div id="fx"></div>
   <div id="panel">
     <div id="row1">
-      <div id="money"><small>쓰레기 처리비</small><b id="cash">0원</b></div>
+      <div id="money"><small>쓰레기 처리비</small><b id="cash">0원</b><span>보낸 쓰레기 <b id="mass" style="font-size:11px;color:#fff">0</b>톤 · 초당 <b id="rate" style="font-size:11px;color:#fff">0</b>톤</span></div>
       <button id="launch" aria-label="쓰레기 발사">🚀 쓰레기 발사!<small id="tapInfo">한 번에 1톤</small></button>
     </div>
     <div id="list"></div>
+  </div>
+  <div id="tv" hidden>
+    <canvas id="tvc"></canvas>
+    <div class="tvLive">LIVE</div>
+    <div class="tvLogo">KBN <small>뉴스특보</small></div>
+    <div class="tvSub" id="tvSub"></div>
+    <div class="tvSkip">눌러서 닫기</div>
+    <div class="tvLower"><div class="tag">속보</div><div class="head" id="tvHead"></div></div>
   </div>
   <div id="modal" class="screen" hidden><div class="card" id="modalCard"></div></div>
   <div id="reload" hidden><div class="card"><p>새 버전을 불러오지 못했어요.</p><button class="btn main" onclick="location.reload()">새로고침</button></div></div>
@@ -105,7 +132,7 @@
   setTimeout(function () { if (!window.trashReady) document.getElementById('reload').hidden = false; }, 4000);
 </script>
 <script type="module">
-import * as L from './logic.js?v=4';
+import * as L from './logic.js?v=5';
 import { createGlobe, AVG_COLOR } from './globe.js?v=1';
 
 const $ = (id) => document.getElementById(id);
@@ -346,7 +373,7 @@ function update(dt) {
   if (!ending) {
     rumbleT -= dt;
     if (p > 0.6 && rumbleT <= 0) { rumbleT = 16 - 12 * p; sfx.rumble(p); shake = Math.max(shake, (p - 0.6) * 8); }
-    const R = L.apparentRadius(p, maxR);
+    const R = L.screenRadius(p, L.focalPx(CW));
     if (p > 0.84 && Math.random() < dt * (p - 0.82) * 7) meteors.push({ x0: px + (Math.random() - 0.5) * R, y0: py + R * 0.5, x1: 10 + Math.random() * (CW - 20), t: 0, T: 1.4 + Math.random() * 0.8, trail: [] });
   }
   shake = Math.max(shake * Math.pow(0.03, dt), p > 0.74 ? (p - 0.74) * 5 : 0);
@@ -391,6 +418,9 @@ function updateTop(p) {
   $('cash').textContent = `${L.formatNumber(save.money)}원`;
   $('tapInfo').textContent = `한 번에 ${L.formatNumber(L.tapPower(save))}톤`;
   $('kind').textContent = `${L.planetStage(p).type.name}급`;
+  $('speed').textContent = L.formatSpeed(ending ? L.speedKms(1) : L.speedKms(p));
+  $('massx').textContent = L.massText(p).replace('지구 질량의 ', '질량 지구의 ');
+  checkBroadcast(p);
   const news = L.currentNews(p);
   if (news !== lastNews) { lastNews = news; $('newsTxt').textContent = news; }
 }
@@ -435,10 +465,13 @@ function render(now) {
 
   // 행성
   const [px, py] = planetPos();
-  let R = L.apparentRadius(p, maxR);
-  if (ending) R = maxR * (1 + Math.min(5, ending.t * ending.t * 0.45));
+  // 크기: 실제 반지름과 거리로 구한 각크기(θ = asin(R/D))를 화각 60° 카메라로 비춘 것
+  const R0 = L.screenRadius(Math.min(p, 1), L.focalPx(CW));
+  let R = R0;
+  if (ending) R = R0 * (1 + Math.min(4, ending.t * ending.t * 0.35));
   R *= 1 + gulp * 0.006;
   drawPlanet(px, py, R, t, p, eclipse, heat);
+  if (!ending) drawScope(t, p, R);
 
   // 구름
   for (const c of city.clouds) {
@@ -571,6 +604,158 @@ function render(now) {
 }
 
 // 행성: 실제 행성 지도를 입힌 공. 바뀔 때는 다음 행성과 서서히 섞인다
+// 천문대 망원경: 행성이 아직 하늘의 점일 때, 오른쪽 위 둥근 화면에 확대해서 보여 준다
+function drawScope(t, p, skyR) {
+  const k = 1 - clamp01((skyR - 30) / 25);
+  if (k <= 0 || !globe) return;
+  const r = 44, cx = CW - r - 12, cy = SKY_TOP + r + 12, id = L.planetStage(p).type.id;
+  ctx.save();
+  ctx.globalAlpha = k;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU);
+  ctx.fillStyle = '#02030a'; ctx.fill();
+  ctx.save(); ctx.clip();
+  const rr = seeded(77);
+  for (let i = 0; i < 30; i++) { ctx.fillStyle = `rgba(255,255,255,${0.2 + rr() * 0.6})`; ctx.fillRect(cx - r + rr() * r * 2, cy - r + rr() * r * 2, 0.8, 0.8); }
+  const out = globe.render(id, Math.round(r * 0.72 * DPR), t, {});
+  if (out) { const e = out.extent * r * 0.72; ctx.drawImage(out.canvas, cx - e, cy - e, e * 2, e * 2); }
+  const vg = ctx.createRadialGradient(cx, cy, r * 0.75, cx, cy, r);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.75)');
+  ctx.fillStyle = vg; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.strokeStyle = 'rgba(160,220,255,0.25)'; ctx.lineWidth = 0.7;
+  ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx - r * 0.82, cy); ctx.moveTo(cx + r * 0.82, cy); ctx.lineTo(cx + r, cy); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy - r * 0.82); ctx.moveTo(cx, cy + r * 0.82); ctx.lineTo(cx, cy + r); ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
+  ctx.font = '800 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 3;
+  ctx.fillText(`망원경 · ${L.planetStage(p).type.name}급`, cx, cy + r + 12);
+  ctx.restore();
+}
+
+// ---------- 뉴스 특보: 특정 거리를 지날 때마다 앵커가 나온다 ----------
+let tv = null;
+const tvc = $('tvc'), tvx = tvc.getContext('2d');
+function checkBroadcast(p) {
+  if (ending || tv || !$('modal').hidden) return;
+  const km = L.distanceKm(p);
+  let idx = save.news ?? -1;
+  for (let i = idx + 1; i < L.BROADCASTS.length; i++) if (km <= L.BROADCASTS[i]) idx = i;   // 여러 개를 한 번에 지났으면 마지막 것만
+  if (idx > (save.news ?? -1)) { save.news = idx; persist(); if ($('modal').hidden) startBroadcast(L.BROADCASTS[idx], p); }
+}
+function startBroadcast(km, p) {
+  const b = L.broadcastFor(km, p);
+  tv = { t: 0, lines: b.lines, line: 0, shown: 0, lineT: 0 };
+  $('tvHead').textContent = b.head;
+  $('tvSub').textContent = '';
+  const el = $('tv');
+  el.classList.remove('out'); el.hidden = false;
+  // 하늘 아래쪽(속보 띠 바로 위)에 띄워 위쪽의 행성이 가려지지 않게
+  const r = el.getBoundingClientRect();
+  el.style.top = `${Math.max(SKY_TOP + 8, SCENE_BOT - r.height - 6)}px`;
+  tvc.width = Math.round(r.width * DPR); tvc.height = Math.round(r.height * DPR);
+  [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.5, { type: 'triangle', vol: 0.045, delay: i * 0.12 }));
+  tone(196, 1.2, { type: 'sawtooth', vol: 0.02 });
+}
+function endBroadcast() {
+  if (!tv || tv.closing) return;
+  tv.closing = true;
+  $('tv').classList.add('out');
+  setTimeout(() => { $('tv').hidden = true; tv = null; }, 350);
+}
+function updateBroadcast(dt, t) {
+  if (!tv) return;
+  tv.t += dt; tv.lineT += dt;
+  const line = tv.lines[tv.line] || '';
+  tv.shown = Math.min(line.length, Math.floor(tv.lineT * 20));
+  $('tvSub').textContent = line.slice(0, tv.shown);
+  tv.talking = tv.shown < line.length;
+  if (tv.lineT > line.length / 20 + 1.3) {
+    if (tv.line + 1 < tv.lines.length) { tv.line++; tv.lineT = 0; }
+    else endBroadcast();
+  }
+  drawStudio(t);
+}
+$('tv').addEventListener('pointerdown', (e) => { e.preventDefault(); endBroadcast(); });
+
+// 방송국 스튜디오: 왼쪽에 앵커, 오른쪽 모니터에 망원경 생중계
+function drawStudio(t) {
+  const c = tvx, w = tvc.width / DPR, h = tvc.height / DPR, p = L.progress(save.mass);
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bg = c.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#0a1838'); bg.addColorStop(1, '#1d3f7c');
+  c.fillStyle = bg; c.fillRect(0, 0, w, h);
+  c.globalAlpha = 0.07; c.fillStyle = '#9cc8ff';
+  for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(w * (0.1 + i * 0.22), 0); c.lineTo(w * (0.18 + i * 0.22), 0); c.lineTo(w * (0.05 + i * 0.22), h); c.lineTo(w * (-0.05 + i * 0.22), h); c.fill(); }
+  c.globalAlpha = 1;
+  // 모니터
+  const mx = w * 0.53, my = h * 0.12, mw = w * 0.43, mh = h * 0.5;
+  c.fillStyle = '#000'; c.fillRect(mx, my, mw, mh);
+  const rr = seeded(5);
+  for (let i = 0; i < 40; i++) { c.fillStyle = `rgba(255,255,255,${0.2 + rr() * 0.6})`; c.fillRect(mx + rr() * mw, my + rr() * mh, 0.8, 0.8); }
+  const id = L.planetStage(p).type.id, pr = mh * 0.36;
+  const out = globe && globe.render(id, Math.round(pr * DPR), t, {});
+  if (out) { const e = out.extent * pr; c.save(); c.beginPath(); c.rect(mx, my, mw, mh); c.clip(); c.drawImage(out.canvas, mx + mw / 2 - e, my + mh / 2 - e, e * 2, e * 2); c.restore(); }
+  c.strokeStyle = 'rgba(150,200,255,0.8)'; c.lineWidth = 1.5; c.strokeRect(mx, my, mw, mh);
+  c.font = '800 8px system-ui, sans-serif'; c.fillStyle = '#fff'; c.textAlign = 'left';
+  c.fillText('천문대 생중계', mx + 5, my + 11);
+  c.textAlign = 'right'; c.fillText(`${L.formatKm(L.distanceKm(p))}km · ${L.formatSpeed(L.speedKms(p))}`, mx + mw - 5, my + mh - 6);
+  // 앵커
+  drawAnchor(c, w * 0.27, h, t, tv && tv.talking);
+  // 책상
+  const dg = c.createLinearGradient(0, h * 0.7, 0, h);
+  dg.addColorStop(0, '#24365e'); dg.addColorStop(1, '#0c1528');
+  c.fillStyle = dg; c.fillRect(0, h * 0.7, w, h * 0.3);
+  c.fillStyle = 'rgba(120,200,255,0.8)'; c.fillRect(0, h * 0.7, w, 1.2);
+}
+function drawAnchor(c, cx, h, t, talking) {
+  const u = h, bob = Math.sin(t * 1.7) * u * 0.003;
+  c.save(); c.translate(0, bob);
+  // 뒷머리(단발)
+  const hair = c.createLinearGradient(cx, u * 0.2, cx, u * 0.6);
+  hair.addColorStop(0, '#3a2418'); hair.addColorStop(1, '#1a0f0a');
+  c.fillStyle = hair;
+  c.beginPath(); c.ellipse(cx, u * 0.38, u * 0.125, u * 0.16, 0, Math.PI, 0); c.lineTo(cx + u * 0.13, u * 0.56); c.quadraticCurveTo(cx, u * 0.6, cx - u * 0.13, u * 0.56); c.closePath(); c.fill();
+  // 목
+  c.fillStyle = '#dca486'; c.fillRect(cx - u * 0.035, u * 0.45, u * 0.07, u * 0.13);
+  // 정장
+  const suit = c.createLinearGradient(cx, u * 0.55, cx, u);
+  suit.addColorStop(0, '#26355a'); suit.addColorStop(1, '#111a30');
+  c.fillStyle = suit;
+  c.beginPath(); c.moveTo(cx - u * 0.27, u); c.lineTo(cx - u * 0.23, u * 0.64); c.quadraticCurveTo(cx - u * 0.2, u * 0.57, cx - u * 0.08, u * 0.555); c.lineTo(cx + u * 0.08, u * 0.555); c.quadraticCurveTo(cx + u * 0.2, u * 0.57, cx + u * 0.23, u * 0.64); c.lineTo(cx + u * 0.27, u); c.closePath(); c.fill();
+  c.fillStyle = '#f2f0ec';
+  c.beginPath(); c.moveTo(cx - u * 0.055, u * 0.555); c.lineTo(cx + u * 0.055, u * 0.555); c.lineTo(cx, u * 0.69); c.closePath(); c.fill();
+  c.strokeStyle = '#0c1222'; c.lineWidth = u * 0.006;
+  c.beginPath(); c.moveTo(cx - u * 0.055, u * 0.555); c.lineTo(cx - u * 0.01, u * 0.72); c.moveTo(cx + u * 0.055, u * 0.555); c.lineTo(cx + u * 0.01, u * 0.72); c.stroke();
+  c.fillStyle = '#222'; c.beginPath(); c.arc(cx - u * 0.07, u * 0.62, u * 0.008, 0, TAU); c.fill();   // 핀 마이크
+  // 얼굴
+  const skin = c.createRadialGradient(cx - u * 0.02, u * 0.35, u * 0.01, cx, u * 0.38, u * 0.11);
+  skin.addColorStop(0, '#f8d8c0'); skin.addColorStop(1, '#dba78a');
+  c.fillStyle = skin; c.beginPath(); c.ellipse(cx, u * 0.375, u * 0.082, u * 0.103, 0, 0, TAU); c.fill();
+  c.fillStyle = '#d9a486'; c.beginPath(); c.ellipse(cx - u * 0.082, u * 0.385, u * 0.012, u * 0.02, 0, 0, TAU); c.ellipse(cx + u * 0.082, u * 0.385, u * 0.012, u * 0.02, 0, 0, TAU); c.fill();
+  c.fillStyle = '#e8c060'; c.beginPath(); c.arc(cx - u * 0.083, u * 0.408, u * 0.005, 0, TAU); c.arc(cx + u * 0.083, u * 0.408, u * 0.005, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(240,120,120,0.16)'; c.beginPath(); c.arc(cx - u * 0.045, u * 0.4, u * 0.02, 0, TAU); c.arc(cx + u * 0.045, u * 0.4, u * 0.02, 0, TAU); c.fill();
+  // 앞머리
+  c.fillStyle = hair;
+  c.beginPath(); c.ellipse(cx, u * 0.33, u * 0.09, u * 0.07, 0, Math.PI * 1.02, Math.PI * 1.98); c.quadraticCurveTo(cx + u * 0.02, u * 0.3, cx - u * 0.06, u * 0.36); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(cx - u * 0.09, u * 0.33); c.quadraticCurveTo(cx - u * 0.1, u * 0.42, cx - u * 0.085, u * 0.47); c.lineTo(cx - u * 0.075, u * 0.36); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(cx + u * 0.09, u * 0.33); c.quadraticCurveTo(cx + u * 0.1, u * 0.42, cx + u * 0.085, u * 0.47); c.lineTo(cx + u * 0.075, u * 0.36); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(255,220,180,0.18)'; c.lineWidth = u * 0.004; c.beginPath(); c.ellipse(cx - u * 0.02, u * 0.31, u * 0.05, u * 0.03, -0.4, Math.PI, Math.PI * 1.6); c.stroke();
+  // 눈썹·눈(가끔 깜빡임)
+  c.strokeStyle = '#3a2618'; c.lineWidth = u * 0.006; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(cx - u * 0.05, u * 0.35); c.quadraticCurveTo(cx - u * 0.035, u * 0.342, cx - u * 0.02, u * 0.348); c.moveTo(cx + u * 0.02, u * 0.348); c.quadraticCurveTo(cx + u * 0.035, u * 0.342, cx + u * 0.05, u * 0.35); c.stroke();
+  const blink = (t % 4.2) < 0.12 ? 0.15 : 1;
+  c.fillStyle = '#24160e';
+  c.beginPath(); c.ellipse(cx - u * 0.035, u * 0.368, u * 0.012, u * 0.008 * blink, 0, 0, TAU); c.ellipse(cx + u * 0.035, u * 0.368, u * 0.012, u * 0.008 * blink, 0, 0, TAU); c.fill();
+  if (blink === 1) { c.fillStyle = '#fff'; c.beginPath(); c.arc(cx - u * 0.031, u * 0.365, u * 0.003, 0, TAU); c.arc(cx + u * 0.039, u * 0.365, u * 0.003, 0, TAU); c.fill(); }
+  // 코
+  c.strokeStyle = 'rgba(150,90,70,0.45)'; c.lineWidth = u * 0.004;
+  c.beginPath(); c.moveTo(cx + u * 0.003, u * 0.375); c.quadraticCurveTo(cx - u * 0.006, u * 0.398, cx + u * 0.006, u * 0.402); c.stroke();
+  // 입: 말할 때 움직인다
+  const open = talking ? Math.max(0, Math.sin(t * 19) * 0.6 + Math.sin(t * 31) * 0.4) : 0;
+  c.fillStyle = '#7a2434'; c.beginPath(); c.ellipse(cx, u * 0.425, u * 0.018, u * (0.003 + 0.009 * open), 0, 0, TAU); c.fill();
+  c.strokeStyle = '#c0646a'; c.lineWidth = u * 0.004; c.beginPath(); c.ellipse(cx, u * 0.425, u * 0.019, u * (0.004 + 0.009 * open), 0, 0, TAU); c.stroke();
+  c.restore();
+}
+
 function drawGlobe(out, cx, cy, R, alpha = 1) {
   const e = out.extent * R;
   ctx.globalAlpha = alpha;
@@ -583,8 +768,11 @@ function drawPlanet(cx, cy, R, t, p, eclipse, heat) {
   const day = clamp01(1 - eclipse / 0.6) * 0.6;   // 밝은 낮일수록 그늘진 쪽이 하늘에 묻힌다
   const Rdev = Math.max(6, Math.min(900, Math.round(R * DPR)));
   const out = globe && R >= 3.5 ? globe.render(id, Rdev, t, { heat: id === 'jupiter' ? heat : 0, day }) : null;
-  if (!out) {   // 아직 멀거나 지도를 불러오는 중: 낮달처럼 희미한 점
-    const c = AVG_COLOR[id] || '#c0c0c0', rr = Math.max(1.5, R);
+  if (!out) {   // 아직 멀거나 지도를 불러오는 중: 하늘의 밝은 점(행성이 보이는 그대로)
+    const c = AVG_COLOR[id] || '#c0c0c0', rr = Math.max(1.3, R);
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr * 4 + 3);
+    glow.addColorStop(0, rgba('#ffffff', 0.5)); glow.addColorStop(1, rgba('#ffffff', 0));
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, rr * 4 + 3, 0, TAU); ctx.fill();
     const gg = ctx.createRadialGradient(cx - rr * 0.35, cy - rr * 0.35, 0, cx, cy, rr);
     gg.addColorStop(0, mix(c, '#ffffff', 0.45)); gg.addColorStop(0.7, c); gg.addColorStop(1, mix(c, '#000000', 0.5));
     ctx.globalAlpha = 0.6 + 0.4 * (1 - day); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
@@ -752,6 +940,7 @@ function frame(now) {
   last = now;
   update(dt);
   render(now);
+  updateBroadcast(Math.min(0.1, dt), now / 1000);
   requestAnimationFrame(frame);
 }
 resize();
