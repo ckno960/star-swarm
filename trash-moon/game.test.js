@@ -15,9 +15,9 @@ test('distance counts down from 384,400km to 0 as mass grows', () => {
 });
 
 test('planet starts as a dot and ends as wide as the screen', () => {
-  assert.equal(L.apparentRadius(0, 90), 1.5);
-  assert.ok(Math.abs(L.apparentRadius(1, 90) - 90) < 1e-9);
-  assert.ok(L.apparentRadius(0.5, 90) < 15, 'small at half way');
+  assert.equal(L.apparentRadius(0, 200), 3);
+  assert.ok(Math.abs(L.apparentRadius(1, 200) - 200) < 1e-9);
+  assert.ok(L.apparentRadius(0.5, 200) < 40, 'small at half way');
 });
 
 test('sending trash adds mass and money; tap power doubles', () => {
@@ -107,6 +107,7 @@ test('prestige: new Earth, everything doubled forever', () => {
 
 test('news follows progress', () => {
   assert.match(L.currentNews(0), /쓰레기/);
+  assert.match(L.currentNews(0.75), /눈/);
   assert.match(L.currentNews(0.99), /안녕/);
 });
 

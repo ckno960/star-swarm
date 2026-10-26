@@ -1,4 +1,4 @@
-// 쓰레기 행성 — 쓰레기를 우주로 보낼수록 쓰레기 행성이 무거워져 지구로 끌려오는 방치형 게임. 화면과 분리된 순수 로직.
+// 쓰레기 행성 — 우주로 보낸 쓰레기를 먹고 무거워진 행성이 지구로 끌려오는 방치형 게임. 화면과 분리된 순수 로직.
 
 export const START_KM = 384400;     // 처음 거리(달까지 거리)
 export const END_MASS = 1e11;       // 이 질량(톤)이 되면 충돌
@@ -25,14 +25,15 @@ export const LAUNCHERS = [
 // 다가올수록 벌어지는 일(진행도 p 기준)
 export const EVENTS = [
   { p: 0, news: '오늘도 쓰레기를 우주로! 쓰레기 걱정 끝?' },
-  { p: 0.2, news: '속보: 밤하늘에 처음 보는 점이 생겼다' },
-  { p: 0.35, news: '천문대 "쓰레기 덩어리가 점점 커지고 있다"' },
-  { p: 0.5, news: '속보: 쓰레기 행성 낮에도 보여… 구름이 끌려간다' },
-  { p: 0.6, news: '바닷물이 이상하게 차오른다, 해안 침수 주의' },
-  { p: 0.7, news: '속보: 곳곳에서 지진, 건물이 무너지기 시작' },
-  { p: 0.82, news: '하늘에서 쓰레기 운석이 떨어진다! 대피하세요' },
-  { p: 0.92, news: '긴급: 충돌까지 얼마 남지 않았습니다' },
-  { p: 0.98, news: '…안녕, 지구' },
+  { p: 0.15, news: '천문대 "쓰레기가 저 행성으로 빨려 들어간다"' },
+  { p: 0.3, news: '속보: 행성이 쓰레기를 먹을수록 무거워지고 있다' },
+  { p: 0.42, news: '행성 표면에 거대한 폭풍이… 마치 눈 같다' },
+  { p: 0.55, news: '속보: 낮에도 보이는 행성, 구름이 끌려간다' },
+  { p: 0.65, news: '바닷물이 차오른다, 해안 침수 주의' },
+  { p: 0.72, news: '속보: 그 "눈"이 지구를 보고 있다는 목격담 잇따라' },
+  { p: 0.8, news: '지진과 함께 건물 붕괴, 하늘에서 불덩이가 떨어진다' },
+  { p: 0.9, news: '긴급: 행성이 숨을 쉬듯 맥동한다' },
+  { p: 0.97, news: '…안녕, 지구' },
 ];
 
 export const prestigeMult = (save) => 2 ** (save.earths || 0);
@@ -96,9 +97,9 @@ export function progress(mass) {
 export function distanceKm(p) {
   return START_KM * (1 - p) ** 1.5;
 }
-// 화면에 보이는 반지름(px): 처음엔 점, 끝에는 화면 폭만큼
-export function apparentRadius(p, maxR) {
-  return 1.5 * (maxR / 1.5) ** (p ** 1.35);
+// 화면에 보이는 반지름(px): 처음엔 낮달처럼 작은 점, 끝에는 화면 폭만큼
+export function apparentRadius(p, maxR, minR = 3) {
+  return minR * (maxR / minR) ** (p ** 1.35);
 }
 export function currentNews(p) {
   let n = EVENTS[0];
