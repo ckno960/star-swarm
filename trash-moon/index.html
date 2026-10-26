@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>쓰레기 행성</title>
+<title>행성이 떨어지면</title>
 <style>
   :root { --cream: #f6ecd0; --ink: #2b2638; --slate: #4a5272; --gold: #ffd23f; --yellow: #fff03a; }
   * { box-sizing: border-box; }
@@ -20,18 +20,20 @@
 
   /* 위쪽 검은 띠: 쇼츠 자막처럼 */
   #top { position: absolute; left: 0; right: 0; top: 0; padding: calc(10px + env(safe-area-inset-top)) 44px 8px; background: #000; text-align: center; }
-  #title { font: 900 20px/1.2 system-ui, sans-serif; color: var(--yellow); letter-spacing: 1px; white-space: nowrap; }
+  #title { font: 900 18px/1.2 system-ui, sans-serif; color: var(--yellow); letter-spacing: 0.5px; white-space: nowrap; }
   #dist { margin-top: 4px; font: 900 18px/1.1 system-ui, sans-serif; white-space: nowrap; }
   #dist b { display: inline-block; min-width: 4.6em; font-size: 40px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
   #dist.danger b { color: #ff4a5a; animation: throb 0.9s ease-in-out infinite; }
   @keyframes throb { 50% { transform: scale(1.06); text-shadow: 0 0 14px #ff2a4a; } }
-  #stats { margin-top: 6px; font: 800 13px system-ui, sans-serif; color: #cfd8e8; }
+  #stats { margin-top: 6px; font: 800 12.5px system-ui, sans-serif; color: #cfd8e8; }
+  #date { margin-top: 3px; font: 800 12px system-ui, sans-serif; color: #e8e4c8; font-variant-numeric: tabular-nums; }
   #stats b { color: #fff; }
   #gear { position: absolute; top: calc(8px + env(safe-area-inset-top)); right: 8px; width: 34px; height: 34px; padding: 0; border: 2px solid #555; border-radius: 8px; background: #111; color: #ddd; font-size: 17px; }
 
   #news { position: absolute; left: 0; right: 0; height: 24px; display: flex; align-items: center; background: rgba(0, 0, 0, 0.72); overflow: hidden; pointer-events: none; }
   #news .tag { flex: none; height: 100%; display: flex; align-items: center; padding: 0 8px; background: #d02a2a; font: 900 13px system-ui, sans-serif; }
-  #news .txt { padding-left: 10px; font: 800 13px system-ui, sans-serif; white-space: nowrap; }
+  #news .txt { padding-left: 100%; font: 800 13px system-ui, sans-serif; white-space: nowrap; animation: marquee 18s linear infinite; }
+  @keyframes marquee { to { transform: translateX(-100%); } }
 
   #panel {
     position: absolute; left: 0; right: 0; bottom: 0; height: 43%; display: flex; flex-direction: column;
@@ -41,6 +43,25 @@
   #money { flex: none; width: 34%; display: flex; flex-direction: column; justify-content: center; padding: 6px 10px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; }
   #money small { font: 700 11px system-ui, sans-serif; color: #a8a0c8; }
   #money b { font: 900 20px system-ui, sans-serif; color: var(--gold); font-variant-numeric: tabular-nums; }
+  #money span { font: 700 11px system-ui, sans-serif; color: #c8c4dc; }
+  #speedBox b { color: #ffd23f; }
+
+  /* 뉴스 특보 */
+  #tv { position: absolute; right: 8px; width: 58%; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden; background: #000; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(255, 255, 255, 0.15); animation: tvIn 0.35s ease-out; }
+  #tv.out { animation: tvOut 0.35s ease-in forwards; }
+  @keyframes tvIn { from { transform: scale(0.85); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes tvOut { to { transform: scale(0.9); opacity: 0; } }
+  #tvc { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .tvLive { position: absolute; left: 6px; top: 5px; padding: 1px 5px; background: #e02a2a; border-radius: 3px; font: 900 8px system-ui, sans-serif; letter-spacing: 1px; }
+  .tvLive::before { content: '● '; animation: blinkDot 1s steps(2) infinite; }
+  @keyframes blinkDot { 50% { opacity: 0.2; } }
+  .tvLogo { position: absolute; right: 6px; top: 4px; font: 900 9px system-ui, sans-serif; letter-spacing: 1px; text-shadow: 0 1px 3px #000; }
+  .tvLogo small { font-size: 10px; opacity: 0.8; }
+  .tvSub { position: absolute; left: 4%; right: 4%; bottom: 24%; min-height: 1.3em; padding: 2px 5px; text-align: center; font: 800 10.5px/1.35 system-ui, sans-serif; background: rgba(0, 0, 0, 0.6); border-radius: 4px; }
+  .tvLower { position: absolute; left: 0; right: 0; bottom: 0; height: 21%; display: flex; align-items: stretch; background: linear-gradient(#f4f6fa, #d8dee8); color: #10182a; }
+  .tvLower .tag { flex: none; display: flex; align-items: center; padding: 0 6px; background: #d0202a; color: #fff; font: 900 11px system-ui, sans-serif; }
+  .tvLower .head { flex: 1; display: flex; align-items: center; padding: 0 6px; font: 900 11px system-ui, sans-serif; white-space: nowrap; overflow: hidden; }
+  .tvSkip { display: none; }
   #launch {
     position: relative; flex: 1; min-height: 76px; padding: 0; display: flex; align-items: center; justify-content: center; gap: 8px;
     background: linear-gradient(#ff7a5a, #e8402a); color: #fff; border: none; border-radius: 16px; box-shadow: 0 6px 0 #8a1a10, 0 10px 24px rgba(255, 80, 40, 0.35);
@@ -83,19 +104,28 @@
 <div id="app">
   <canvas id="cv"></canvas>
   <div id="top">
-    <div id="title" class="ol">쓰레기 행성이 지구에 떨어지면</div>
+    <div id="title" class="ol">스테이지 1 · 달급 행성이 떨어지면</div>
     <div id="dist">지구까지 <b id="km">384,400</b> km</div>
-    <div id="stats">질량 <b id="mass">0</b>톤 · 초당 <b id="rate">0</b>톤</div>
+    <div id="stats"><span id="speedBox">접근 속도 <b id="speed">0m/s</b></span> · <b id="massx">질량</b> · <b id="kind">명왕성급</b></div>
+    <div id="date">2026.01.01</div>
     <button id="gear" aria-label="환경설정">⚙</button>
   </div>
   <div id="news"><span class="tag">속보</span><span class="txt" id="newsTxt"></span></div>
   <div id="fx"></div>
   <div id="panel">
     <div id="row1">
-      <div id="money"><small>쓰레기 처리비</small><b id="cash">0원</b></div>
-      <button id="launch" aria-label="쓰레기 발사">🚀 쓰레기 발사!<small id="tapInfo">한 번에 1톤</small></button>
+      <div id="money"><small>발사 계약금</small><b id="cash">0원</b><span>위성 <b id="sats" style="font-size:11px;color:#fff">0</b>기 · <b id="mass" style="font-size:11px;color:#fff">0</b>톤 · 초당 <b id="rate" style="font-size:11px;color:#fff">0</b>톤</span></div>
+      <button id="launch" aria-label="인공위성 발사">🛰️ 인공위성 발사!<small id="tapInfo">한 번에 1톤</small></button>
     </div>
     <div id="list"></div>
+  </div>
+  <div id="tv" hidden>
+    <canvas id="tvc"></canvas>
+    <div class="tvLive">LIVE</div>
+    <div class="tvLogo">KBN <small>뉴스특보</small></div>
+    <div class="tvSub" id="tvSub"></div>
+    <div class="tvSkip">눌러서 닫기</div>
+    <div class="tvLower"><div class="tag">속보</div><div class="head" id="tvHead"></div></div>
   </div>
   <div id="modal" class="screen" hidden><div class="card" id="modalCard"></div></div>
   <div id="reload" hidden><div class="card"><p>새 버전을 불러오지 못했어요.</p><button class="btn main" onclick="location.reload()">새로고침</button></div></div>
@@ -105,7 +135,8 @@
   setTimeout(function () { if (!window.trashReady) document.getElementById('reload').hidden = false; }, 4000);
 </script>
 <script type="module">
-import * as L from './logic.js?v=2';
+import * as L from './logic.js?v=7';
+import { createGlobe, AVG_COLOR } from './globe.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
@@ -118,11 +149,12 @@ function seeded(seed) { let s = seed >>> 0; return () => { s = (s + 0x6d2b79f5) 
 function mix(a, b, k) {
   const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
   const ch = (s) => Math.round(((pa >> s) & 255) * (1 - k) + ((pb >> s) & 255) * k);
-  return '#' + [16, 8, 0].map((s) => ch(s).toString(16).padStart(2, '0')).join('');   // 다시 섞을 수 있게 #rrggbb로
+  return '#' + [16, 8, 0].map((s) => ch(s).toString(16).padStart(2, '0')).join('');
 }
 function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+function canvasOf(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w * DPR)); c.height = Math.max(1, Math.ceil(h * DPR)); const g = c.getContext('2d'); g.scale(DPR, DPR); return [c, g]; }
 
-// ---------- 화면 크기: 기기의 실제 해상도로 그린다(행성이 커지면 디테일이 늘어날 뿐 픽셀이 커지지 않음) ----------
+// ---------- 화면 크기: 기기의 실제 해상도로 그린다 ----------
 let CW = 390, CH = 780, DPR = 2, SKY_TOP = 120, GROUND = 500, SCENE_BOT = 520, maxR = 195;
 function resize() {
   const r = app.getBoundingClientRect();
@@ -133,7 +165,7 @@ function resize() {
   $('news').style.top = `${panelTop - 24}px`;
   SKY_TOP = topH;
   SCENE_BOT = panelTop - 24;
-  GROUND = Math.round(SCENE_BOT - Math.max(34, (SCENE_BOT - SKY_TOP) * 0.13));
+  GROUND = Math.round(SCENE_BOT - Math.max(40, (SCENE_BOT - SKY_TOP) * 0.15));
   maxR = CW * 0.5;
   city = null;
 }
@@ -166,107 +198,143 @@ function noise(dur, { vol = 0.1, from = 2000, to = 200, delay = 0 } = {}) {
   src.connect(f).connect(g).connect(a.destination); src.start(t0);
 }
 const sfx = {
-  launch() { tone(320, 0.18, { type: 'triangle', to: 900, vol: 0.05 }); noise(0.2, { vol: 0.03, from: 800, to: 3000 }); },
+  launch() { noise(0.5, { vol: 0.05, from: 300, to: 1800 }); tone(120, 0.4, { type: 'triangle', vol: 0.03, to: 260 }); },
   buy() { [988, 1319].forEach((f, i) => tone(f, 0.12, { type: 'triangle', vol: 0.05, delay: i * 0.07 })); },
-  hit() { noise(0.4, { vol: 0.12, from: 1500, to: 80 }); tone(90, 0.35, { vol: 0.12, to: 40 }); },
-  // 행성의 낮은 울음: 다가올수록 자주, 낮게
-  groan(p) { tone(70 - 30 * p, 2.2, { type: 'sawtooth', vol: 0.025 + 0.04 * p, to: 40 - 15 * p }); tone(105 - 40 * p, 2.2, { vol: 0.03, to: 60 }); },
-  heartbeat() { tone(55, 0.18, { vol: 0.12, to: 40 }); tone(50, 0.2, { vol: 0.1, to: 38, delay: 0.25 }); },
-  boom() { noise(3, { vol: 0.3, from: 3000, to: 40 }); tone(60, 2.8, { vol: 0.3, to: 20 }); },
+  hit() { noise(0.6, { vol: 0.14, from: 1200, to: 60 }); tone(70, 0.5, { vol: 0.12, to: 30 }); },
+  rumble(p) { noise(2.2, { vol: 0.04 + 0.08 * p, from: 160, to: 40 }); tone(45, 2, { vol: 0.03 + 0.05 * p, to: 30 }); },
+  boom() { noise(3.5, { vol: 0.32, from: 2500, to: 30 }); tone(50, 3.2, { vol: 0.3, to: 18 }); },
   tick() { tone(660, 0.05, { type: 'triangle', vol: 0.03 }); },
 };
 const buzz = (p) => { if (save.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch { /* 없음 */ } };
 
-// ---------- 행성 표면 결: 반복되는 잔 무늬(화면 해상도 그대로 깔아서 커져도 흐려지거나 깍두기가 되지 않게) ----------
-function makeNoiseTile(size, seed) {
-  const c = document.createElement('canvas'); c.width = c.height = size;
-  const g = c.getContext('2d'), img = g.createImageData(size, size), d = img.data;
-  const rand = seeded(seed);
-  const grid = (n) => { const a = new Float32Array(n * n); for (let i = 0; i < a.length; i++) a[i] = rand(); return a; };
-  const octs = [[8, 0.5], [16, 0.25], [32, 0.15], [64, 0.1]].map(([n, w]) => ({ n, w, g: grid(n) }));
-  const smooth = (t) => t * t * (3 - 2 * t);
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    let v = 0;
-    for (const o of octs) {
-      const fx = x / size * o.n, fy = y / size * o.n, x0 = Math.floor(fx), y0 = Math.floor(fy);
-      const tx = smooth(fx - x0), ty = smooth(fy - y0), at = (i, j) => o.g[((j % o.n) * o.n + (i % o.n))];
-      v += o.w * lerp(lerp(at(x0, y0), at(x0 + 1, y0), tx), lerp(at(x0, y0 + 1), at(x0 + 1, y0 + 1), tx), ty);
+// ---------- 도시(강가의 빌딩 숲, 사진처럼) ----------
+let city = null;
+const CONCRETE = ['#c9c2b8', '#b9b1a7', '#d7cfc3', '#bfb5a6', '#a7a29c', '#cdbfac', '#d9d3cb', '#b3aca2'];
+function buildingSprite(w, h, kind, r, spire) {
+  const extra = spire ? h * 0.32 : 0;
+  const [c, g] = canvasOf(w, h + extra);
+  const top = extra;
+  if (kind === 'glass') {
+    const gr = g.createLinearGradient(0, top, 0, top + h);
+    gr.addColorStop(0, '#a9c0d6'); gr.addColorStop(0.5, '#6f8ba6'); gr.addColorStop(1, '#4a627b');
+    g.fillStyle = gr; g.fillRect(0, top, w, h);
+    g.fillStyle = 'rgba(30,45,60,0.35)';
+    for (let x = 2; x < w; x += 2.6) g.fillRect(x, top, 0.5, h);
+    for (let y = top + 3; y < top + h; y += 3.2) g.fillRect(0, y, w, 0.35);
+    const sky = g.createLinearGradient(0, top, w, top + h * 0.6);
+    sky.addColorStop(0, 'rgba(230,240,250,0.35)'); sky.addColorStop(1, 'rgba(230,240,250,0)');
+    g.fillStyle = sky; g.fillRect(0, top, w, h);
+  } else {
+    const base = CONCRETE[Math.floor(r() * CONCRETE.length)];
+    const gr = g.createLinearGradient(0, top, 0, top + h);
+    gr.addColorStop(0, mix(base, '#ffffff', 0.12)); gr.addColorStop(1, mix(base, '#000000', 0.18));
+    g.fillStyle = gr; g.fillRect(0, top, w, h);
+    const ww = 1.1 + r() * 0.8, gap = ww + 0.9 + r() * 0.8, fh = 2.6 + r() * 0.8;
+    for (let y = top + 3; y < top + h - 2; y += fh) {
+      for (let x = 1.2; x < w - 1.5; x += gap) {
+        const lit = r();
+        g.fillStyle = lit < 0.08 ? 'rgba(220,232,245,0.8)' : `rgba(55,70,88,${0.45 + r() * 0.25})`;
+        g.fillRect(x, y, ww, fh * 0.55);
+      }
     }
-    const i = (y * size + x) * 4, k = Math.round(v * 255);
-    d[i] = d[i + 1] = d[i + 2] = k; d[i + 3] = 255;
   }
-  g.putImageData(img, 0, 0);
+  // 햇빛: 왼쪽 면이 밝고 오른쪽 끝은 그늘
+  const sh = g.createLinearGradient(0, 0, w, 0);
+  sh.addColorStop(0, 'rgba(255,248,235,0.22)'); sh.addColorStop(0.35, 'rgba(255,248,235,0)'); sh.addColorStop(0.8, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(20,20,30,0.28)');
+  g.fillStyle = sh; g.fillRect(0, top, w, h);
+  // 옥상 설비
+  g.fillStyle = 'rgba(80,80,85,0.6)';
+  if (w > 10 && r() < 0.7) g.fillRect(w * (0.2 + r() * 0.4), top - 1.5, w * 0.18, 1.5);
+  if (r() < 0.3) g.fillRect(w * 0.7, top - 5, 0.5, 5);
+  if (spire) {
+    const tg = g.createLinearGradient(0, 0, w, 0);
+    tg.addColorStop(0, '#f4f6f8'); tg.addColorStop(1, '#a8b4c0');
+    g.fillStyle = tg; g.beginPath(); g.moveTo(w * 0.15, top); g.lineTo(w * 0.5, top - extra * 0.25); g.lineTo(w * 0.85, top); g.fill();
+    g.fillStyle = '#d8dde4'; g.fillRect(w / 2 - 0.5, 0, 1, extra * 0.8);
+  }
+  return { img: c, extra };
+}
+function cloudSprite(w, r) {
+  const h = w * 0.55;
+  const [c, g] = canvasOf(w, h);
+  for (let i = 0; i < 34; i++) {
+    const bx = w * (0.15 + r() * 0.7), by = h * (0.35 + r() * 0.45) - Math.sin((bx / w) * Math.PI) * h * 0.25, br = w * (0.07 + r() * 0.12);
+    const gr = g.createRadialGradient(bx - br * 0.2, by - br * 0.3, br * 0.1, bx, by, br);
+    gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.6, 'rgba(250,250,252,0.75)'); gr.addColorStop(1, 'rgba(250,250,252,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(bx, by, br, 0, TAU); g.fill();
+  }
+  // 아래쪽 그늘
+  g.globalCompositeOperation = 'source-atop';
+  const sh = g.createLinearGradient(0, 0, 0, h);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(0.55, 'rgba(120,135,160,0.05)'); sh.addColorStop(1, 'rgba(110,120,150,0.55)');
+  g.fillStyle = sh; g.fillRect(0, 0, w, h);
   return c;
 }
-const noiseTile = makeNoiseTile(256, 7);
-let noisePat = null;
-
-// 행성의 핏줄(눈에서 뻗어 나가는 빛나는 균열): 행성 반지름 기준 좌표로 미리 만든다
-const veins = (() => {
-  const rand = seeded(13), list = [];
-  for (let k = 0; k < 11; k++) {
-    const pts = [[0, 0]];
-    let a = (k / 11) * TAU + rand() * 0.4, x = 0, y = 0;
-    for (let s = 0; s < 14; s++) { a += (rand() - 0.5) * 0.9; const st = 0.05 + rand() * 0.04; x += Math.cos(a) * st; y += Math.sin(a) * st * 0.8; pts.push([x, y]); }
-    list.push({ pts, w: 0.6 + rand() * 0.8, ph: rand() * TAU });
-  }
-  return list;
-})();
-
-// ---------- 도시(강가의 빌딩 숲) ----------
-let city = null;
 function buildCity() {
-  const rand = seeded(42), list = [];
-  const maxH = (GROUND - SKY_TOP) * 0.42;
-  const tones = [['#f6dcc8', '#d8b4a0'], ['#f0d0bc', '#ccA894'], ['#fae6d6', '#dcbcaa'], ['#e8c8b4', '#c4a08c'], ['#f2d8cc', '#d0b0a4']];
-  for (const back of [true, false]) {
-    let x = -10;
-    while (x < CW + 10) {
-      const w = (back ? 14 : 12) + rand() * 26;
-      const mid = 1 - Math.abs((x + w / 2) / CW - 0.42) * 1.2;
-      const h = Math.max(14, maxH * (back ? 0.35 : 0.2) + maxH * 0.65 * rand() * Math.max(0.25, mid));
-      list.push({ x, w, h, tone: tones[Math.floor(rand() * tones.length)], back, fall: 0.74 + rand() * 0.24, seed: rand() * 1e6 });
-      x += w * (0.7 + rand() * 0.4);
+  const r = seeded(42), skyH = GROUND - SKY_TOP;
+  const layers = [];
+  for (const [li, hMin, hMax, wMin, wMax] of [[0, 0.12, 0.34, 6, 16], [1, 0.12, 0.45, 9, 24], [2, 0.08, 0.6, 11, 30]]) {
+    const list = [];
+    let x = -12;
+    while (x < CW + 12) {
+      const w = wMin + r() * (wMax - wMin);
+      const mid = 1 - Math.abs((x + w / 2) / CW - 0.42) * 1.1;
+      const h = skyH * (hMin + (hMax - hMin) * r() * Math.max(0.3, mid));
+      const s = buildingSprite(w, h, r() < 0.3 ? 'glass' : 'concrete', r, false);
+      list.push({ x, w, h, ...s, fallMag: 7.3 + r() * 2.4, layer: li });
+      x += w * (0.75 + r() * 0.35);
     }
+    layers.push(list);
   }
-  list.push({ x: CW * 0.18, w: 22, h: maxH * 1.45, tone: ['#fbeee2', '#d8c4b4'], back: false, fall: 0.93, spire: true, seed: 5 });
-  for (const b of list) {
-    const extra = b.spire ? 46 : 0;
-    const c = document.createElement('canvas'); c.width = Math.ceil(b.w * DPR); c.height = Math.ceil((b.h + extra) * DPR);
-    const g = c.getContext('2d'); g.scale(DPR, DPR);
-    const gr = g.createLinearGradient(0, extra, b.w, extra);
-    gr.addColorStop(0, b.tone[0]); gr.addColorStop(0.7, b.tone[0]); gr.addColorStop(1, b.tone[1]);
-    g.fillStyle = gr; g.fillRect(0, extra, b.w, b.h);
-    const r2 = seeded(b.seed);
-    g.fillStyle = 'rgba(120,140,170,0.35)';
-    for (let y = extra + 4; y < extra + b.h - 3; y += 4.5) for (let xx = 2; xx < b.w - 3; xx += 3.5) if (r2() < 0.7) g.fillRect(xx, y, 1.6, 2.2);
-    if (b.spire) { g.fillStyle = '#e4e8f0'; g.fillRect(b.w / 2 - 0.8, 0, 1.6, extra); g.fillStyle = b.tone[0]; g.fillRect(3, extra - 6, b.w - 6, 6); }
-    b.img = c; b.extra = extra;
-  }
-  const trees = Array.from({ length: Math.round(CW / 4) }, () => ({ x: rand() * CW, r: 2 + rand() * 3, c: ['#5a8a3a', '#7aa040', '#d8b040', '#9ab040', '#c89a30'][Math.floor(rand() * 5)] }));
-  const clouds = Array.from({ length: 9 }, () => ({ x: rand() * CW, y: SKY_TOP + (GROUND - SKY_TOP) * (0.55 + rand() * 0.3), s: 14 + rand() * 26, v: 2 + rand() * 6, seed: rand() * 1e6 }));
-  for (const c of clouds) {
-    const r2 = seeded(c.seed), blobs = Array.from({ length: 6 }, () => [(r2() - 0.5) * c.s * 1.6, (r2() - 0.6) * c.s * 0.35, c.s * (0.28 + r2() * 0.25)]);
-    c.blobs = blobs;
-  }
-  const stars = Array.from({ length: 140 }, () => ({ x: rand() * CW, y: SKY_TOP + rand() * (GROUND - SKY_TOP), b: rand() }));
-  city = { list, trees, clouds, stars };
+  const sp = buildingSprite(20, skyH * 0.72, 'glass', r, true);
+  layers[2].push({ x: CW * 0.17, w: 20, h: skyH * 0.72, ...sp, fallMag: 9.4, layer: 2 });
+  const trees = Array.from({ length: Math.round(CW / 3) }, () => ({ x: r() * CW, rr: 1.6 + r() * 2.6, c: ['#3e5a2c', '#56702f', '#7a7a32', '#a08a3a', '#4a6a34'][Math.floor(r() * 5)] }));
+  const clouds = Array.from({ length: 7 }, () => { const w = 50 + r() * 90; return { x: r() * CW, y: SKY_TOP + skyH * (0.45 + r() * 0.35), w, v: 2 + r() * 5, img: cloudSprite(w, r) }; });
+  const stars = Array.from({ length: 160 }, () => ({ x: r() * CW, y: SKY_TOP + r() * skyH * 0.8, b: r() }));
+  city = { layers, trees, clouds, stars };
 }
 
+// 연기 한 덩이: 가장자리가 부드럽게 사라지는 회색 구름
+const smokeImg = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(90,86,82,0.55)'); gr.addColorStop(0.5, 'rgba(90,86,82,0.25)'); gr.addColorStop(1, 'rgba(90,86,82,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return c;
+})();
+
 // ---------- 상태 ----------
-const shots = [], parts = [], meteors = [];
-let shake = 0, flash = 0, ending = null, spawnAcc = 0, groanT = 3, beatT = 0, lastNews = '', gulp = 0, blink = 0, nextBlink = 4;
+const shots = [], parts = [], meteors = [], fires = [], flakes = [];
+let shake = 0, flash = 0, ending = null, spawnAcc = 0, rumbleT = 6, lastTicker = '', gulp = 0;
+const cfg = () => L.stageConfig(save.stage);
 const planetPos = () => [CW / 2, SKY_TOP + (GROUND - SKY_TOP) * 0.36];
-const SHOT_COLORS = ['#7dffb0', '#ffd23f', '#7ad0ff', '#ff8ab0', '#ffffff', '#c8a0ff'];
+// 실제 행성 지도를 입힌 공(WebGL). 안 되는 기기에서는 색이 있는 둥근 점으로 대신한다
+const globe = (() => { try { return createGlobe('./textures/'); } catch (e) { console.warn(e); return null; } })();
+
+// 지금 순간의 세계: 물리 계산값과 그것이 화면에 드러나는 정도
+function world() {
+  const c = cfg(), p = ending ? 1 : L.progress(save.mass, c), e = L.effects(Math.min(p, 1), c);
+  const cal = L.calendar(save), sd = L.seasonDay(cal.doy, cal.dayIndex, e.seasonAmp), w = L.seasonWeights(sd);
+  const thetaDeg = L.angularRadius(Math.min(p, 1), c) * 180 / Math.PI;
+  return {
+    c, p, e, cal, sd, w, warm: save.warm, temp: L.temperatureC(sd, e, save.warm),
+    km: ending ? 0 : L.distanceKm(p, c),
+    eclipse: clamp01((thetaDeg - 3) / 30) * 0.8,                   // 하늘의 큰 부분을 행성이 차지하며 어두워짐
+    heat: clamp01((save.warm - 2) / 40),                           // 달아오르는 하늘(바다가 데워진 만큼)
+    tide: e.tideM > 0.3 ? clamp01(Math.log10(1 + e.tideM) / Math.log10(20001)) : 0,   // 해수면이 오르는 정도
+    quakeShake: e.quake > 5 ? Math.min(12, (e.quake - 5) * 1.3) : 0,
+  };
+}
 
 function launchShot(big = false) {
-  shots.push({ x0: 10 + Math.random() * (CW - 20), y0: GROUND - 4, t: 0, T: 1.1 + Math.random() * 0.6, big, bend: (Math.random() - 0.5) * 120, c: SHOT_COLORS[Math.floor(Math.random() * SHOT_COLORS.length)], ang: Math.random() * TAU });
+  const x0 = 10 + Math.random() * (CW - 20);
+  shots.push({ x0, y0: GROUND - 2, t: 0, T: 1.6 + Math.random() * 0.8, big, bend: (Math.random() - 0.5) * 140, ang: Math.random() * TAU, trail: [] });
 }
 function tapLaunch() {
   if (ending) return;
   audio();
   const n = L.tapPower(save);
-  L.addTrash(save, n);
+  L.addLaunch(save, n);
   launchShot(true);
   sfx.launch(); buzz(8);
   const b = $('launch').getBoundingClientRect(), a = app.getBoundingClientRect();
@@ -280,445 +348,596 @@ function pop(text, x, y) {
   $('fx').appendChild(el);
   setTimeout(() => el.remove(), 800);
 }
-function burst(x, y, n, colors, speed, life, g = 0, size = 2) {
-  for (let i = 0; i < n; i++) {
-    const a = Math.random() * TAU, v = speed * (0.3 + Math.random() * 0.8);
-    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g, life: life * (0.6 + Math.random() * 0.6), max: life, c: colors[i % colors.length], s: size * (0.6 + Math.random() * 0.8) });
-  }
+function smoke(x, y, n, size, vy = -14) {
+  for (let i = 0; i < n; i++) parts.push({ x: x + (Math.random() - 0.5) * size, y, vx: (Math.random() - 0.5) * 10, vy: vy * (0.5 + Math.random()), g: 0, life: 2 + Math.random() * 1.5, max: 3, c: '#6a6460', s: size * (0.4 + Math.random() * 0.5), grow: size * 0.6, smoke: true });
+}
+function sparks(x, y, n, speed) {
+  for (let i = 0; i < n; i++) { const a = -Math.random() * Math.PI, v = speed * (0.3 + Math.random()); parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 120, life: 0.5 + Math.random() * 0.6, max: 1, c: ['#fff2c0', '#ffb040', '#ff6a20'][i % 3], s: 1 + Math.random() * 1.2 }); }
 }
 function checkEnd() {
-  if (!ending && save.mass >= L.END_MASS) { ending = { t: 0 }; persist(); }
+  if (!ending && save.mass >= cfg().endMass) { ending = { t: 0 }; persist(); }
 }
 
 // ---------- 갱신 ----------
 let uiT = 0;
 function update(dt) {
-  const p = L.progress(save.mass);
+  const W = world(), p = W.p;
   if (!ending) {
     const rate = L.totalRate(save);
-    L.addTrash(save, rate * dt);
+    L.addLaunch(save, rate * dt);
     save.time += dt;
+    save.days += dt;   // 1초 = 1일
+    save.warm = L.relaxWarming(save.warm, W.e.tempRise, dt);
     if (rate > 0) {
-      spawnAcc += dt * Math.min(8, 0.6 + Math.log10(1 + rate) * 0.9);
+      spawnAcc += dt * Math.min(5, 0.4 + Math.log10(1 + rate) * 0.6);
       while (spawnAcc >= 1) { spawnAcc -= 1; launchShot(); }
     }
     checkEnd();
   }
-  const [px, py] = planetPos(), r = L.apparentRadius(p, maxR);
+  if (globe) {
+    const st = L.planetStage(p, W.c);
+    globe.preload(st.type.id);
+    if (st.next && p > st.next.from - 0.06) globe.preload(st.next.id);
+    if (p > 0.8) { globe.preload('earth'); globe.preload(W.c.endId); }
+  }
   for (const s of shots) {
     s.t += dt;
-    if (s.t >= s.T && !s.done) { s.done = true; gulp = Math.min(1, gulp + (s.big ? 0.25 : 0.08)); }
+    if (s.t >= s.T && !s.done) { s.done = true; save.sats += 1; gulp = Math.min(1, gulp + (s.big ? 0.2 : 0.06)); }
   }
-  for (let i = shots.length - 1; i >= 0; i--) if (shots[i].done) shots.splice(i, 1);
-  if (shots.length > 70) shots.splice(0, shots.length - 70);
+  for (let i = shots.length - 1; i >= 0; i--) if (shots[i].done && shots[i].t > shots[i].T + 1.2) shots.splice(i, 1);
+  if (shots.length > 40) shots.splice(0, shots.length - 40);
   gulp *= Math.pow(0.05, dt);
 
-  // 눈 깜빡임
-  nextBlink -= dt;
-  if (nextBlink <= 0) { blink = 0.25; nextBlink = 3 + Math.random() * 6; }
-  blink = Math.max(0, blink - dt);
-
+  // 지진: 조석 응력이 클수록 자주, 세게
   if (!ending) {
-    groanT -= dt;
-    if (p > 0.4 && groanT <= 0) { groanT = 14 - 10 * p; sfx.groan(p); }
-    if (p > 0.88) { beatT -= dt; if (beatT <= 0) { beatT = 1.4 - 0.6 * p; sfx.heartbeat(); } }
-    if (p > 0.8 && Math.random() < dt * (p - 0.78) * 10) meteors.push({ x0: px + (Math.random() - 0.5) * r, y0: py + r * 0.7, x1: 10 + Math.random() * (CW - 20), t: 0, T: 0.9 + Math.random() * 0.6 });
+    rumbleT -= dt;
+    if (W.e.quake > 5.5 && rumbleT <= 0) { rumbleT = Math.max(2, 14 - (W.e.quake - 5.5) * 3); sfx.rumble(clamp01((W.e.quake - 5) / 5)); shake = Math.max(shake, W.quakeShake); }
+    // 불덩이: 행성 가까이에서 부서진 파편과 위성 잔해가 떨어진다
+    if (W.km < 60000 || W.e.insideRoche) {
+      const R = L.screenRadius(p, L.focalPx(CW), W.c), [px, py] = planetPos();
+      const rate = W.e.insideRoche ? 3 : (60000 - W.km) / 60000 * 1.5;
+      if (Math.random() < dt * rate) meteors.push({ x0: px + (Math.random() - 0.5) * Math.min(R, CW), y0: py + Math.min(R, CW) * 0.4, x1: 10 + Math.random() * (CW - 20), t: 0, T: 1.2 + Math.random() * 0.8, trail: [] });
+    }
   }
-  shake = Math.max(shake * Math.pow(0.02, dt), p > 0.72 ? (p - 0.72) * 10 : 0);
+  shake = Math.max(shake * Math.pow(0.03, dt), W.quakeShake * 0.25);
   for (const m of meteors) {
     m.t += dt;
-    if (m.t >= m.T && !m.done) { m.done = true; burst(m.x1, GROUND - 6, 22, ['#fff2c0', '#ffb040', '#ff5a20', '#6a4a40'], 70, 0.8, 90, 2.5); shake = Math.max(shake, 5); sfx.hit(); }
+    if (m.t >= m.T && !m.done) {
+      m.done = true; flash = Math.max(flash, 0.12);
+      sparks(m.x1, GROUND - 4, 26, 90); smoke(m.x1, GROUND - 6, 8, 10);
+      fires.push({ x: m.x1, life: 8 + Math.random() * 6 });
+      shake = Math.max(shake, 5); sfx.hit();
+    }
   }
   for (let i = meteors.length - 1; i >= 0; i--) if (meteors[i].done) meteors.splice(i, 1);
-  for (const q of parts) { q.life -= dt; q.vy += q.g * dt; q.x += q.vx * dt; q.y += q.vy * dt; }
+  for (const f of fires) { f.life -= dt; if (Math.random() < dt * 3) smoke(f.x, GROUND - 4, 1, 9, -18); }
+  for (let i = fires.length - 1; i >= 0; i--) if (fires[i].life <= 0) fires.splice(i, 1);
+  for (const q of parts) { q.life -= dt; q.vy += q.g * dt; q.x += q.vx * dt; q.y += q.vy * dt; if (q.smoke) { q.s += q.grow * dt; q.vx += 3 * dt; } }
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) parts.splice(i, 1);
-  flash *= Math.pow(0.05, dt);
+  if (parts.length > 500) parts.splice(0, parts.length - 500);
+  updateFlakes(dt, W);
+  flash *= Math.pow(0.03, dt);
   if (ending) updateEnding(dt);
   uiT -= dt;
   if (uiT <= 0) { uiT = 0.2; refreshList(); }
-  updateTop(p);
+  updateTop(W);
+  queueNews(W);
+}
+// 계절 입자: 겨울 눈(기온이 영하 근처일 때만), 봄 꽃잎, 가을 낙엽
+function updateFlakes(dt, W) {
+  const snow = W.w.winter * clamp01((2 - W.temp) / 4), petals = W.w.spring * 0.6, leaves = W.w.autumn * 0.7;
+  const want = snow * 90 + petals * 18 + leaves * 22;
+  while (flakes.length < want && Math.random() < 0.9) {
+    const r = Math.random() * (snow * 90 + petals * 18 + leaves * 22 || 1);
+    const kind = r < snow * 90 ? 'snow' : r < snow * 90 + petals * 18 ? 'petal' : 'leaf';
+    flakes.push({ kind, x: Math.random() * CW, y: SKY_TOP - 5 + Math.random() * 10, vx: kind === 'snow' ? (Math.random() - 0.5) * 8 : 6 + Math.random() * 14, vy: kind === 'snow' ? 14 + Math.random() * 16 : 10 + Math.random() * 12, ph: Math.random() * TAU, s: kind === 'snow' ? 0.8 + Math.random() * 1.4 : 1.6 + Math.random() * 1.4, c: kind === 'leaf' ? ['#d8742a', '#c4402a', '#e0a838'][Math.floor(Math.random() * 3)] : kind === 'petal' ? '#f6c4d4' : '#ffffff' });
+    if (flakes.length > 140) break;
+  }
+  for (const f of flakes) { f.ph += dt * 2; f.x += (f.vx + Math.sin(f.ph) * 8) * dt; f.y += f.vy * dt; }
+  for (let i = flakes.length - 1; i >= 0; i--) if (flakes[i].y > SCENE_BOT + 20 || flakes.length > want + 5 && Math.random() < 0.02) flakes.splice(i, 1);
 }
 function updateEnding(dt) {
   const e = ending;
   e.t += dt;
-  shake = e.t < 3 ? 3 + e.t * 6 : Math.max(0, 20 - (e.t - 3) * 10);
-  if (e.t < 0.1 && !e.g) { e.g = true; sfx.groan(1); }
-  if (e.t < 3 && Math.random() < dt * 16) {
+  shake = e.t < 3 ? 2 + e.t * 5 : Math.max(0, 16 - (e.t - 3) * 10);
+  if (!e.r) { e.r = true; sfx.rumble(1); }
+  if (e.t < 2.8 && Math.random() < dt * 12) {
     const [px, py] = planetPos();
-    meteors.push({ x0: px + (Math.random() - 0.5) * CW, y0: py + maxR * 0.6, x1: Math.random() * CW, t: 0, T: 0.5 + Math.random() * 0.4 });
+    meteors.push({ x0: px + (Math.random() - 0.5) * CW, y0: py + maxR * 0.4, x1: Math.random() * CW, t: 0, T: 0.6 + Math.random() * 0.5, trail: [] });
   }
   if (e.t >= 2.8 && !e.boom) { e.boom = true; sfx.boom(); buzz([200, 80, 300]); }
-  if (e.t >= 6.5 && !e.shown) { e.shown = true; showEnd(); }
+  if (e.t >= 7 && !e.shown) { e.shown = true; showEnd(); }
 }
-function updateTop(p) {
-  $('km').textContent = (ending ? 0 : Math.ceil(L.distanceKm(p))).toLocaleString('en-US');
-  $('dist').classList.toggle('danger', p > 0.85);
+function updateTop(W) {
+  const { c, p, cal } = W;
+  $('title').textContent = `스테이지 ${c.stage} · ${c.endName}급 행성이 떨어지면`;
+  $('km').textContent = Math.ceil(W.km).toLocaleString('en-US');
+  $('dist').classList.toggle('danger', W.km < 120000);
   $('mass').textContent = L.formatNumber(save.mass);
+  $('sats').textContent = L.formatNumber(save.sats);
   $('rate').textContent = L.formatRate(L.totalRate(save));
   $('cash').textContent = `${L.formatNumber(save.money)}원`;
   $('tapInfo').textContent = `한 번에 ${L.formatNumber(L.tapPower(save))}톤`;
-  const news = L.currentNews(p);
-  if (news !== lastNews) { lastNews = news; $('newsTxt').textContent = news; }
+  $('kind').textContent = `${L.planetStage(Math.min(p, 1), c).type.name}급`;
+  $('speed').textContent = L.formatSpeed(L.speedKms(Math.min(p, 1), c));
+  $('massx').textContent = L.massText(Math.min(p, 1), c).replace('지구 질량의 ', '질량 지구의 ');
+  const icon = { 봄: '🌸', 여름: '☀️', 가을: '🍁', 겨울: '❄️' }, sn = L.seasonName(W.w);
+  $('date').textContent = `${cal.y}.${String(cal.m).padStart(2, '0')}.${String(cal.d).padStart(2, '0')} · ${icon[sn]} ${sn} · ${W.temp > 999 ? '측정 불가' : W.temp.toFixed(1) + '°C'} · D+${cal.dayIndex}`;
+  const tk = L.tickerText(Math.min(p, 1), c, save.warm);
+  if (tk !== lastTicker) { lastTicker = tk; $('newsTxt').textContent = tk; }
 }
 
 // ---------- 그리기 ----------
+// 계절별 하늘·나무 색
+const SEASON_SKY = {
+  spring: ['#3b70c6', '#7aa8dc', '#d8e6f2'], summer: ['#2559b8', '#5f97da', '#d6e8f6'],
+  autumn: ['#3466b4', '#7ea2d0', '#ecdcc4'], winter: ['#5878a8', '#8ea6c4', '#e2e6ea'],
+};
+function seasonMix(w, pick) {
+  let col = null, acc = 0;
+  for (const k of ['spring', 'summer', 'autumn', 'winter']) {
+    if (w[k] <= 0) continue;
+    const c = pick(k);
+    col = col ? mix(col, c, w[k] / (acc + w[k])) : c;
+    acc += w[k];
+  }
+  return col;
+}
+const TREE_SEASON = {
+  spring: (i) => (i % 2 ? '#f2b8cc' : '#8cc04a'), summer: (i) => ['#3e7a2a', '#4e8a34', '#356a26'][i % 3],
+  autumn: (i) => ['#d0702a', '#c4402a', '#e0a838', '#a85a28'][i % 4], winter: () => '#6e6052',
+};
 function render(now) {
   if (!city) buildCity();
-  const t = now / 1000;
-  const p = ending ? 1 : L.progress(save.mass);
-  const dread = clamp01((p - 0.55) / 0.45);      // 공포가 짙어지는 정도
-  const danger = clamp01((p - 0.78) / 0.22);
+  const t = now / 1000, W = world(), p = W.p, { eclipse, heat, w } = W;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.save();
   ctx.translate((Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake);
 
-  // 하늘: 맑은 낮 → 행성이 해를 가려 어두워지고 → 보랏빛·핏빛
+  // 하늘: 계절빛 → 행성이 커지며 어두워지고 → 달아오르며 붉게
+  const sky = (i) => seasonMix(w, (k) => SEASON_SKY[k][i]);
+  const zen = mix(mix(sky(0), '#070b1c', eclipse), '#2a0c14', heat * 0.6);
+  const midc = mix(mix(sky(1), '#1c2440', eclipse), '#7a2a1a', heat * 0.7);
+  const hor = mix(mix(sky(2), '#4a4a60', eclipse), '#ff8a40', heat * 0.8);
   const g = ctx.createLinearGradient(0, SKY_TOP, 0, GROUND);
-  g.addColorStop(0, mix(mix('#3d7fdc', '#1a1238', dread), '#2a0610', danger));
-  g.addColorStop(0.65, mix(mix('#8cc0ee', '#5a3a7a', dread), '#a0281a', danger));
-  g.addColorStop(1, mix(mix('#cfe6f6', '#c08aa0', dread), '#ff8a3a', danger));
+  g.addColorStop(0, zen); g.addColorStop(0.6, midc); g.addColorStop(1, hor);
   ctx.fillStyle = g; ctx.fillRect(-30, 0, CW + 60, CH);
-  // 낮인데 별이 보이기 시작한다
-  if (dread > 0) {
-    for (const s of city.stars) { ctx.globalAlpha = dread * (0.3 + 0.7 * s.b) * (0.7 + 0.3 * Math.sin(t * 2 + s.x)); ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.b > 0.85 ? 1.6 : 1, s.b > 0.85 ? 1.6 : 1); }
+  if (eclipse > 0.1) {
+    for (const s of city.stars) { ctx.globalAlpha = (eclipse - 0.1) * (0.3 + 0.7 * s.b) * (0.8 + 0.2 * Math.sin(t * 2 + s.x)); ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.b > 0.9 ? 1.5 : 0.9, s.b > 0.9 ? 1.5 : 0.9); }
     ctx.globalAlpha = 1;
   }
-
-  const [px, py] = planetPos();
-  let R = L.apparentRadius(p, maxR);
-  if (ending) R = maxR * (1 + Math.min(4, ending.t * ending.t * 0.4));
-  R *= 1 + (0.012 * Math.sin(t * 1.6) * dread) + gulp * 0.015;   // 숨 쉬듯 맥동, 삼킬 때 살짝 부풂
-  drawTendrils(px, py, R, t, p, false);
-  drawPlanet(px, py, R, t, p, dread, danger);
-  drawTendrils(px, py, R, t, p, true);
-
-  // 구름: 절반을 넘으면 행성 쪽으로 빨려 올라간다
-  const pull = clamp01((p - 0.5) / 0.45);
-  for (const c of city.clouds) {
-    c.x += c.v * 0.016 * (1 + pull * 5);
-    if (c.x > CW + 80) c.x = -80;
-    // 행성에 빨려 올라가며 옅어진다(행성을 가리지 않게)
-    const x = lerp(c.x, px, pull * 0.4), y = lerp(c.y, py, pull * 0.4);
-    ctx.globalAlpha = 1 - pull * 0.8;
-    const top = mix(mix('#ffffff', '#e8c8e8', dread), '#ffb080', danger);
-    for (const [bx, by, br] of c.blobs) {
-      const gx = x + bx * (1 + pull * 0.6), gy = y + by;
-      const gr = ctx.createRadialGradient(gx, gy - br * 0.3, br * 0.1, gx, gy, br);
-      gr.addColorStop(0, top); gr.addColorStop(0.7, top); gr.addColorStop(1, rgba('#ffffff', 0));
-      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(gx, gy, br, 0, TAU); ctx.fill();
+  // 해: 여름엔 높고 강하게, 겨울엔 낮고 약하게
+  const sunX = CW * 0.14, sunY = SKY_TOP + 34 - 12 * w.summer + 16 * w.winter, sunA = (1 - eclipse * 0.9) * (0.85 + 0.25 * w.summer - 0.15 * w.winter);
+  const sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 150);
+  sg.addColorStop(0, `rgba(255,252,240,${Math.min(1, 0.95 * sunA)})`); sg.addColorStop(0.06, `rgba(255,248,225,${0.8 * sunA})`); sg.addColorStop(0.25, `rgba(255,240,210,${0.25 * sunA})`); sg.addColorStop(1, 'rgba(255,240,210,0)');
+  ctx.fillStyle = sg; ctx.fillRect(sunX - 150, sunY - 150, 300, 300);
+  // 오로라: 행성의 조석력이 커지면 지구 자기권이 흔들린다
+  const aur = clamp01((Math.log10(Math.max(1, W.e.tideRatio)) - 1.5) / 1.5) * (1 - heat * 0.6);
+  if (aur > 0) {
+    for (let k = 0; k < 3; k++) {
+      ctx.beginPath();
+      for (let x = -20; x <= CW + 20; x += 8) { const y = SKY_TOP + 30 + k * 18 + Math.sin(x * 0.02 + t * 0.6 + k) * 14; if (x === -20) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.strokeStyle = rgba(k === 1 ? '#c070ff' : '#60ff9a', 0.12 * aur); ctx.lineWidth = 26 - k * 6; ctx.stroke();
     }
-    ctx.globalAlpha = 1;
   }
 
-  // 날아가는 쓰레기: 빛 꼬리를 끌며 올라가 행성 둘레를 돌며 삼켜진다
+  // 행성과 그 둘레를 도는 인공위성들
+  const [px, py] = planetPos();
+  const R0 = L.screenRadius(Math.min(p, 1), L.focalPx(CW), W.c);   // 실제 각크기 θ = asin(R/D)를 화각 60° 카메라로
+  let R = R0;
+  if (ending) R = R0 * (1 + Math.min(4, ending.t * ending.t * 0.35));
+  R *= 1 + gulp * 0.006;
+  drawSatellites(ctx, px, py, R, t, false);
+  drawPlanet(px, py, R, t, p, eclipse, heat);
+  drawSatellites(ctx, px, py, R, t, true);
+  if (!ending && !tv) drawScope(t, W, R);
+
+  // 구름
+  for (const c of city.clouds) {
+    c.x += c.v * 0.016;
+    if (c.x > CW + c.w) c.x = -c.w;
+    ctx.globalAlpha = 0.95;
+    ctx.drawImage(c.img, c.x - c.w / 2, c.y - c.w * 0.27, c.w, c.w * 0.55);
+  }
+  ctx.globalAlpha = 1;
+  const cloudDim = Math.min(0.85, eclipse * 0.8 + heat * 0.5 + w.winter * 0.15);
+  if (cloudDim > 0.01) {
+    for (const c of city.clouds) {
+      ctx.save(); ctx.globalAlpha = cloudDim; ctx.globalCompositeOperation = 'multiply';
+      ctx.drawImage(c.img, c.x - c.w / 2, c.y - c.w * 0.27, c.w, c.w * 0.55);
+      ctx.restore();
+    }
+  }
+
+  // 위성을 싣고 날아오르는 로켓
   for (const s of shots) {
     const k = Math.min(1, s.t / s.T);
-    let x, y;
-    if (k < 0.75) {
-      const e = k / 0.75, ee = e * e * (3 - 2 * e);
-      const tx = px + Math.cos(s.ang) * R * 1.6, ty = py + Math.sin(s.ang) * R * 0.45;
-      x = lerp(s.x0, tx, ee) + Math.sin(e * Math.PI) * s.bend; y = lerp(s.y0, ty, ee);
-    } else {
-      const e = (k - 0.75) / 0.25, a = s.ang + e * 3, rr = lerp(1.6, 0.2, e);
-      x = px + Math.cos(a) * R * rr; y = py + Math.sin(a) * R * rr * 0.28;
+    if (!s.done) {
+      const e = 1 - (1 - k) * (1 - k);
+      const orb = Math.max(R * 1.6, 6);
+      const tx = px + Math.cos(s.ang) * orb, ty = py + Math.sin(s.ang) * orb * 0.35;
+      const cx = s.x0 + s.bend, cy = lerp(s.y0, ty, 0.35);
+      const x = (1 - e) * (1 - e) * s.x0 + 2 * (1 - e) * e * cx + e * e * tx;
+      const y = (1 - e) * (1 - e) * s.y0 + 2 * (1 - e) * e * cy + e * e * ty;
+      s.trail.push([x, y]); if (s.trail.length > 40) s.trail.shift();
+      s.hx = x; s.hy = y; s.k = k;
+    } else if (s.trail.length) s.trail.shift();
+    if (s.trail.length > 1) {
+      for (let i = 1; i < s.trail.length; i++) {
+        const a = i / s.trail.length;
+        ctx.strokeStyle = `rgba(235,235,240,${0.35 * a * (1 - (s.k || 1) * 0.6)})`;
+        ctx.lineWidth = (s.big ? 2.4 : 1.6) * (1 - (s.k || 0) * 0.7) * (0.6 + a * 0.6);
+        ctx.beginPath(); ctx.moveTo(s.trail[i - 1][0], s.trail[i - 1][1]); ctx.lineTo(s.trail[i][0], s.trail[i][1]); ctx.stroke();
+      }
     }
-    const sz = (s.big ? 2.6 : 1.8);
-    const gl = ctx.createRadialGradient(x, y, 0, x, y, sz * 4);
-    gl.addColorStop(0, rgba('#ffffff', 0.9)); gl.addColorStop(0.3, rgba(s.c.length === 7 ? s.c : '#ffffff', 0.6)); gl.addColorStop(1, rgba('#ffffff', 0));
-    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x, y, sz * 4, 0, TAU); ctx.fill();
-    if (s.lx != null) { ctx.strokeStyle = rgba(s.c, 0.5); ctx.lineWidth = sz; ctx.beginPath(); ctx.moveTo(s.lx, s.ly); ctx.lineTo(x, y); ctx.stroke(); }
-    s.lx = x; s.ly = y;
+    if (!s.done) {
+      const sz = (s.big ? 2.4 : 1.7) * (1 - s.k * 0.7);
+      const gl = ctx.createRadialGradient(s.hx, s.hy, 0, s.hx, s.hy, sz * 4);
+      gl.addColorStop(0, 'rgba(255,250,230,1)'); gl.addColorStop(0.3, 'rgba(255,170,80,0.7)'); gl.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(s.hx, s.hy, sz * 4, 0, TAU); ctx.fill();
+    }
   }
 
-  // 운석
+  // 불덩이
   for (const m of meteors) {
     const k = Math.min(1, m.t / m.T);
-    const x = lerp(m.x0, m.x1, k), y = lerp(m.y0, GROUND - 6, k * k);
-    const tx = lerp(m.x0, m.x1, Math.max(0, k - 0.12)), ty = lerp(m.y0, GROUND - 6, Math.max(0, k - 0.12) ** 2);
-    const lg = ctx.createLinearGradient(tx, ty, x, y);
-    lg.addColorStop(0, 'rgba(255,90,30,0)'); lg.addColorStop(1, 'rgba(255,230,160,0.95)');
-    ctx.strokeStyle = lg; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(x, y); ctx.stroke();
-    ctx.fillStyle = '#fff6d0'; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, TAU); ctx.fill();
+    const x = lerp(m.x0, m.x1, k), y = lerp(m.y0, GROUND - 4, k * k);
+    m.trail.push([x, y]); if (m.trail.length > 30) m.trail.shift();
+    for (let i = 1; i < m.trail.length; i++) {
+      const a = i / m.trail.length;
+      ctx.strokeStyle = `rgba(90,80,75,${0.35 * a})`; ctx.lineWidth = 5 * a + 1;
+      ctx.beginPath(); ctx.moveTo(m.trail[i - 1][0], m.trail[i - 1][1]); ctx.lineTo(m.trail[i][0], m.trail[i][1]); ctx.stroke();
+    }
+    const gl = ctx.createRadialGradient(x, y, 0, x, y, 14);
+    gl.addColorStop(0, 'rgba(255,255,235,1)'); gl.addColorStop(0.2, 'rgba(255,200,110,0.9)'); gl.addColorStop(0.6, 'rgba(255,90,30,0.35)'); gl.addColorStop(1, 'rgba(255,60,20,0)');
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x, y, 14, 0, TAU); ctx.fill();
   }
 
-  // 도시: 지진이 나면 하나씩 무너져 내린다
-  const sink = (b) => ending ? Math.max(clamp01((p - b.fall) / 0.07), clamp01(ending.t / 2.5)) : clamp01((p - b.fall) / 0.07);
-  const haze = mix(mix('#c8dcf0', '#7a5a8a', dread), '#c05030', danger);
-  for (const b of city.list) {
-    const s = sink(b), h = b.h + b.extra;
-    ctx.save(); ctx.beginPath(); ctx.rect(-30, 0, CW + 60, GROUND); ctx.clip();
-    const jit = s > 0 && s < 1 ? (Math.random() - 0.5) * 2 : 0;
-    ctx.drawImage(b.img, b.x + jit, GROUND - h + s * h, b.w, h);
-    if (b.back || dread > 0) { ctx.globalAlpha = b.back ? 0.35 + dread * 0.3 : dread * 0.35; ctx.fillStyle = haze; ctx.fillRect(b.x + jit, GROUND - h + s * h, b.w, h); ctx.globalAlpha = 1; }
-    ctx.restore();
-    if (s > 0 && s < 1 && Math.random() < 0.25) parts.push({ x: b.x + Math.random() * b.w, y: GROUND - h * (1 - s), vx: (Math.random() - 0.5) * 20, vy: -8, g: 0, life: 1, max: 1, c: 'rgba(230,214,200,0.8)', s: 3 + Math.random() * 4 });
+  // 도시: 지진 규모가 건물이 버티는 한계를 넘으면 하나씩 무너진다
+  const quake = ending ? 99 : W.e.quake;
+  const sink = (b) => ending ? Math.max(clamp01((quake - b.fallMag) / 0.5), clamp01(ending.t / 2.6)) : clamp01((quake - b.fallMag) / 0.5);
+  const hazeAlpha = [0.55, 0.3, 0.06];
+  const snowRoof = w.winter * clamp01((2 - W.temp) / 4);
+  for (const layer of city.layers) {
+    for (const b of layer) {
+      const s = sink(b), h = b.h + b.extra;
+      ctx.save(); ctx.beginPath(); ctx.rect(-30, 0, CW + 60, GROUND); ctx.clip();
+      const jit = s > 0 && s < 1 ? (Math.random() - 0.5) * 1.5 : 0, y = GROUND - h + s * h;
+      ctx.drawImage(b.img, b.x + jit, y, b.w, h);
+      if (snowRoof > 0.05 && b.layer === 2 && !b.extra) { ctx.globalAlpha = snowRoof * 0.9; ctx.fillStyle = '#f4f8fc'; ctx.fillRect(b.x + jit, y - 1, b.w, 2.2); }
+      ctx.globalAlpha = Math.min(0.9, hazeAlpha[b.layer] + eclipse * 0.45);
+      ctx.fillStyle = mix(hor, '#101020', eclipse * 0.6); ctx.fillRect(b.x + jit, y, b.w, h);
+      ctx.restore();
+      if (s > 0 && s < 1 && Math.random() < 0.12) smoke(b.x + b.w / 2, GROUND - h * (1 - s), 1, b.w * 0.5, -10);
+    }
   }
-  for (const tr of city.trees) { ctx.fillStyle = mix(tr.c, '#3a2020', danger * 0.6); ctx.beginPath(); ctx.arc(tr.x, GROUND - tr.r * 0.6, tr.r, 0, TAU); ctx.fill(); }
+  for (const f of fires) {
+    const fl = 0.7 + 0.3 * Math.sin(t * 13 + f.x);
+    const gl = ctx.createRadialGradient(f.x, GROUND - 4, 0, f.x, GROUND - 4, 22);
+    gl.addColorStop(0, `rgba(255,200,90,${0.8 * fl})`); gl.addColorStop(0.4, `rgba(255,100,30,${0.45 * fl})`); gl.addColorStop(1, 'rgba(255,80,20,0)');
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(f.x, GROUND - 4, 22, 0, TAU); ctx.fill();
+  }
+  // 강가 나무: 봄꽃 → 짙은 초록 → 단풍 → 앙상한 가지(눈 덮임)
+  city.trees.forEach((tr, i) => {
+    let col = seasonMix(w, (k) => TREE_SEASON[k](i));
+    col = mix(col, '#140c10', eclipse * 0.6);
+    if (heat > 0.3) col = mix(col, '#4a3a2a', (heat - 0.3));
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(tr.x, GROUND - tr.rr * 0.5, tr.rr, 0, TAU); ctx.fill();
+    if (snowRoof > 0.05) { ctx.globalAlpha = snowRoof; ctx.fillStyle = '#f4f8fc'; ctx.beginPath(); ctx.arc(tr.x, GROUND - tr.rr * 0.9, tr.rr * 0.7, Math.PI, 0); ctx.fill(); ctx.globalAlpha = 1; }
+  });
 
-  // 강: 다가올수록 물이 차오르고(조석) 하늘빛을 비춘다
-  const rise = clamp01((p - 0.62) / 0.38) * 18;
+  // 강: 조석 해일로 차오르고(하루 두 번 밀물), 겨울엔 차갑게
+  const rise = W.tide * 26 * (0.75 + 0.25 * Math.sin(t * 1.4));
   const wy = GROUND - rise;
   const wg = ctx.createLinearGradient(0, wy, 0, SCENE_BOT + 24);
-  wg.addColorStop(0, mix(mix('#8eb0d0', '#5a4a7a', dread), '#8a3020', danger)); wg.addColorStop(1, mix(mix('#4a6a90', '#201838', dread), '#401010', danger));
+  wg.addColorStop(0, mix(mix(hor, '#506880', 0.45), '#8a98a8', w.winter * 0.3)); wg.addColorStop(1, mix(mix('#2a4462', '#05070f', eclipse), '#3a1008', heat * 0.6));
   ctx.fillStyle = wg; ctx.fillRect(-30, wy, CW + 60, CH);
-  ctx.save(); ctx.globalAlpha = 0.28; ctx.translate(0, wy * 2); ctx.scale(1, -1);
-  for (const b of city.list) { if (b.back) continue; const s = sink(b), h = (b.h + b.extra) * (1 - s); if (h > 1) ctx.drawImage(b.img, 0, s * b.img.height, b.img.width, b.img.height * (1 - s), b.x, wy - h, b.w, h); }
+  ctx.save(); ctx.beginPath(); ctx.rect(-30, wy, CW + 60, CH); ctx.clip();
+  ctx.globalAlpha = 0.32;
+  for (const b of city.layers[2]) {
+    const s = sink(b), h = (b.h + b.extra) * (1 - s);
+    if (h < 1) continue;
+    const slices = Math.ceil(h / 2);
+    for (let i = 0; i < slices; i++) {
+      const sy0 = (1 - (i + 1) / slices) * b.img.height * (1 - s) + s * b.img.height;
+      const off = Math.sin(t * 2 + i * 0.7 + b.x) * 1.2 * (i / slices + 0.2);
+      ctx.drawImage(b.img, 0, sy0, b.img.width, b.img.height * (1 - s) / slices, b.x + off, wy + i * 2, b.w, 2);
+    }
+  }
   ctx.restore();
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  for (let y = wy + 3; y < SCENE_BOT + 24; y += 4) for (let x = ((y * 13) % 37) - 20; x < CW; x += 37) ctx.fillRect(x + Math.sin(t * 1.5 + y) * 4, y, 10 + (y % 7), 1);
+  ctx.globalAlpha = 1;
+  for (let y = wy + 2; y < SCENE_BOT + 24; y += 2.5) {
+    const k = (y - wy) / (SCENE_BOT + 24 - wy);
+    ctx.fillStyle = `rgba(255,250,235,${0.25 * (1 - k) * sunA})`;
+    ctx.fillRect(sunX + Math.sin(t * 3 + y) * 6 - 6 - k * 10, y, 12 + k * 20, 0.7);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(((y * 37) % CW) + Math.sin(t + y) * 5, y, 14, 0.6);
+  }
 
-  for (const q of parts) { ctx.globalAlpha = clamp01(q.life / q.max * 1.4); ctx.fillStyle = q.c; ctx.beginPath(); ctx.arc(q.x, q.y, q.s, 0, TAU); ctx.fill(); }
+  // 연기·불꽃·눈·꽃잎·낙엽
+  for (const q of parts) {
+    const a = clamp01(q.life / q.max * 1.3);
+    if (q.smoke) { ctx.globalAlpha = a * 0.7; ctx.drawImage(smokeImg, q.x - q.s * 1.4, q.y - q.s * 1.4, q.s * 2.8, q.s * 2.8); continue; }
+    ctx.globalAlpha = a; ctx.fillStyle = q.c;
+    ctx.beginPath(); ctx.arc(q.x, q.y, q.s, 0, TAU); ctx.fill();
+  }
+  for (const f of flakes) {
+    ctx.globalAlpha = f.kind === 'snow' ? 0.9 : 0.85; ctx.fillStyle = f.c;
+    ctx.beginPath();
+    if (f.kind === 'snow') ctx.arc(f.x, f.y, f.s, 0, TAU);
+    else ctx.ellipse(f.x, f.y, f.s, f.s * 0.55, f.ph, 0, TAU);
+    ctx.fill();
+  }
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // 충돌: 행성이 하늘을 삼키고 → 하얗게 번쩍 → 우주에서 본 지구가 갈라진다
-  if (ending) {
-    const e = ending.t;
-    if (e > 2.6) {
-      if (e > 3.2) drawBrokenEarth(e - 3.2);
-      const a = e < 3.2 ? (e - 2.6) / 0.6 : Math.max(0, 1 - (e - 3.2) / 1.4);
-      ctx.globalAlpha = a; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, CW, CH); ctx.globalAlpha = 1;
-    }
-  }
-  if (flash > 0.01) { ctx.globalAlpha = flash; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, CW, CH); ctx.globalAlpha = 1; }
+  if (ending) drawEnding(ending.t, t, W);
+  if (flash > 0.01) { ctx.globalAlpha = flash; ctx.fillStyle = '#fff6e0'; ctx.fillRect(0, 0, CW, CH); ctx.globalAlpha = 1; }
 }
 
-// 행성: 사파이어빛 가스 행성. 쓰레기를 먹을수록 커지고, 폭풍이 눈이 되어 뜨이고, 핏줄이 빛난다.
-function drawPlanet(cx, cy, R, t, p, dread, danger) {
-  // 바깥 기운
-  const auraR = R * (1.35 + 0.25 * dread);
-  const ag = ctx.createRadialGradient(cx, cy, R * 0.92, cx, cy, auraR);
-  ag.addColorStop(0, rgba(dread > 0.5 ? '#ff4a8a' : '#8ab8ff', 0.25 + 0.35 * p));
-  ag.addColorStop(0.5, rgba('#8a5aff', 0.12 + 0.2 * dread));
-  ag.addColorStop(1, rgba('#8a5aff', 0));
-  ctx.fillStyle = ag; ctx.beginPath(); ctx.arc(cx, cy, auraR, 0, TAU); ctx.fill();
-
-  if (R < 9) {   // 아직 멀리: 낮달처럼 작고 희미한 점
-    const sg = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, 0, cx, cy, R);
-    sg.addColorStop(0, '#f4f6ff'); sg.addColorStop(1, '#a8b8e0');
-    ctx.globalAlpha = 0.75 + 0.25 * (R / 9);
-    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
-    ctx.globalAlpha = 1;
-    return;
+// 쏘아 올린 위성들: 행성 둘레를 기울어진 궤도로 돈다(먼 쪽 절반은 행성 뒤로)
+function drawSatellites(c, cx, cy, R, t, front, maxN = 90) {
+  if (R < 4) return;
+  const n = Math.min(maxN, Math.floor(save.sats));
+  for (let i = 0; i < n; i++) {
+    const h1 = ((i * 2654435761) >>> 0) / 4294967296, h2 = ((i * 2246822519 + 7) >>> 0) / 4294967296, h3 = ((i * 3266489917 + 13) >>> 0) / 4294967296;
+    const a = R * (1.25 + 1.6 * h1), bR = a * (0.12 + 0.35 * h2), rot = (h3 - 0.5) * 1.4;
+    const th = h2 * TAU + t * 0.9 / Math.pow(a / R, 1.5);
+    const near = Math.sin(th) > 0;
+    if (near !== front) continue;
+    const ox = Math.cos(th) * a, oy = Math.sin(th) * bR;
+    const x = cx + ox * Math.cos(rot) - oy * Math.sin(rot), y = cy + ox * Math.sin(rot) + oy * Math.cos(rot);
+    const s = Math.max(0.7, Math.min(2.2, R / 60));
+    c.fillStyle = rgba('#ffffff', 0.85); c.fillRect(x - s / 2, y - s / 2, s, s);
+    if (h1 > 0.7) { c.fillStyle = rgba('#9fd4ff', 0.6); c.fillRect(x - s * 1.6, y - s * 0.2, s * 3.2, s * 0.4); }   // 태양 전지판
   }
+}
 
-  // 고리(먹은 쓰레기가 모여 생긴 띠) 뒤쪽 절반
-  drawRing(cx, cy, R, t, p, false);
-
+// 천문대 망원경: 행성이 아직 하늘의 점일 때, 오른쪽 위 둥근 화면에 확대해서 보여 준다(뉴스가 뜨면 잠시 숨김)
+function drawScope(t, W, skyR) {
+  const k = 1 - clamp01((skyR - 30) / 25);
+  if (k <= 0 || !globe) return;
+  const r = 44, cx = CW - r - 12, cy = SKY_TOP + r + 12, id = L.planetStage(Math.min(W.p, 1), W.c).type.id;
   ctx.save();
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.clip();
-  // 바탕
-  const base = ctx.createLinearGradient(cx, cy - R, cx, cy + R);
-  base.addColorStop(0, mix('#2a4a9a', '#3a1a5a', dread));
-  base.addColorStop(0.5, mix('#1a6a9a', '#2a1a4a', dread));
-  base.addColorStop(1, mix('#1a2a6a', '#4a0a2a', dread));
-  ctx.fillStyle = base; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
-  // 흐르는 띠
-  const bands = 16;
-  const pal = ['#5ad0e8', '#3a7ad0', '#8a6ae0', '#2a4aa0', '#7ae0d0', '#c08ae0', '#3a5ab8', '#e0b8f0'];
-  const horror = ['#8a2a6a', '#3a0a3a', '#c0306a', '#2a0a2a', '#6a1a4a', '#e0507a', '#4a0a3a', '#a03060'];
-  for (let i = 0; i < bands; i++) {
-    const yy = cy - R + (i + 0.5) / bands * R * 2;
-    const lat = (yy - cy) / R;
-    const w = Math.sqrt(Math.max(0, 1 - lat * lat)) * R;
-    ctx.beginPath();
-    const steps = 28;
-    for (let k = 0; k <= steps; k++) {
-      const x = cx - w + (k / steps) * w * 2, u = (x - cx) / Math.max(1, w);
-      const y = yy + Math.sin(u * 3 + t * (0.25 + (i % 3) * 0.08) + i * 1.7) * R * 0.035 + (1 - u * u) * R * 0.04;
-      if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = mix(pal[i % pal.length], horror[i % horror.length], dread);
-    ctx.globalAlpha = 0.35 + 0.15 * Math.sin(i * 2.3);
-    ctx.lineWidth = R * 2 / bands * (0.8 + 0.6 * ((i * 7) % 5) / 5);
-    ctx.stroke();
+  ctx.globalAlpha = k;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU);
+  ctx.fillStyle = '#02030a'; ctx.fill();
+  ctx.save(); ctx.clip();
+  const rr = seeded(77);
+  for (let i = 0; i < 30; i++) { ctx.fillStyle = `rgba(255,255,255,${0.2 + rr() * 0.6})`; ctx.fillRect(cx - r + rr() * r * 2, cy - r + rr() * r * 2, 0.8, 0.8); }
+  const pr = r * 0.42;
+  drawSatellites(ctx, cx, cy, pr, t, false, 40);
+  const out = globe.render(id, Math.round(pr * DPR), t, {});
+  if (out) { const e = out.extent * pr; ctx.drawImage(out.canvas, cx - e, cy - e, e * 2, e * 2); }
+  drawSatellites(ctx, cx, cy, pr, t, true, 40);
+  const vg = ctx.createRadialGradient(cx, cy, r * 0.75, cx, cy, r);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.75)');
+  ctx.fillStyle = vg; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
+  ctx.font = '800 10px system-ui, sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = '#fff';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 3;
+  ctx.fillText(`망원경 · 위성 ${L.formatNumber(save.sats)}기`, CW - 10, cy + r + 13);
+  ctx.restore();
+}
+
+// ---------- 뉴스 특보: 거리와 지구 영향이 기준을 넘을 때마다 앵커가 오른쪽 위에 나온다 ----------
+let tv = null;
+const newsQueue = [];
+const tvc = $('tvc'), tvx = tvc.getContext('2d');
+function queueNews(W) {
+  if (ending) return;
+  const fresh = L.pendingNews(Math.min(W.p, 1), W.c, save.newsSeen, save.warm);
+  if (fresh.length) {
+    for (const n of fresh) { save.newsSeen.push(n.id); newsQueue.push(n); }
+    while (newsQueue.length > 3) newsQueue.shift();   // 한꺼번에 몰리면 최근 것만
+    persist();
   }
+  if (!tv && newsQueue.length && $('modal').hidden) startBroadcast(newsQueue.shift());
+}
+function startBroadcast(n) {
+  tv = { t: 0, lines: n.lines, line: 0, shown: 0, lineT: 0 };
+  $('tvHead').textContent = n.head;
+  $('tvSub').textContent = '';
+  const el = $('tv');
+  el.style.top = `${SKY_TOP + 8}px`;
+  el.classList.remove('out'); el.hidden = false;
+  const r = el.getBoundingClientRect();
+  tvc.width = Math.round(r.width * DPR); tvc.height = Math.round(r.height * DPR);
+  [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.5, { type: 'triangle', vol: 0.045, delay: i * 0.12 }));
+  tone(196, 1.2, { type: 'sawtooth', vol: 0.02 });
+}
+function endBroadcast() {
+  if (!tv || tv.closing) return;
+  tv.closing = true;
+  $('tv').classList.add('out');
+  setTimeout(() => { $('tv').hidden = true; tv = null; }, 350);
+}
+function updateBroadcast(dt, t) {
+  if (!tv) return;
+  tv.t += dt; tv.lineT += dt;
+  const line = tv.lines[tv.line] || '';
+  tv.shown = Math.min(line.length, Math.floor(tv.lineT * 22));
+  $('tvSub').textContent = line.slice(0, tv.shown);
+  tv.talking = tv.shown < line.length;
+  if (tv.lineT > line.length / 22 + 1.4) {
+    if (tv.line + 1 < tv.lines.length) { tv.line++; tv.lineT = 0; }
+    else endBroadcast();
+  }
+  drawStudio(t);
+}
+$('tv').addEventListener('pointerdown', (e) => { e.preventDefault(); endBroadcast(); });
+
+// 방송국 스튜디오: 왼쪽에 앵커, 오른쪽 모니터에 망원경 생중계
+function drawStudio(t) {
+  const c = tvx, w = tvc.width / DPR, h = tvc.height / DPR, W = world(), p = Math.min(W.p, 1);
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bg = c.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#0a1838'); bg.addColorStop(1, '#1d3f7c');
+  c.fillStyle = bg; c.fillRect(0, 0, w, h);
+  c.globalAlpha = 0.07; c.fillStyle = '#9cc8ff';
+  for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(w * (0.1 + i * 0.22), 0); c.lineTo(w * (0.18 + i * 0.22), 0); c.lineTo(w * (0.05 + i * 0.22), h); c.lineTo(w * (-0.05 + i * 0.22), h); c.fill(); }
+  c.globalAlpha = 1;
+  const mx = w * 0.52, my = h * 0.15, mw = w * 0.44, mh = h * 0.48;
+  c.fillStyle = '#000'; c.fillRect(mx, my, mw, mh);
+  const rr = seeded(5);
+  for (let i = 0; i < 30; i++) { c.fillStyle = `rgba(255,255,255,${0.2 + rr() * 0.6})`; c.fillRect(mx + rr() * mw, my + rr() * mh, 0.7, 0.7); }
+  const id = L.planetStage(p, W.c).type.id, pr = mh * 0.32;
+  c.save(); c.beginPath(); c.rect(mx, my, mw, mh); c.clip();
+  drawSatellites(c, mx + mw / 2, my + mh / 2, pr, t, false, 30);
+  const out = globe && globe.render(id, Math.round(pr * DPR), t, {});
+  if (out) { const e = out.extent * pr; c.drawImage(out.canvas, mx + mw / 2 - e, my + mh / 2 - e, e * 2, e * 2); }
+  drawSatellites(c, mx + mw / 2, my + mh / 2, pr, t, true, 30);
+  c.restore();
+  c.strokeStyle = 'rgba(150,200,255,0.8)'; c.lineWidth = 1; c.strokeRect(mx, my, mw, mh);
+  c.font = '800 6.5px system-ui, sans-serif'; c.fillStyle = '#fff'; c.textAlign = 'left';
+  c.fillText('천문대 생중계', mx + 3, my + 8);
+  c.textAlign = 'right'; c.fillText(`${L.formatKm(W.km)}km · ${L.formatSpeed(L.speedKms(p, W.c))}`, mx + mw - 3, my + mh - 4);
+  drawAnchor(c, w * 0.26, h, t, tv && tv.talking);
+  const dg = c.createLinearGradient(0, h * 0.7, 0, h);
+  dg.addColorStop(0, '#24365e'); dg.addColorStop(1, '#0c1528');
+  c.fillStyle = dg; c.fillRect(0, h * 0.7, w, h * 0.3);
+  c.fillStyle = 'rgba(120,200,255,0.8)'; c.fillRect(0, h * 0.7, w, 1);
+}
+function drawAnchor(c, cx, h, t, talking) {
+  const u = h, bob = Math.sin(t * 1.7) * u * 0.003;
+  c.save(); c.translate(0, bob);
+  // 뒷머리(단발)
+  const hair = c.createLinearGradient(cx, u * 0.2, cx, u * 0.6);
+  hair.addColorStop(0, '#3a2418'); hair.addColorStop(1, '#1a0f0a');
+  c.fillStyle = hair;
+  c.beginPath(); c.ellipse(cx, u * 0.38, u * 0.125, u * 0.16, 0, Math.PI, 0); c.lineTo(cx + u * 0.13, u * 0.56); c.quadraticCurveTo(cx, u * 0.6, cx - u * 0.13, u * 0.56); c.closePath(); c.fill();
+  // 목
+  c.fillStyle = '#dca486'; c.fillRect(cx - u * 0.035, u * 0.45, u * 0.07, u * 0.13);
+  // 정장
+  const suit = c.createLinearGradient(cx, u * 0.55, cx, u);
+  suit.addColorStop(0, '#26355a'); suit.addColorStop(1, '#111a30');
+  c.fillStyle = suit;
+  c.beginPath(); c.moveTo(cx - u * 0.27, u); c.lineTo(cx - u * 0.23, u * 0.64); c.quadraticCurveTo(cx - u * 0.2, u * 0.57, cx - u * 0.08, u * 0.555); c.lineTo(cx + u * 0.08, u * 0.555); c.quadraticCurveTo(cx + u * 0.2, u * 0.57, cx + u * 0.23, u * 0.64); c.lineTo(cx + u * 0.27, u); c.closePath(); c.fill();
+  c.fillStyle = '#f2f0ec';
+  c.beginPath(); c.moveTo(cx - u * 0.055, u * 0.555); c.lineTo(cx + u * 0.055, u * 0.555); c.lineTo(cx, u * 0.69); c.closePath(); c.fill();
+  c.strokeStyle = '#0c1222'; c.lineWidth = u * 0.006;
+  c.beginPath(); c.moveTo(cx - u * 0.055, u * 0.555); c.lineTo(cx - u * 0.01, u * 0.72); c.moveTo(cx + u * 0.055, u * 0.555); c.lineTo(cx + u * 0.01, u * 0.72); c.stroke();
+  c.fillStyle = '#222'; c.beginPath(); c.arc(cx - u * 0.07, u * 0.62, u * 0.008, 0, TAU); c.fill();   // 핀 마이크
+  // 얼굴
+  const skin = c.createRadialGradient(cx - u * 0.02, u * 0.35, u * 0.01, cx, u * 0.38, u * 0.11);
+  skin.addColorStop(0, '#f8d8c0'); skin.addColorStop(1, '#dba78a');
+  c.fillStyle = skin; c.beginPath(); c.ellipse(cx, u * 0.375, u * 0.082, u * 0.103, 0, 0, TAU); c.fill();
+  c.fillStyle = '#d9a486'; c.beginPath(); c.ellipse(cx - u * 0.082, u * 0.385, u * 0.012, u * 0.02, 0, 0, TAU); c.ellipse(cx + u * 0.082, u * 0.385, u * 0.012, u * 0.02, 0, 0, TAU); c.fill();
+  c.fillStyle = '#e8c060'; c.beginPath(); c.arc(cx - u * 0.083, u * 0.408, u * 0.005, 0, TAU); c.arc(cx + u * 0.083, u * 0.408, u * 0.005, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(240,120,120,0.16)'; c.beginPath(); c.arc(cx - u * 0.045, u * 0.4, u * 0.02, 0, TAU); c.arc(cx + u * 0.045, u * 0.4, u * 0.02, 0, TAU); c.fill();
+  // 앞머리
+  c.fillStyle = hair;
+  c.beginPath(); c.ellipse(cx, u * 0.33, u * 0.09, u * 0.07, 0, Math.PI * 1.02, Math.PI * 1.98); c.quadraticCurveTo(cx + u * 0.02, u * 0.3, cx - u * 0.06, u * 0.36); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(cx - u * 0.09, u * 0.33); c.quadraticCurveTo(cx - u * 0.1, u * 0.42, cx - u * 0.085, u * 0.47); c.lineTo(cx - u * 0.075, u * 0.36); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(cx + u * 0.09, u * 0.33); c.quadraticCurveTo(cx + u * 0.1, u * 0.42, cx + u * 0.085, u * 0.47); c.lineTo(cx + u * 0.075, u * 0.36); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(255,220,180,0.18)'; c.lineWidth = u * 0.004; c.beginPath(); c.ellipse(cx - u * 0.02, u * 0.31, u * 0.05, u * 0.03, -0.4, Math.PI, Math.PI * 1.6); c.stroke();
+  // 눈썹·눈(가끔 깜빡임)
+  c.strokeStyle = '#3a2618'; c.lineWidth = u * 0.006; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(cx - u * 0.05, u * 0.35); c.quadraticCurveTo(cx - u * 0.035, u * 0.342, cx - u * 0.02, u * 0.348); c.moveTo(cx + u * 0.02, u * 0.348); c.quadraticCurveTo(cx + u * 0.035, u * 0.342, cx + u * 0.05, u * 0.35); c.stroke();
+  const blink = (t % 4.2) < 0.12 ? 0.15 : 1;
+  c.fillStyle = '#24160e';
+  c.beginPath(); c.ellipse(cx - u * 0.035, u * 0.368, u * 0.012, u * 0.008 * blink, 0, 0, TAU); c.ellipse(cx + u * 0.035, u * 0.368, u * 0.012, u * 0.008 * blink, 0, 0, TAU); c.fill();
+  if (blink === 1) { c.fillStyle = '#fff'; c.beginPath(); c.arc(cx - u * 0.031, u * 0.365, u * 0.003, 0, TAU); c.arc(cx + u * 0.039, u * 0.365, u * 0.003, 0, TAU); c.fill(); }
+  // 코
+  c.strokeStyle = 'rgba(150,90,70,0.45)'; c.lineWidth = u * 0.004;
+  c.beginPath(); c.moveTo(cx + u * 0.003, u * 0.375); c.quadraticCurveTo(cx - u * 0.006, u * 0.398, cx + u * 0.006, u * 0.402); c.stroke();
+  // 입: 말할 때 움직인다
+  const open = talking ? Math.max(0, Math.sin(t * 19) * 0.6 + Math.sin(t * 31) * 0.4) : 0;
+  c.fillStyle = '#7a2434'; c.beginPath(); c.ellipse(cx, u * 0.425, u * 0.018, u * (0.003 + 0.009 * open), 0, 0, TAU); c.fill();
+  c.strokeStyle = '#c0646a'; c.lineWidth = u * 0.004; c.beginPath(); c.ellipse(cx, u * 0.425, u * 0.019, u * (0.004 + 0.009 * open), 0, 0, TAU); c.stroke();
+  c.restore();
+}
+
+function drawGlobe(out, cx, cy, R, alpha = 1) {
+  const e = out.extent * R;
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(out.canvas, cx - e, cy - e, e * 2, e * 2);
   ctx.globalAlpha = 1;
-  // 잔 무늬(화면 해상도로 깔려 커져도 선명)
-  if (!noisePat) noisePat = ctx.createPattern(noiseTile, 'repeat');
-  ctx.save();
-  ctx.globalCompositeOperation = 'overlay';
-  ctx.globalAlpha = 0.55;
-  const ns = Math.max(0.5, Math.min(2.5, R / 160));
-  ctx.translate(cx + t * 6 * ns, cy);
-  ctx.scale(ns, ns * 0.55);
-  ctx.fillStyle = noisePat; ctx.fillRect(-R / ns - 300, -R / (ns * 0.55) - 300, R * 2 / ns + 600, R * 2 / (ns * 0.55) + 600);
-  ctx.restore();
-  ctx.globalCompositeOperation = 'source-over';
-
-  // 폭풍의 눈: 처음엔 소용돌이였다가 점점 진짜 눈이 되어 뜨인다
-  const eyeK = clamp01((p - 0.35) / 0.25);
-  if (eyeK > 0) drawEye(cx, cy + R * 0.22, R, t, p, eyeK, dread);
-  // 빛나는 핏줄
-  if (dread > 0) {
-    const beat = 0.55 + 0.45 * Math.max(0, Math.sin(t * (2.2 + 2 * danger))) ** 3;
-    const ex = cx, ey = cy + R * 0.22;
-    for (const v of veins) {
-      ctx.beginPath();
-      v.pts.forEach(([x, y], i) => { const X = ex + x * R * 1.1, Y = ey + y * R * 1.1; if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y); });
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.strokeStyle = rgba('#ff2a6a', 0.25 * dread * beat); ctx.lineWidth = Math.max(2, R * 0.03 * v.w); ctx.stroke();
-      ctx.strokeStyle = rgba('#ffc0d0', 0.7 * dread * beat); ctx.lineWidth = Math.max(0.7, R * 0.007 * v.w); ctx.stroke();
-    }
-  }
-  // 구 모양 명암: 왼쪽 위 빛, 오른쪽 아래 어둠, 가장자리 어둡게
-  const sh = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.1, cx, cy, R * 1.02);
-  sh.addColorStop(0, 'rgba(255,255,255,0.18)'); sh.addColorStop(0.55, 'rgba(0,0,20,0)'); sh.addColorStop(0.85, 'rgba(0,0,20,0.45)'); sh.addColorStop(1, 'rgba(0,0,15,0.85)');
-  ctx.fillStyle = sh; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
-  // 테두리 빛
-  ctx.globalCompositeOperation = 'lighter';
-  const rim = ctx.createRadialGradient(cx, cy, R * 0.82, cx, cy, R);
-  rim.addColorStop(0, 'rgba(0,0,0,0)'); rim.addColorStop(1, rgba(dread > 0.5 ? '#ff6a9a' : '#9ad8ff', 0.35 + 0.25 * dread));
-  ctx.fillStyle = rim; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.restore();
-
-  drawRing(cx, cy, R, t, p, true);
 }
-
-function drawEye(ex, ey, R, t, p, eyeK, dread) {
-  const ew = R * 0.46, eh = ew * 0.55;
-  // 소용돌이 팔
-  ctx.save();
-  ctx.globalAlpha = 0.5 * eyeK;
-  for (let k = 0; k < 5; k++) {
-    ctx.beginPath();
-    for (let s = 0; s <= 40; s++) {
-      const a = k / 5 * TAU + s * 0.12 - t * 0.25, rr = ew * (0.35 + s * 0.028);
-      const x = ex + Math.cos(a) * rr, y = ey + Math.sin(a) * rr * 0.5;
-      if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = mix('#a8f0ff', '#ff8ab0', dread); ctx.lineWidth = Math.max(1, R * 0.012); ctx.stroke();
-  }
-  ctx.restore();
-  // 눈꺼풀이 열리는 정도: 진행할수록 크게, 가끔 깜빡임
-  const openK = clamp01((p - 0.55) / 0.35);
-  const blinkK = blink > 0 ? Math.abs(Math.cos((blink / 0.25) * Math.PI)) : 1;
-  const open = eh * openK * blinkK;
-  // 눈 주변의 어두운 꺼짐
-  const hollow = ctx.createRadialGradient(ex, ey, 0, ex, ey, ew * 1.1);
-  hollow.addColorStop(0, rgba('#05000a', 0.55 * eyeK)); hollow.addColorStop(1, rgba('#05000a', 0));
-  ctx.fillStyle = hollow; ctx.beginPath(); ctx.ellipse(ex, ey, ew * 1.1, ew * 0.6, 0, 0, TAU); ctx.fill();
-  if (open < 0.5) {   // 감긴 눈: 가는 빛줄기
-    ctx.strokeStyle = rgba('#ffd0a0', 0.6 * eyeK); ctx.lineWidth = Math.max(1, R * 0.006);
-    ctx.beginPath(); ctx.ellipse(ex, ey, ew * 0.9, Math.max(0.5, open), 0, 0, TAU); ctx.stroke();
+function drawPlanet(cx, cy, R, t, p, eclipse, heat) {
+  const st = L.planetStage(Math.min(p, 1), cfg());
+  const id = st.type.id, nid = st.next ? st.next.id : null;
+  const day = clamp01(1 - eclipse / 0.6) * 0.6;   // 밝은 낮일수록 그늘진 쪽이 하늘에 묻힌다
+  const Rdev = Math.max(6, Math.min(900, Math.round(R * DPR)));
+  const hot = (x) => (x === cfg().endId ? heat : 0);
+  const out = globe && R >= 3.5 ? globe.render(id, Rdev, t, { heat: hot(id), day }) : null;
+  if (!out) {   // 아직 멀거나 지도를 불러오는 중: 하늘의 밝은 점
+    const c = AVG_COLOR[id] || '#c0c0c0', rr = Math.max(1.3, R);
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr * 4 + 3);
+    glow.addColorStop(0, rgba('#ffffff', 0.5)); glow.addColorStop(1, rgba('#ffffff', 0));
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, rr * 4 + 3, 0, TAU); ctx.fill();
+    const gg = ctx.createRadialGradient(cx - rr * 0.35, cy - rr * 0.35, 0, cx, cy, rr);
+    gg.addColorStop(0, mix(c, '#ffffff', 0.45)); gg.addColorStop(0.7, c); gg.addColorStop(1, mix(c, '#000000', 0.5));
+    ctx.globalAlpha = 0.6 + 0.4 * (1 - day); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
     return;
   }
-  ctx.save();
-  ctx.beginPath();
-  // 아몬드 모양 눈꺼풀
-  ctx.moveTo(ex - ew, ey);
-  ctx.quadraticCurveTo(ex, ey - open * 2, ex + ew, ey);
-  ctx.quadraticCurveTo(ex, ey + open * 2, ex - ew, ey);
-  ctx.closePath();
-  ctx.clip();
-  const sclera = ctx.createRadialGradient(ex, ey, 0, ex, ey, ew);
-  sclera.addColorStop(0, '#fff2c8'); sclera.addColorStop(0.6, '#f0a060'); sclera.addColorStop(1, '#6a1020');
-  ctx.fillStyle = sclera; ctx.fillRect(ex - ew, ey - eh * 2, ew * 2, eh * 4);
-  // 눈동자는 아래 도시를 내려다본다(살짝 흔들림)
-  const lookX = Math.sin(t * 0.4) * ew * 0.12, lookY = eh * 0.25;
-  const ir = eh * 0.95;
-  const iris = ctx.createRadialGradient(ex + lookX, ey + lookY, ir * 0.15, ex + lookX, ey + lookY, ir);
-  iris.addColorStop(0, '#ffe680'); iris.addColorStop(0.45, '#ff8a20'); iris.addColorStop(0.8, '#c0102a'); iris.addColorStop(1, '#3a0010');
-  ctx.fillStyle = iris; ctx.beginPath(); ctx.arc(ex + lookX, ey + lookY, ir, 0, TAU); ctx.fill();
-  ctx.strokeStyle = 'rgba(80,0,10,0.45)'; ctx.lineWidth = Math.max(0.6, R * 0.004);
-  for (let k = 0; k < 28; k++) { const a = k / 28 * TAU; ctx.beginPath(); ctx.moveTo(ex + lookX + Math.cos(a) * ir * 0.3, ey + lookY + Math.sin(a) * ir * 0.3); ctx.lineTo(ex + lookX + Math.cos(a) * ir * 0.95, ey + lookY + Math.sin(a) * ir * 0.95); ctx.stroke(); }
-  // 세로로 찢어진 동공: 가까워질수록 가늘어진다(초점을 맞추듯)
-  const pw = ir * (0.32 - 0.2 * dread);
-  ctx.fillStyle = '#050005'; ctx.beginPath(); ctx.ellipse(ex + lookX, ey + lookY, pw, ir * 0.88, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.ellipse(ex + lookX - ir * 0.35, ey + lookY - ir * 0.35, ir * 0.12, ir * 0.08, -0.5, 0, TAU); ctx.fill();
-  ctx.restore();
-  // 눈꺼풀 테두리 빛
-  ctx.strokeStyle = rgba('#ffb070', 0.55); ctx.lineWidth = Math.max(1, R * 0.008);
-  ctx.beginPath(); ctx.moveTo(ex - ew, ey); ctx.quadraticCurveTo(ex, ey - open * 2, ex + ew, ey); ctx.quadraticCurveTo(ex, ey + open * 2, ex - ew, ey); ctx.stroke();
+  drawGlobe(out, cx, cy, R);
+  if (st.blend > 0 && nid) {
+    const o2 = globe.render(nid, Rdev, t, { heat: hot(nid), day });
+    if (o2) drawGlobe(o2, cx, cy, R, st.blend);
+  }
 }
 
-function drawRing(cx, cy, R, t, p, front) {
-  const k = clamp01((p - 0.15) / 0.5);
-  if (k <= 0) return;
-  ctx.save();
-  ctx.translate(cx, cy); ctx.rotate(-0.22);
-  ctx.beginPath();
-  if (front) ctx.rect(-R * 3, 0, R * 6, R * 3); else ctx.rect(-R * 3, -R * 3, R * 6, R * 3);
-  ctx.clip();
-  for (let i = 0; i < 9; i++) {
-    const rr = R * (1.35 + i * 0.06 * (0.5 + k));
-    ctx.strokeStyle = rgba(['#c8d8ff', '#ffd8a8', '#a8f0e0', '#e0c0ff'][i % 4], (0.08 + 0.06 * (i % 3)) * k);
-    ctx.lineWidth = Math.max(1, R * 0.03 * (1 + (i % 2)));
-    ctx.beginPath(); ctx.ellipse(0, 0, rr, rr * 0.24, 0, 0, TAU); ctx.stroke();
-  }
-  // 고리 속에서 반짝이는 쓰레기 조각
-  const rand = seeded(3);
-  for (let i = 0; i < 70 * k; i++) {
-    const a = rand() * TAU + t * (0.15 + rand() * 0.1), rr = R * (1.35 + rand() * 0.5 * k);
-    ctx.fillStyle = rgba(['#ffffff', '#ffe0a0', '#a0e8ff', '#ffa0c0'][i % 4], 0.5 + 0.5 * Math.sin(t * 3 + i));
-    ctx.fillRect(Math.cos(a) * rr, Math.sin(a) * rr * 0.24, 1.3, 1.3);
-  }
-  ctx.restore();
-}
-
-// 지구를 향해 뻗어 내려오는 빛의 촉수(끝으로 갈수록)
-function drawTendrils(cx, cy, R, t, p, front) {
-  const k = clamp01((p - 0.7) / 0.3);
-  if (k <= 0 || R < 20) return;
-  for (let i = 0; i < 7; i++) {
-    if ((i % 2 === 0) !== front) continue;
-    const a0 = Math.PI * (0.18 + i * 0.11);
-    const sx = cx + Math.cos(a0) * R * 0.95, sy = cy + Math.sin(a0) * R * 0.95;
-    const len = (GROUND - sy) * (0.3 + 0.6 * k) * (0.7 + 0.3 * Math.sin(i * 1.9));
-    ctx.beginPath(); ctx.moveTo(sx, sy);
-    const steps = 20;
-    for (let s = 1; s <= steps; s++) {
-      const u = s / steps;
-      const x = sx + Math.sin(u * 4 + t * 1.3 + i) * R * 0.12 * u + (sx - cx) * 0.3 * u;
-      const y = sy + len * u;
-      ctx.lineTo(x, y);
+// 충돌: 하늘을 덮은 행성 → 하얀 섬광 → 우주에서 본 지구와, 실제 크기 비율의 행성이 부딪혀 지구가 부서진다
+const earthCopy = document.createElement('canvas');
+function drawEnding(e, t, W) {
+  if (e < 2.6) return;
+  if (e > 3.2) {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
+    const r = seeded(9);
+    for (let i = 0; i < 260; i++) { ctx.fillStyle = `rgba(255,255,255,${0.15 + r() * 0.8})`; ctx.fillRect(r() * CW, r() * CH, r() < 0.9 ? 0.8 : 1.5, r() < 0.9 ? 0.8 : 1.5); }
+    const k = e - 3.2, endId = W.c.endId;
+    const er = CW * 0.2, ex = CW * 0.42, ey = CH * 0.5;
+    const ratio = L.BODY_DATA[endId].radiusKm / L.EARTH.radiusKm, gr = er * ratio;
+    const ang = -0.75, gap = Math.max(0, 1 - k) * er * 0.6;
+    const gx = ex + Math.cos(ang) * (er + gr + gap), gy = ey + Math.sin(ang) * (er + gr + gap);
+    const g = globe && globe.render(endId, Math.min(800, Math.round(gr * DPR)), t, { heat: 0.85 });
+    if (g) drawGlobe(g, gx, gy, gr);
+    const contactX = ex + Math.cos(ang) * er, contactY = ey + Math.sin(ang) * er;
+    const eo = globe && globe.render('earth', Math.min(800, Math.round(er * DPR)), t, { heat: Math.min(1, Math.max(0, k - 0.6)) });
+    if (eo) {
+      if (earthCopy.width !== eo.canvas.width) { earthCopy.width = eo.canvas.width; earthCopy.height = eo.canvas.height; }
+      const ec = earthCopy.getContext('2d'); ec.clearRect(0, 0, earthCopy.width, earthCopy.height); ec.drawImage(eo.canvas, 0, 0);
+      const ext = eo.extent * er;
+      if (k < 1.4) ctx.drawImage(earthCopy, ex - ext, ey - ext, ext * 2, ext * 2);
+      else {
+        const spread = (k - 1.4) * 40;
+        for (let sI = 0; sI < 8; sI++) {
+          const a0 = (sI / 8) * TAU, a1 = ((sI + 1) / 8) * TAU, am = (a0 + a1) / 2;
+          ctx.save(); ctx.translate(ex + Math.cos(am) * spread, ey + Math.sin(am) * spread); ctx.rotate((k - 1.4) * 0.12 * (sI % 2 ? 1 : -1));
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, er, a0, a1); ctx.closePath(); ctx.clip();
+          ctx.drawImage(earthCopy, -ext, -ext, ext * 2, ext * 2);
+          const core = ctx.createRadialGradient(0, 0, 0, 0, 0, er * 0.6);
+          core.addColorStop(0, 'rgba(255,240,170,0.95)'); core.addColorStop(0.4, 'rgba(255,110,30,0.8)'); core.addColorStop(1, 'rgba(120,20,10,0)');
+          ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, 0, er * 0.6, 0, TAU); ctx.fill();
+          ctx.restore();
+        }
+        const rr = seeded(4);
+        for (let i = 0; i < 140; i++) { const a = rr() * TAU, d = er * 0.8 + spread * (1 + rr() * 2.5); ctx.fillStyle = ['#ffb040', '#6a5a50', '#4a7ab8', '#ff6a20'][i % 4]; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * d, ey + Math.sin(a) * d, 0.6 + rr() * 1.6, 0, TAU); ctx.fill(); }
+      }
     }
-    const lg = ctx.createLinearGradient(sx, sy, sx, sy + len);
-    lg.addColorStop(0, rgba('#ff4a9a', 0.55 * k)); lg.addColorStop(0.6, rgba('#8a4aff', 0.3 * k)); lg.addColorStop(1, rgba('#8a4aff', 0));
-    ctx.strokeStyle = lg; ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(2, R * 0.05) * (1 - 0.3 * (i % 3) / 2);
-    ctx.stroke();
-    ctx.lineWidth = Math.max(0.8, R * 0.012); ctx.strokeStyle = rgba('#ffd0f0', 0.4 * k); ctx.stroke();
+    if (k > 0.8) {
+      const kk = k - 0.8;
+      const cg = ctx.createRadialGradient(contactX, contactY, 0, contactX, contactY, er * (0.4 + kk * 0.7));
+      cg.addColorStop(0, `rgba(255,250,220,${Math.min(1, 0.4 + kk * 0.4)})`); cg.addColorStop(0.3, 'rgba(255,160,60,0.5)'); cg.addColorStop(1, 'rgba(255,80,20,0)');
+      ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(contactX, contactY, er * (0.4 + kk * 0.7), 0, TAU); ctx.fill();
+    }
   }
-}
-
-function drawBrokenEarth(t) {
-  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
-  const rand = seeded(9);
-  for (let i = 0; i < 160; i++) { ctx.fillStyle = `rgba(255,255,255,${0.3 + rand() * 0.7})`; ctx.fillRect(rand() * CW, rand() * CH, 1.2, 1.2); }
-  const cx = CW / 2, cy = CH * 0.4, r = CW * 0.27, spread = Math.min(1, t / 3) * 60;
-  // 지구를 삼킨 행성의 눈이 뒤에서 내려다본다
-  const eg = ctx.createRadialGradient(cx, cy - r * 1.6, 0, cx, cy - r * 1.6, r * 1.4);
-  eg.addColorStop(0, `rgba(255,120,60,${Math.min(0.5, t * 0.2)})`); eg.addColorStop(1, 'rgba(255,60,120,0)');
-  ctx.fillStyle = eg; ctx.fillRect(0, 0, CW, CH);
-  for (let k = 0; k < 7; k++) {
-    const a0 = (k / 7) * TAU, a1 = ((k + 1) / 7) * TAU, am = (a0 + a1) / 2;
-    ctx.save(); ctx.translate(cx + Math.cos(am) * spread, cy + Math.sin(am) * spread); ctx.rotate(t * 0.08 * (k % 2 ? 1 : -1));
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r, a0, a1); ctx.closePath(); ctx.clip();
-    const og = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
-    og.addColorStop(0, '#5aa8ff'); og.addColorStop(1, '#0a2a6a');
-    ctx.fillStyle = og; ctx.fillRect(-r, -r, r * 2, r * 2);
-    const lr = seeded(k + 3);
-    ctx.fillStyle = '#4a9a5a';
-    for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.ellipse((lr() - 0.5) * r * 1.4, (lr() - 0.5) * r * 1.4, 6 + lr() * 16, 4 + lr() * 9, lr() * 3, 0, TAU); ctx.fill(); }
-    const core = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.45);
-    core.addColorStop(0, '#fff2a0'); core.addColorStop(0.5, '#ff6a20'); core.addColorStop(1, 'rgba(160,20,10,0)');
-    ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, 0, r * 0.45, 0, TAU); ctx.fill();
-    ctx.restore();
-  }
-  for (let i = 0; i < 80; i++) { const a = rand() * TAU, d = r * 0.7 + spread * (1 + rand() * 3); ctx.fillStyle = ['#5aa8ff', '#4a9a5a', '#ff8a30', '#d8d0c0'][i % 4]; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1 + rand() * 2, 0, TAU); ctx.fill(); }
+  const a = e < 3.2 ? (e - 2.6) / 0.6 : Math.max(0, 1 - (e - 3.2) / 1.2);
+  ctx.globalAlpha = a; ctx.fillStyle = '#fffaf0'; ctx.fillRect(0, 0, CW, CH); ctx.globalAlpha = 1;
 }
 
 // ---------- 발사대 목록 ----------
-const ICONS = ['🛍️', '🚛', '🪃', '🚀', '🛰️', '🗼', '⛰️', '🏚️', '🏝️', '💥'];
+const ICONS = ['🛰️', '🚀', '🌦️', '📡', '🏗️', '🗼', '☄️', '🏭', '🌑', '💍'];
 let rows = null;
 function buildList() {
   const list = $('list');
   list.innerHTML = '';
   rows = [];
   const tapRow = document.createElement('div'); tapRow.className = 'item';
-  tapRow.innerHTML = '<div class="ic">🗑️</div>';
+  tapRow.innerHTML = '<div class="ic">🚀</div>';
   const ti = document.createElement('div'); ti.className = 'info'; tapRow.appendChild(ti);
   const tb = document.createElement('button'); tapRow.appendChild(tb);
   tb.onclick = () => { if (L.buyTap(save)) { sfx.buy(); persist(); refreshList(); } };
@@ -740,7 +959,7 @@ function refreshList() {
   for (const r of rows) {
     if (r.tap) {
       const c = L.tapCost(save.tapLv);
-      r.info.innerHTML = `<b>봉투 키우기 <small>Lv.${save.tapLv}</small></b><span>버튼 한 번에 보내는 쓰레기 두 배</span><span class="gain">한 번에 ${L.formatNumber(L.tapPower(save))}톤 → ${L.formatNumber(L.tapPower(save) * 2)}톤</span>`;
+      r.info.innerHTML = `<b>로켓 키우기 <small>Lv.${save.tapLv}</small></b><span>버튼 한 번에 쏘는 위성 두 배</span><span class="gain">한 번에 ${L.formatNumber(L.tapPower(save))}톤 → ${L.formatNumber(L.tapPower(save) * 2)}톤</span>`;
       r.btn.textContent = `${L.formatNumber(c)}원`; r.btn.disabled = save.money < c;
       continue;
     }
@@ -771,11 +990,11 @@ function modal(html, buttons) {
 const closeModal = () => { $('modal').hidden = true; };
 function fmtTime(s) { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}시간 ${m}분` : `${m}분 ${Math.floor(s % 60)}초`; }
 function showEnd() {
-  const n = (save.earths || 0) + 1;
-  modal(`<h2>지구 멸망</h2><p>쓰레기를 먹고 자란 행성이<br>마침내 지구를 삼켰습니다.<br>${n}번째 지구가 사라졌어요.</p>
-    <div class="stats"><span>걸린 시간</span><b>${fmtTime(save.time)}</b><span>보낸 쓰레기</span><b>${L.formatNumber(save.sent)}톤</b>${save.best ? `<span>최고 기록</span><b>${fmtTime(Math.min(save.best, save.time))}</b>` : ''}</div>`, [
-    [`새 지구에서 다시<small>모든 생산·발사 영구 ×${2 ** n}</small>`, 'main', () => {
-      L.prestige(save); persist(); ending = null; shots.length = 0; meteors.length = 0; parts.length = 0; shake = 0; city = null; rows = null; refreshList(); closeModal();
+  const c = cfg(), next = L.stageConfig(c.stage + 1), e = L.effects(1, c), cal = L.calendar(save);
+  modal(`<h2>스테이지 ${c.stage} 클리어</h2><p>위성을 거느리며 ${c.endName}만큼 자란 행성이<br>${cal.y}년 ${cal.m}월 ${cal.d}일, 지구와 부딪혔습니다.</p>
+    <div class="stats"><span>걸린 날</span><b>${L.formatNumber(save.time)}일</b><span>쏘아 올린 위성</span><b>${L.formatNumber(save.sats)}기 · ${L.formatNumber(save.sent)}톤</b><span>충돌 속도</span><b>${L.formatSpeed(L.speedKms(1, c))}</b><span>마지막 조석력</span><b>달의 ${L.formatTimes(e.tideRatio)}배</b></div>`, [
+    [`스테이지 ${next.stage} 시작<small>목표: ${next.endName}급 · 모든 발사 영구 ×${L.formatTimes(L.STAGE_BONUS ** next.stage / L.STAGE_BONUS)}</small>`, 'main', () => {
+      L.nextStage(save); persist(); ending = null; shots.length = 0; meteors.length = 0; parts.length = 0; fires.length = 0; newsQueue.length = 0; shake = 0; city = null; rows = null; refreshList(); closeModal();
     }],
   ]);
 }
@@ -784,9 +1003,9 @@ function settingsHtml() {
     <div class="setRow"><span>진동</span><button class="btn" id="setVib">${save.vibrate ? '켬' : '끔'}</button></div>`;
 }
 function showSettings() {
-  modal(`<h2>환경설정</h2>${settingsHtml()}<p style="font-size:13px">부순 지구 ${save.earths || 0}개 · 생산 ×${L.prestigeMult(save)}</p>`, [
-    ['기록 지우기', 'red', () => modal('<h2>기록 지우기</h2><p>질량, 돈, 발사대, 부순 지구가<br>모두 지워져요.</p>', [
-      ['지우기', 'red', () => { Object.assign(save, L.defaultSave(), { sound: save.sound, vibrate: save.vibrate }); persist(); ending = null; city = null; rows = null; refreshList(); closeModal(); }],
+  modal(`<h2>환경설정</h2>${settingsHtml()}<p style="font-size:13px">스테이지 ${save.stage} · 발사 ×${L.formatTimes(L.prestigeMult(save))}</p><p style="font-size:11px;opacity:.7">행성 지도: Solar System Scope(CC BY 4.0), NASA/JPL</p>`, [
+    ['기록 지우기', 'red', () => modal('<h2>기록 지우기</h2><p>스테이지, 위성, 돈, 발사대, 날짜가<br>모두 지워져요.</p>', [
+      ['지우기', 'red', () => { Object.assign(save, L.defaultSave(), { sound: save.sound, vibrate: save.vibrate }); persist(); ending = null; city = null; rows = null; newsQueue.length = 0; refreshList(); closeModal(); }],
       ['취소', '', showSettings],
     ])],
     ['닫기', 'main', closeModal],
@@ -799,9 +1018,10 @@ function applyOffline() {
   save.lastSeen = now;
   if (away < 30 || ending || L.totalRate(save) <= 0) return;
   const r = L.offlineProgress(save, away);
+  save.sats += Math.round(r.seconds * Math.min(5, 0.4 + Math.log10(1 + L.totalRate(save)) * 0.6));
   persist();
   if (r.tons <= 0) return;
-  modal(`<h2>다녀오셨어요</h2><p>자리를 비운 ${fmtTime(r.seconds)} 동안<br>발사대가 쓰레기 <b>${L.formatNumber(r.tons)}톤</b>을 보내고<br>처리비 <b>${L.formatNumber(r.money)}원</b>을 벌었어요<br><br>행성이 그만큼 더 가까워졌습니다…</p>`, [['확인', 'main', () => { closeModal(); checkEnd(); }]]);
+  modal(`<h2>다녀오셨어요</h2><p>자리를 비운 ${fmtTime(r.seconds)}(${L.formatNumber(r.seconds)}일) 동안<br>발사대가 위성 <b>${L.formatNumber(r.tons)}톤</b>을 쏘아 올리고<br>계약금 <b>${L.formatNumber(r.money)}원</b>을 벌었어요<br><br>행성은 그만큼 더 무거워지고 가까워졌습니다.</p>`, [['확인', 'main', () => { closeModal(); checkEnd(); }]]);
 }
 
 // ---------- 연결 ----------
@@ -820,6 +1040,7 @@ function frame(now) {
   last = now;
   update(dt);
   render(now);
+  updateBroadcast(Math.min(0.1, dt), now / 1000);
   requestAnimationFrame(frame);
 }
 resize();
@@ -828,7 +1049,7 @@ applyOffline();
 checkEnd();
 requestAnimationFrame(frame);
 window.trashReady = true;
-window.__trash = { save, tapLaunch, L };
+window.__trash = { save, tapLaunch, L, planetPos: () => planetPos() };
 </script>
 </body>
 </html>

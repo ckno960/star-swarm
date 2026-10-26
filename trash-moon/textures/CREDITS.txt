@@ -1,0 +1,8 @@
+행성 지도 출처
+
+- 수성, 금성(구름), 달, 목성, 토성, 토성 고리, 천왕성, 해왕성, 명왕성, 화성(색 보정):
+  Solar System Scope (https://www.solarsystemscope.com/textures/), CC BY 4.0
+  (https://creativecommons.org/licenses/by/4.0/). 2048x1024로 줄이고 화성은 색을, 명왕성은 관측되지 않은 남쪽을 채움.
+- 이오, 유로파(색 입힘), 가니메데(색 입힘), 타이탄(색 보정):
+  NASA/JPL, NASA 3D Resources (https://github.com/nasa/NASA-3D-Resources), 퍼블릭 도메인.
+- 지구: NASA Blue Marble, three.js 예제 텍스처(earth_atmos_2048.jpg).
