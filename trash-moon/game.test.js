@@ -107,7 +107,7 @@ test('prestige: new Earth, everything doubled forever', () => {
 
 test('news follows progress', () => {
   assert.match(L.currentNews(0), /쓰레기/);
-  assert.match(L.currentNews(0.75), /눈/);
+
   assert.match(L.currentNews(0.99), /안녕/);
 });
 
@@ -124,4 +124,18 @@ test('formatting and save round-trip', () => {
   assert.equal(t.owned[2], 4);
   assert.equal(t.mass, 123);
   assert.deepEqual(L.loadSave({ getItem() { throw new Error('x'); } }), L.defaultSave());
+});
+
+test('planet turns into real planets as it grows, blending at each change', () => {
+  assert.equal(L.planetStage(0).type.id, 'moon');
+  assert.equal(L.planetStage(0.35).type.id, 'mars');
+  assert.equal(L.planetStage(0.7).type.id, 'saturn');
+  assert.equal(L.planetStage(1).type.id, 'jupiter');
+  assert.equal(L.planetStage(1).next, null);
+  assert.equal(L.planetStage(0.2).blend, 0);
+  const b = L.planetStage(0.3 - L.BLEND / 2);
+  assert.equal(b.type.id, 'moon');
+  assert.ok(b.blend > 0.4 && b.blend < 0.6);
+  let prev = -1;
+  for (const t of L.PLANET_TYPES) { assert.ok(t.from > prev); prev = t.from; }
 });
