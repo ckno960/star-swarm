@@ -127,15 +127,27 @@ test('formatting and save round-trip', () => {
 });
 
 test('planet turns into real planets as it grows, blending at each change', () => {
-  assert.equal(L.planetStage(0).type.id, 'moon');
-  assert.equal(L.planetStage(0.35).type.id, 'mars');
-  assert.equal(L.planetStage(0.7).type.id, 'saturn');
+  assert.equal(L.planetStage(0).type.id, 'pluto');
+  assert.equal(L.planetStage(0.2).type.id, 'moon');
+  assert.equal(L.planetStage(0.55).type.id, 'mars');
+  assert.equal(L.planetStage(0.85).type.id, 'saturn');
   assert.equal(L.planetStage(1).type.id, 'jupiter');
   assert.equal(L.planetStage(1).next, null);
   assert.equal(L.planetStage(0.2).blend, 0);
-  const b = L.planetStage(0.3 - L.BLEND / 2);
-  assert.equal(b.type.id, 'moon');
+  const b = L.planetStage(0.53 - L.BLEND / 2);
+  assert.equal(b.type.id, 'ganymede');
   assert.ok(b.blend > 0.4 && b.blend < 0.6);
   let prev = -1;
   for (const t of L.PLANET_TYPES) { assert.ok(t.from > prev); prev = t.from; }
+});
+
+test('every planet stage has a real texture map and render settings', async () => {
+  const { BODIES } = await import('./globe.js');
+  const fs = await import('node:fs');
+  for (const t of [...L.PLANET_TYPES, { id: 'earth' }]) {
+    const b = BODIES[t.id];
+    assert.ok(b, `${t.id} body`);
+    assert.ok(fs.existsSync(new URL(`./textures/${b.tex}.jpg`, import.meta.url)), `${t.id} texture`);
+    if (b.ring && b.ring !== 'faint') assert.ok(fs.existsSync(new URL(`./textures/${b.ring}.png`, import.meta.url)), `${t.id} ring`);
+  }
 });

@@ -25,27 +25,36 @@ export const LAUNCHERS = [
 // 다가올수록 벌어지는 일(진행도 p 기준)
 export const EVENTS = [
   { p: 0, news: '오늘도 쓰레기를 우주로! 쓰레기 걱정 끝?' },
-  { p: 0.15, news: '천문대 "보낸 쓰레기가 작은 천체로 빨려 들어간다"' },
-  { p: 0.3, news: '속보: 쓰레기를 먹은 천체, 화성만큼 커져 붉게 빛나' },
-  { p: 0.42, news: '두꺼운 구름에 덮인 행성… 금성을 닮았다' },
-  { p: 0.54, news: '속보: 행성이 해왕성급 거대 얼음 행성으로' },
-  { p: 0.62, news: '바닷물이 비정상적으로 차오른다, 해안 침수 주의' },
-  { p: 0.66, news: '하늘에 고리가 생겼다… 토성을 닮은 행성' },
-  { p: 0.74, news: '속보: 곳곳에서 지진, 건물이 무너지기 시작' },
-  { p: 0.8, news: '목성급 가스 행성, 낮에도 해를 가린다' },
+  { p: 0.08, news: '천문대 "보낸 쓰레기를 먹고 작은 천체가 자라고 있다"' },
+  { p: 0.16, news: '속보: 쓰레기를 먹은 천체, 달만큼 커졌다' },
+  { p: 0.32, news: '수성보다 커진 천체… 학계 충격' },
+  { p: 0.53, news: '속보: 붉은 화성급 행성으로 성장' },
+  { p: 0.6, news: '두꺼운 구름에 덮인 금성급 행성, 낮에도 또렷하다' },
+  { p: 0.64, news: '바닷물이 비정상적으로 차오른다, 해안 침수 주의' },
+  { p: 0.67, news: '속보: 해왕성급 거대 얼음 행성으로' },
+  { p: 0.76, news: '곳곳에서 지진, 건물이 무너지기 시작' },
+  { p: 0.81, news: '하늘에 거대한 고리가… 토성급 행성' },
   { p: 0.86, news: '하늘에서 불덩이가 떨어진다! 대피하세요' },
-  { p: 0.92, news: '긴급: 조석 마찰로 행성이 달아올라 붉게 빛난다' },
-  { p: 0.97, news: '…안녕, 지구' },
+  { p: 0.89, news: '목성급 가스 행성이 해를 가린다' },
+  { p: 0.94, news: '긴급: 조석 마찰로 행성이 달아올라 붉게 빛난다' },
+  { p: 0.98, news: '…안녕, 지구' },
 ];
 
-// 쓰레기를 먹을수록 행성이 실제 행성처럼 바뀐다(진행도 p 기준)
+// 쓰레기를 먹을수록 실제 천체 크기 순서대로 바뀐다(진행도 p 기준): 명왕성 1,188km → … → 목성 69,911km
 export const PLANET_TYPES = [
-  { id: 'moon', name: '달', from: 0 },
-  { id: 'mars', name: '화성', from: 0.3 },
-  { id: 'venus', name: '금성', from: 0.42 },
-  { id: 'neptune', name: '해왕성', from: 0.54 },
-  { id: 'saturn', name: '토성', from: 0.66 },
-  { id: 'jupiter', name: '목성', from: 0.8 },
+  { id: 'pluto', name: '명왕성', from: 0 },
+  { id: 'europa', name: '유로파', from: 0.08 },
+  { id: 'moon', name: '달', from: 0.16 },
+  { id: 'io', name: '이오', from: 0.24 },
+  { id: 'mercury', name: '수성', from: 0.32 },
+  { id: 'titan', name: '타이탄', from: 0.39 },
+  { id: 'ganymede', name: '가니메데', from: 0.46 },
+  { id: 'mars', name: '화성', from: 0.53 },
+  { id: 'venus', name: '금성', from: 0.6 },
+  { id: 'neptune', name: '해왕성', from: 0.67 },
+  { id: 'uranus', name: '천왕성', from: 0.74 },
+  { id: 'saturn', name: '토성', from: 0.81 },
+  { id: 'jupiter', name: '목성', from: 0.89 },
 ];
 export const BLEND = 0.025;   // 바뀌기 직전 이만큼 동안 서서히 섞인다
 export function planetStage(p) {
@@ -119,7 +128,7 @@ export function distanceKm(p) {
 }
 // 화면에 보이는 반지름(px): 처음엔 낮달처럼 작은 점, 끝에는 화면 폭만큼
 export function apparentRadius(p, maxR, minR = 3) {
-  return minR * (maxR / minR) ** (p ** 1.1);
+  return minR * (maxR / minR) ** (p ** 0.95);
 }
 export function currentNews(p) {
   let n = EVENTS[0];

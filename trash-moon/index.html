@@ -105,8 +105,8 @@
   setTimeout(function () { if (!window.trashReady) document.getElementById('reload').hidden = false; }, 4000);
 </script>
 <script type="module">
-import * as L from './logic.js?v=3';
-import * as P from './planets.js?v=1';
+import * as L from './logic.js?v=4';
+import { createGlobe, AVG_COLOR } from './globe.js?v=1';
 
 const $ = (id) => document.getElementById(id);
 const app = $('app'), cv = $('cv'), ctx = cv.getContext('2d');
@@ -277,8 +277,8 @@ const smokeImg = (() => {
 const shots = [], parts = [], meteors = [], fires = [];
 let shake = 0, flash = 0, ending = null, spawnAcc = 0, rumbleT = 6, lastNews = '', gulp = 0;
 const planetPos = () => [CW / 2, SKY_TOP + (GROUND - SKY_TOP) * 0.34];
-const sphereA = document.createElement('canvas'), sphereB = document.createElement('canvas');
-let sphereT = 0, sphereKey = '';
+// 실제 행성 지도를 입힌 공(WebGL). 안 되는 기기에서는 색이 있는 둥근 점으로 대신한다
+const globe = (() => { try { return createGlobe('./textures/'); } catch (e) { console.warn(e); return null; } })();
 
 function launchShot(big = false) {
   const x0 = 10 + Math.random() * (CW - 20);
@@ -328,9 +328,11 @@ function update(dt) {
   }
   // 다음 행성 표면을 미리 준비
   const st = L.planetStage(p);
-  P.requestTexture(st.type.id);
-  if (st.next && p > st.next.from - 0.08) P.requestTexture(st.next.id);
-  if (p > 0.85) P.requestTexture('earth');
+  if (globe) {
+    globe.preload(st.type.id);
+    if (st.next && p > st.next.from - 0.06) globe.preload(st.next.id);
+    if (p > 0.85) { globe.preload('earth'); globe.preload('jupiter'); }
+  }
 
   const [px, py] = planetPos();
   for (const s of shots) {
@@ -568,91 +570,70 @@ function render(now) {
   if (flash > 0.01) { ctx.globalAlpha = flash; ctx.fillStyle = '#fff6e0'; ctx.fillRect(0, 0, CW, CH); ctx.globalAlpha = 1; }
 }
 
-// 행성: 실제 행성 표면 지도를 공 모양으로, 해가 비추는 쪽만 밝게
-function sphereFor(canvas, id, Rdev, rot, heat) {
-  return P.hasTexture(id) ? P.renderSphere(canvas, id, Rdev, rot, heat) : null;
+// 행성: 실제 행성 지도를 입힌 공. 바뀔 때는 다음 행성과 서서히 섞인다
+function drawGlobe(out, cx, cy, R, alpha = 1) {
+  const e = out.extent * R;
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(out.canvas, cx - e, cy - e, e * 2, e * 2);
+  ctx.globalAlpha = 1;
 }
 function drawPlanet(cx, cy, R, t, p, eclipse, heat) {
   const st = L.planetStage(p);
   const id = st.type.id, nid = st.next ? st.next.id : null;
-  if (R < 5 || !P.hasTexture(id)) {
-    // 아직 멀다: 낮달처럼 희미한 점
-    const c = P.AVG_COLOR[id];
-    const gg = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, 0, cx, cy, Math.max(1.5, R));
-    gg.addColorStop(0, mix(c, '#ffffff', 0.5)); gg.addColorStop(1, c);
-    ctx.globalAlpha = 0.85; ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(cx, cy, Math.max(1.5, R), 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+  const day = clamp01(1 - eclipse / 0.6) * 0.6;   // 밝은 낮일수록 그늘진 쪽이 하늘에 묻힌다
+  const Rdev = Math.max(6, Math.min(900, Math.round(R * DPR)));
+  const out = globe && R >= 3.5 ? globe.render(id, Rdev, t, { heat: id === 'jupiter' ? heat : 0, day }) : null;
+  if (!out) {   // 아직 멀거나 지도를 불러오는 중: 낮달처럼 희미한 점
+    const c = AVG_COLOR[id] || '#c0c0c0', rr = Math.max(1.5, R);
+    const gg = ctx.createRadialGradient(cx - rr * 0.35, cy - rr * 0.35, 0, cx, cy, rr);
+    gg.addColorStop(0, mix(c, '#ffffff', 0.45)); gg.addColorStop(0.7, c); gg.addColorStop(1, mix(c, '#000000', 0.5));
+    ctx.globalAlpha = 0.6 + 0.4 * (1 - day); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
     return;
   }
-  const Rdev = Math.max(4, Math.min(300, Math.round(R * DPR)));
-  const key = `${id}:${nid}:${Rdev}`;
-  // 회전은 1초에 15번만 다시 그린다(충분히 부드럽고 가볍게)
-  if (key !== sphereKey || t - sphereT > 1 / 15) {
-    sphereKey = key; sphereT = t;
-    sphereFor(sphereA, id, Rdev, t * P.SPIN[id], id === 'jupiter' ? heat : 0);
-    if (st.blend > 0 && nid) sphereFor(sphereB, nid, Rdev, t * P.SPIN[nid], nid === 'jupiter' ? heat : 0);
+  drawGlobe(out, cx, cy, R);
+  if (st.blend > 0 && nid) {
+    const o2 = globe.render(nid, Rdev, t, { heat: nid === 'jupiter' ? heat : 0, day });
+    if (o2) drawGlobe(o2, cx, cy, R, st.blend);
   }
-  const ringK = (id === 'saturn' ? 1 - (nid === 'jupiter' ? st.blend : 0) : 0) + (nid === 'saturn' ? st.blend : 0);
-  if (ringK > 0) drawRing(cx, cy, R, ringK, false, eclipse);
-  // 가스 행성의 옅은 대기 테
-  if (['venus', 'neptune', 'saturn', 'jupiter'].includes(id)) {
-    const hg = ctx.createRadialGradient(cx, cy, R * 0.98, cx, cy, R * 1.07);
-    hg.addColorStop(0, rgba(heat > 0 ? '#ff9a6a' : '#cfe4ff', 0.25 + heat * 0.3)); hg.addColorStop(1, rgba('#cfe4ff', 0));
-    ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, R * 1.07, 0, TAU); ctx.fill();
-  }
-  ctx.drawImage(sphereA, cx - R, cy - R, R * 2, R * 2);
-  if (st.blend > 0 && nid && P.hasTexture(nid)) { ctx.globalAlpha = st.blend; ctx.drawImage(sphereB, cx - R, cy - R, R * 2, R * 2); ctx.globalAlpha = 1; }
-  // 낮 하늘에서는 대기 너머로 흐릿하게 보인다(어두워질수록 또렷)
-  const wash = (1 - eclipse) * 0.35 * (1 - clamp01((R - 30) / 120));
-  if (wash > 0.01) { ctx.globalAlpha = wash; ctx.fillStyle = '#9cc2ea'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
-  if (ringK > 0) drawRing(cx, cy, R, ringK, true, eclipse);
-}
-function drawRing(cx, cy, R, k, front, eclipse) {
-  const outer = R * 2.25;
-  const img = P.ringImage(Math.max(32, Math.min(420, Math.round(outer * DPR))));
-  ctx.save();
-  ctx.translate(cx, cy); ctx.rotate(-0.32); ctx.scale(1, 0.22);
-  ctx.beginPath();
-  if (front) ctx.rect(-outer, 0, outer * 2, outer); else ctx.rect(-outer, -outer, outer * 2, outer);
-  ctx.clip();
-  ctx.globalAlpha = k * (0.9 - eclipse * 0.3);
-  ctx.drawImage(img, -outer, -outer, outer * 2, outer * 2);
-  ctx.restore();
 }
 
-// 충돌: 하늘을 덮은 행성 → 하얀 섬광 → 우주에서 본 지구가 거대 행성과 부딪혀 부서진다
-const earthC = document.createElement('canvas'), giantC = document.createElement('canvas');
+// 충돌: 하늘을 덮은 행성 → 하얀 섬광 → 우주에서 본 지구가 달아오른 거대 행성과 부딪혀 부서진다
+const earthCopy = document.createElement('canvas');
 function drawEnding(e, t) {
   if (e < 2.6) return;
   if (e > 3.2) {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, CW, CH);
     const r = seeded(9);
-    for (let i = 0; i < 220; i++) { ctx.fillStyle = `rgba(255,255,255,${0.2 + r() * 0.8})`; ctx.fillRect(r() * CW, r() * CH, 1, 1); }
+    for (let i = 0; i < 260; i++) { ctx.fillStyle = `rgba(255,255,255,${0.15 + r() * 0.8})`; ctx.fillRect(r() * CW, r() * CH, r() < 0.9 ? 0.8 : 1.5, r() < 0.9 ? 0.8 : 1.5); }
     const k = e - 3.2;
-    const er = CW * 0.26, ex = CW * 0.4, ey = CH * 0.5;
-    const gr = CW * 0.75, gx = CW * 1.22 - Math.min(1.2, k * 0.5) * CW * 0.12, gy = CH * 0.02 + Math.min(1.2, k * 0.5) * CH * 0.05;
-    if (P.hasTexture('jupiter')) { P.renderSphere(giantC, 'jupiter', Math.min(300, Math.round(gr * DPR * 0.5)), t * 0.02, 0.8); ctx.drawImage(giantC, gx - gr, gy - gr, gr * 2, gr * 2); }
+    const er = CW * 0.24, ex = CW * 0.4, ey = CH * 0.52;
+    const gr = CW * 0.8, gx = CW * 1.2 - Math.min(1.2, k * 0.5) * CW * 0.12, gy = CH * 0.04 + Math.min(1.2, k * 0.5) * CH * 0.05;
+    const g = globe && globe.render('jupiter', Math.min(800, Math.round(gr * DPR)), t, { heat: 0.85 });
+    if (g) drawGlobe(g, gx, gy, gr);
     const ca = Math.atan2(gy - ey, gx - ex), contactX = ex + Math.cos(ca) * er, contactY = ey + Math.sin(ca) * er;
-    if (P.hasTexture('earth')) {
-      P.renderSphere(earthC, 'earth', Math.min(300, Math.round(er * DPR)), t * 0.01, Math.min(1, Math.max(0, k - 0.6)));
-      if (k < 1.4) ctx.drawImage(earthC, ex - er, ey - er, er * 2, er * 2);
+    const eo = globe && globe.render('earth', Math.min(800, Math.round(er * DPR)), t, { heat: Math.min(1, Math.max(0, k - 0.6)) });
+    if (eo) {
+      if (earthCopy.width !== eo.canvas.width) { earthCopy.width = eo.canvas.width; earthCopy.height = eo.canvas.height; }
+      const ec = earthCopy.getContext('2d'); ec.clearRect(0, 0, earthCopy.width, earthCopy.height); ec.drawImage(eo.canvas, 0, 0);
+      const ext = eo.extent * er;
+      if (k < 1.4) ctx.drawImage(earthCopy, ex - ext, ey - ext, ext * 2, ext * 2);
       else {
-        // 조각나 흩어진다
+        // 조각나 흩어지며 녹은 속이 드러난다
         const spread = (k - 1.4) * 40;
-        for (let s = 0; s < 8; s++) {
-          const a0 = (s / 8) * TAU, a1 = ((s + 1) / 8) * TAU, am = (a0 + a1) / 2;
-          ctx.save(); ctx.translate(ex + Math.cos(am) * spread, ey + Math.sin(am) * spread); ctx.rotate((k - 1.4) * 0.12 * (s % 2 ? 1 : -1));
+        for (let sI = 0; sI < 8; sI++) {
+          const a0 = (sI / 8) * TAU, a1 = ((sI + 1) / 8) * TAU, am = (a0 + a1) / 2;
+          ctx.save(); ctx.translate(ex + Math.cos(am) * spread, ey + Math.sin(am) * spread); ctx.rotate((k - 1.4) * 0.12 * (sI % 2 ? 1 : -1));
           ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, er, a0, a1); ctx.closePath(); ctx.clip();
-          ctx.drawImage(earthC, -er, -er, er * 2, er * 2);
+          ctx.drawImage(earthCopy, -ext, -ext, ext * 2, ext * 2);
           const core = ctx.createRadialGradient(0, 0, 0, 0, 0, er * 0.6);
           core.addColorStop(0, 'rgba(255,240,170,0.95)'); core.addColorStop(0.4, 'rgba(255,110,30,0.8)'); core.addColorStop(1, 'rgba(120,20,10,0)');
           ctx.fillStyle = core; ctx.beginPath(); ctx.arc(0, 0, er * 0.6, 0, TAU); ctx.fill();
           ctx.restore();
         }
         const rr = seeded(4);
-        for (let i = 0; i < 120; i++) { const a = rr() * TAU, d = er * 0.8 + spread * (1 + rr() * 2.5); ctx.fillStyle = ['#ffb040', '#6a5a50', '#4a7ab8', '#ff6a20'][i % 4]; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * d, ey + Math.sin(a) * d, 0.6 + rr() * 1.6, 0, TAU); ctx.fill(); }
+        for (let i = 0; i < 140; i++) { const a = rr() * TAU, d = er * 0.8 + spread * (1 + rr() * 2.5); ctx.fillStyle = ['#ffb040', '#6a5a50', '#4a7ab8', '#ff6a20'][i % 4]; ctx.beginPath(); ctx.arc(ex + Math.cos(a) * d, ey + Math.sin(a) * d, 0.6 + rr() * 1.6, 0, TAU); ctx.fill(); }
       }
     }
-    // 맞닿은 곳의 섬광과 충격파
     const cg = ctx.createRadialGradient(contactX, contactY, 0, contactX, contactY, er * (0.4 + k * 0.6));
     cg.addColorStop(0, `rgba(255,250,220,${Math.min(1, 0.4 + k * 0.4)})`); cg.addColorStop(0.3, 'rgba(255,160,60,0.5)'); cg.addColorStop(1, 'rgba(255,80,20,0)');
     ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(contactX, contactY, er * (0.4 + k * 0.6), 0, TAU); ctx.fill();
@@ -735,7 +716,7 @@ function settingsHtml() {
     <div class="setRow"><span>진동</span><button class="btn" id="setVib">${save.vibrate ? '켬' : '끔'}</button></div>`;
 }
 function showSettings() {
-  modal(`<h2>환경설정</h2>${settingsHtml()}<p style="font-size:13px">부순 지구 ${save.earths || 0}개 · 생산 ×${L.prestigeMult(save)}</p>`, [
+  modal(`<h2>환경설정</h2>${settingsHtml()}<p style="font-size:13px">부순 지구 ${save.earths || 0}개 · 생산 ×${L.prestigeMult(save)}</p><p style="font-size:11px;opacity:.7">행성 지도: Solar System Scope(CC BY 4.0), NASA/JPL</p>`, [
     ['기록 지우기', 'red', () => modal('<h2>기록 지우기</h2><p>질량, 돈, 발사대, 부순 지구가<br>모두 지워져요.</p>', [
       ['지우기', 'red', () => { Object.assign(save, L.defaultSave(), { sound: save.sound, vibrate: save.vibrate }); persist(); ending = null; city = null; rows = null; refreshList(); closeModal(); }],
       ['취소', '', showSettings],
@@ -779,7 +760,7 @@ applyOffline();
 checkEnd();
 requestAnimationFrame(frame);
 window.trashReady = true;
-window.__trash = { save, tapLaunch, L };
+window.__trash = { save, tapLaunch, L, planetPos: () => planetPos() };
 </script>
 </body>
 </html>
