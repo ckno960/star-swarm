@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>좀비 열차</title>
+<link rel="preload" as="image" href="./img/bg.png?v=1">
 <style>
   :root { --bg: #17110d; --card: #2a1f18; --line: #4a3a2c; --cream: #f0e2c0; --gold: #ffcf5a; --red: #e0503a; --gnb: 62px; }
   * { box-sizing: border-box; }
@@ -119,7 +120,7 @@
   </div>
   <div id="banner" class="hide sh"></div>
   <div id="acts">
-    <button class="act" id="aFeed"><b>🥫</b>먹이<small></small></button>
+    <button class="act" id="aFeed"><b>🥫</b>밥 먹기<small></small></button>
     <button class="act" id="aStove"><b>🔥</b><span></span><small></small></button>
     <button class="act" id="aRepair"><b>🔧</b>수리<small>🔩 2</small></button>
     <button class="act" id="aHeal"><b>💊</b>약<small>+40</small></button>
@@ -141,37 +142,26 @@
 </script>
 <script type="module">
 import * as L from './logic.js?v=1';
-import { Buf, createRoom, compose, catSprite, catBody, zombieSprite } from './pixel.js?v=1';
+import { BG, IMG, loadImages, drawScene } from './scene.js?v=1';
 
 const $ = (id) => document.getElementById(id);
 const save = L.loadSave(localStorage);
-const PET = '모모';
+const BOY = '하루', DOG = '보리';
 
-// ---------- 화면 크기: 낮은 해상도(가로 200픽셀)로 그리고 픽셀 그대로 키워 화면을 꽉 채운다 ----------
-const AW = 200;
+// ---------- 화면 크기: 배경 그림(704×1520)을 화면에 꽉 차게(cover) ----------
 const cv = $('cv'), fx = $('fx'), scene = $('scene');
-let room = null, buf = null, img = null, actx = null, art = null, fctx = null;
-let SW = 390, SH = 480, K = 2, DPR = 1;
+let fctx = null, gctx = null;
+let SW = 390, SH = 780, DPR = 1, S = 0.5, OX = 0, OY = 0;
 function resize() {
   SW = scene.clientWidth; SH = scene.clientHeight; DPR = Math.min(3, window.devicePixelRatio || 1);
-  K = SW / AW;
-  const AH = Math.max(120, Math.round(SH / K));
-  if (!room || room.AH !== AH) {
-    room = createRoom(AW, AH);
-    buf = new Buf(AW, AH);
-    art = document.createElement('canvas'); art.width = AW; art.height = AH;
-    actx = art.getContext('2d');
-    img = actx.createImageData(AW, AH);
-    buf.d = new Uint32Array(img.data.buffer);
-  }
-  cv.width = Math.round(SW * DPR); cv.height = Math.round(room.AH * K * DPR);
-  cv.style.width = `${SW}px`; cv.style.height = `${room.AH * K}px`;
-  fx.width = Math.round(SW * DPR); fx.height = Math.round(SH * DPR);
-  fx.style.width = `${SW}px`; fx.style.height = `${SH}px`;
-  fctx = fx.getContext('2d');
+  S = Math.max(SW / BG.w, SH / BG.h); OX = (SW - BG.w * S) / 2; OY = (SH - BG.h * S) / 2;
+  for (const c of [cv, fx]) { c.width = Math.round(SW * DPR); c.height = Math.round(SH * DPR); c.style.width = `${SW}px`; c.style.height = `${SH}px`; }
+  fctx = fx.getContext('2d'); gctx = cv.getContext('2d');
 }
 new ResizeObserver(() => resize()).observe(scene);
 resize();
+const toScreen = (x, y) => [OX + x * S, OY + y * S];
+const toBg = (x, y) => [(x - OX) / S, (y - OY) / S];
 
 // ---------- 소리 ----------
 let ac = null;
@@ -206,7 +196,7 @@ const sfx = {
   hit() { noise(0.12, { vol: 0.14, from: 2600, to: 200 }); tone(140, 0.12, { type: 'square', vol: 0.03, to: 80 }); },
   kill() { noise(0.35, { vol: 0.12, from: 900, to: 80 }); tone(70, 0.4, { type: 'sawtooth', vol: 0.03, to: 40 }); },
   zap() { tone(1400, 0.2, { type: 'square', vol: 0.02, to: 300 }); noise(0.25, { vol: 0.06, from: 6000, to: 1000 }); },
-  meow() { tone(760, 0.18, { type: 'triangle', vol: 0.05, to: 1150 }); tone(1100, 0.3, { type: 'triangle', vol: 0.045, to: 620, delay: 0.16 }); },
+  woof() { tone(420, 0.12, { type: 'sawtooth', vol: 0.04, to: 300 }); tone(460, 0.14, { type: 'sawtooth', vol: 0.04, to: 320, delay: 0.18 }); },
   eat() { [0, 0.15, 0.3].forEach((d) => noise(0.06, { vol: 0.05, from: 1800, to: 600, delay: d })); },
   click() { tone(520, 0.05, { type: 'square', vol: 0.025 }); },
   buy() { [660, 880, 1320].forEach((f, i) => tone(f, 0.12, { type: 'square', vol: 0.025, delay: i * 0.07 })); },
@@ -217,20 +207,8 @@ const sfx = {
 };
 const buzz = (p) => { if (save.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch { /* 없음 */ } };
 
-// ---------- 스프라이트 미리 만들기 ----------
-const CAT = {};
-for (const m of ['sleep', 'awake', 'happy', 'scared']) CAT[m] = catSprite(m);
-CAT.eat = [catSprite('eat', 0), catSprite('eat', 1)];
-const BODY = [catBody(0), catBody(1)];
-let zSprites = null, zSpriteW = 0;
-function zombieFrames(variant) {
-  const w = Math.round(room.winRect.w * 0.82);
-  if (!zSprites || zSpriteW !== w) { zSprites = {}; zSpriteW = w; }
-  return zSprites[variant] || (zSprites[variant] = [zombieSprite(w, 0, variant), zombieSprite(w, 1, variant)]);
-}
-
 // ---------- 상태(화면 전용) ----------
-const view = { scroll: 0, t: 0, zVariant: 0, zHit: 0, eatT: 0, petT: 0, nap: 0, blink: 0, floats: [], hearts: [], shake: 0, clackT: 0, bangT: 0, crackT: 0, lastZombie: null, warned: -1 };
+const view = { dogPetT: 0, scroll: 0, t: 0, zVariant: 0, zHit: 0, eatT: 0, petT: 0, nap: 0, blink: 0, floats: [], hearts: [], shake: 0, clackT: 0, bangT: 0, crackT: 0, lastZombie: null, warned: -1 };
 function banner(text, red = false, ms = 2200) {
   const b = $('banner');
   b.textContent = text; b.className = `sh${red ? ' red' : ''}`;
@@ -238,24 +216,29 @@ function banner(text, red = false, ms = 2200) {
 }
 function floatText(text, x, y, color = '#fff') { view.floats.push({ text, x, y, color, t: 0 }); }
 
-// ---------- 고양이 기분 → 그림 ----------
-function catView() {
-  const z = save.zombie, night = L.isNight(L.hourOf(save));
-  const cold = save.warmth < 30, t = view.t;
-  let mood, body = null;
-  if (save.dead) mood = 'sleep';
-  else if (z && z.t > L.ZOMBIE_APPROACH * 0.5) { mood = 'scared'; body = BODY[0]; }
-  else if (view.eatT > 0) { mood = 'eat'; body = BODY[Math.floor(t * 2) % 2]; }
-  else if (view.petT > 0) { mood = 'happy'; body = BODY[Math.floor(t * 3) % 2]; }
-  else if (night || save.health < 35 || view.nap > 0) mood = 'sleep';
-  else { mood = view.blink > 0 ? 'sleep' : 'awake'; body = BODY[Math.floor(t * 0.8) % 2]; }
-  const sprite = mood === 'eat' ? CAT.eat[Math.floor(t * 6) % 2] : CAT[mood];
-  let dx = 0, dy = 0;
-  if (mood === 'sleep') dy = Math.floor(t * 0.6) % 2;
-  if (mood === 'scared') dx = Math.round(Math.sin(t * 40));
-  if (cold) dx += Math.round(Math.sin(t * 30) * 0.6);
-  return { mood, sprite, body, dx, dy, tint: cold ? 0xffe0a080 : 0 };
+// ---------- 소년·코기 상태 → 그림 ----------
+function boyView() {
+  const z = save.zombie, night = L.isNight(L.hourOf(save)), t = view.t;
+  let img, mood, dx = 0, dy = 0;
+  if (save.dead || night || save.health < 35 || view.nap > 0) { mood = 'sleep'; img = Math.floor(t * 0.7) % 2 ? 'boy_sleep_2' : 'boy_sleep_1'; }
+  if (z && z.t > L.ZOMBIE_APPROACH * 0.5 && !save.dead) { mood = 'scared'; img = 'boy_scared'; dx = Math.sin(t * 40) * 1.5; }
+  else if (view.eatT > 0) { mood = 'eat'; img = Math.floor(t * 3) % 2 ? 'boy_eat_2' : 'boy_eat_1'; }
+  else if (view.petT > 0) { mood = 'happy'; img = 'boy_happy'; }
+  else if (!mood && save.warmth < 30) { mood = 'cold'; img = 'boy_cold'; dx = Math.sin(t * 30) * 1; }
+  else if (!mood) { mood = 'idle'; img = view.blink > 0 ? 'boy_blink' : Math.floor(t / 2.6) % 2 ? 'boy_idle_2' : 'boy_idle_1'; }
+  return { img, mood, dx, dy };
 }
+function corgiView() {
+  const z = save.zombie, t = view.t;
+  let dx = 0, dy = 0, sx = 1, sy = 1 + Math.sin(t * 2.4) * 0.012, mood = 'sit';
+  if (z && z.t > L.ZOMBIE_APPROACH * 0.5 && !save.dead) { mood = 'bark'; dx = Math.sin(t * 50) * 2; dy = -Math.abs(Math.sin(t * 9)) * 6; }
+  else if (view.dogPetT > 0) { mood = 'happy'; dy = -Math.abs(Math.sin(t * 8)) * 12; sx = 1 + Math.sin(t * 16) * 0.03; }
+  else if (view.eatT > 0) { mood = 'eat'; sy = 0.96 + Math.sin(t * 10) * 0.02; }
+  else if (save.hunger < 25 || save.warmth < 30) { mood = 'sad'; sy = 0.97; }
+  return { mood, dx, dy, sx, sy };
+}
+const corgiBox = () => { const im = IMG.corgi, w = im.width * BG.corgi.k, h = im.height * BG.corgi.k; return { x: BG.corgi.cx - w / 2, y: BG.corgi.by - h, w, h }; };
+const boyHead = (b) => (b.mood === 'sleep' ? [BG.sleep.x + 280, BG.sleep.y + 20] : [BG.sit.cx, BG.sit.by - 130]);
 
 // ---------- 그리기 ----------
 const isRain = () => { const b = Math.floor(save.minutes / 360); return ((b * 7919) % 5) === 0; };
@@ -264,63 +247,56 @@ function render() {
   let zv = null;
   if (z) {
     if (view.lastZombie !== z) { view.lastZombie = z; view.zVariant = Math.floor(Math.random() * 6); }
-    const fr = zombieFrames(view.zVariant), k = Math.min(1, z.t / L.ZOMBIE_APPROACH);
-    zv = { k, hit: view.zHit > 0, sprite: fr[k >= 1 ? Math.floor(view.t * 2.2) % 2 : 0] };
+    const k = Math.min(1, z.t / L.ZOMBIE_APPROACH);
+    zv = { k, hit: view.zHit > 0, slap: k >= 1 ? Math.floor(view.t * 2.2) % 2 : 0, variant: view.zVariant };
   }
-  const cat = catView();
-  const o = {
-    t: view.t, daylight: L.daylight(L.hourOf(save)), scroll: view.scroll, crowd: Math.min(1, L.zombieRate(save) / 1.6),
-    rain: isRain(), station: !!save.station, zombie: zv, fire: save.stoveOn && save.fuel > 0 ? 1 : 0, fuel: save.fuel, food: save.food,
-    barricade: save.barricade / L.barricadeMax(save), plates: save.up.plate, lampOn: true, radioOn: save.up.radio > 0,
-    cat: { sprite: cat.sprite, body: cat.body, dx: cat.dx, dy: cat.dy, tint: cat.tint },
-  };
-  room._plates = save.up.plate;
-  compose(buf, room, o);
-  actx.putImageData(img, 0, 0);
-  const g = cv.getContext('2d');
-  g.imageSmoothingEnabled = false;
-  const sx = view.shake > 0 ? Math.round((Math.random() - 0.5) * 6 * view.shake) * DPR : 0;
-  g.drawImage(art, 0, 0, room.AW, room.AH, sx, 0, cv.width, cv.height);
-  drawFx(cat);
+  const boy = boyView(), corgi = corgiView();
+  const g = gctx;
+  const shake = view.shake > 0 ? (Math.random() - 0.5) * 6 * view.shake : 0;
+  g.setTransform(DPR * S, 0, 0, DPR * S, DPR * (OX + shake), DPR * OY);
+  drawScene(g, {
+    t: view.t, daylight: L.daylight(L.hourOf(save)), scroll: view.scroll, rain: isRain(), station: !!save.station, zombie: zv,
+    fireOn: save.stoveOn && save.fuel > 0, plates: save.up.plate, barricade: save.barricade / L.barricadeMax(save), boy, corgi,
+  });
+  drawFx(boy, corgi);
 }
-// 픽셀 위에 얹는 글자들(또렷한 폰트)
-function drawFx(cat) {
-  const c = fctx, k = K;
+// 그림 위에 얹는 글자들
+function drawFx(boy, corgi) {
+  const c = fctx;
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
   c.clearRect(0, 0, SW, SH);
   c.textAlign = 'center'; c.textBaseline = 'middle';
-  const r = room.winRect;
-  // 역 이름 간판
+  const W = BG.win, [wx, wy] = toScreen(W.x, W.y), ww = W.w * S, wh = W.h * S;
   if (save.station) {
-    c.font = `900 ${Math.max(9, r.w * k * 0.12)}px system-ui, sans-serif`; c.fillStyle = '#fff';
-    c.fillText(save.station.name, (r.x + r.w / 2) * k, (r.y + r.h * 0.12 + 2.5) * k);
+    c.font = `900 ${Math.max(10, ww * 0.1)}px system-ui, sans-serif`; c.fillStyle = '#fff'; c.strokeStyle = '#000'; c.lineWidth = 3;
+    c.strokeText(save.station.name, wx + ww / 2, wy + wh * 0.42); c.fillText(save.station.name, wx + ww / 2, wy + wh * 0.42);
   }
-  // 좀비 체력
   const z = save.zombie;
   if (z && z.t > L.ZOMBIE_APPROACH * 0.6) {
-    const w = r.w * k * 0.7, x = (r.x + r.w / 2) * k - w / 2, y = r.y * k - 10;
+    const w = ww * 0.7, x = wx + ww / 2 - w / 2, y = wy - 10;
     c.fillStyle = 'rgba(0,0,0,0.7)'; c.fillRect(x - 2, y - 2, w + 4, 8);
     c.fillStyle = '#7ad04a'; c.fillRect(x, y, w * Math.max(0, z.hp / z.max), 4);
-    if (view.t % 1.2 < 0.8) { c.font = '900 12px system-ui, sans-serif'; c.fillStyle = '#ffdd66'; c.strokeStyle = '#000'; c.lineWidth = 3; c.strokeText('눌러서 때리기!', (r.x + r.w / 2) * k, (r.y + r.h + 6) * k); c.fillText('눌러서 때리기!', (r.x + r.w / 2) * k, (r.y + r.h + 6) * k); }
+    if (view.t % 1.2 < 0.8) { c.font = '900 13px system-ui, sans-serif'; c.fillStyle = '#ffdd66'; c.strokeStyle = '#000'; c.lineWidth = 3; c.strokeText('눌러서 때리기!', wx + ww / 2, wy + wh + 12); c.fillText('눌러서 때리기!', wx + ww / 2, wy + wh + 12); }
   }
-  // 고양이 머리 위: Zz, 배고픔 말풍선
-  const head = cat.body ? [room.catSit[0], room.catSit[1] - 38] : [room.catAt[0], room.catAt[1] - 26];
-  if (cat.mood === 'sleep' && !save.dead) {
-    c.font = '900 11px system-ui, sans-serif'; c.fillStyle = '#e8e4ff';
-    for (let i = 0; i < 3; i++) { const p = (view.t * 0.4 + i / 3) % 1; c.globalAlpha = Math.sin(p * Math.PI); c.fillText('z', (head[0] + 8 + p * 8) * k, (head[1] + 4 - p * 12) * k); }
+  // 소년 머리 위: Zz, 배고픔 말풍선
+  const [hx, hy] = toScreen(...boyHead(boy));
+  if (boy.mood === 'sleep' && !save.dead) {
+    c.font = '900 13px system-ui, sans-serif'; c.fillStyle = '#e8e4ff'; c.strokeStyle = '#000'; c.lineWidth = 2;
+    for (let i = 0; i < 3; i++) { const p = (view.t * 0.4 + i / 3) % 1; c.globalAlpha = Math.sin(p * Math.PI); c.strokeText('z', hx + 8 + p * 12, hy - p * 22); c.fillText('z', hx + 8 + p * 12, hy - p * 22); }
     c.globalAlpha = 1;
   } else if (save.hunger < 25 && !save.dead) {
-    const bx = (head[0] + 12) * k, by = (head[1] - 4) * k;
-    c.fillStyle = 'rgba(255,255,255,0.92)'; c.beginPath(); c.ellipse(bx, by, 14, 11, 0, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.arc(bx - 12, by + 12, 3, 0, Math.PI * 2); c.fill();
-    c.font = '14px system-ui'; c.fillText('🐟', bx, by + 1);
+    const bx = hx + 30, by = hy - 14;
+    c.fillStyle = 'rgba(255,255,255,0.92)'; c.beginPath(); c.ellipse(bx, by, 15, 12, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(bx - 13, by + 13, 3, 0, Math.PI * 2); c.fill();
+    c.font = '15px system-ui'; c.fillText('🍖', bx, by + 1);
   }
-  // 하트
-  for (const h of view.hearts) { c.globalAlpha = 1 - h.t; c.font = '14px system-ui'; c.fillText('💜', h.x * k, (h.y - h.t * 14) * k); }
+  // 코기: 짖기
+  const cb = corgiBox(), [cx, cy] = toScreen(cb.x + cb.w / 2, cb.y);
+  if (corgi.mood === 'bark' && view.t % 0.6 < 0.35) { c.font = '900 14px system-ui, sans-serif'; c.fillStyle = '#fff'; c.strokeStyle = '#000'; c.lineWidth = 3; c.strokeText('멍! 멍!', cx, cy - 8); c.fillText('멍! 멍!', cx, cy - 8); }
+  for (const h of view.hearts) { c.globalAlpha = 1 - h.t; c.font = '16px system-ui'; const [x, y] = toScreen(h.x, h.y); c.fillText('🧡', x, y - h.t * 24); }
   c.globalAlpha = 1;
-  // 떠오르는 글자
-  c.font = '900 14px system-ui, sans-serif'; c.lineWidth = 3; c.strokeStyle = '#000';
-  for (const f of view.floats) { c.globalAlpha = Math.min(1, 2 - f.t * 2); c.fillStyle = f.color; const y = f.y * k - f.t * 26; c.strokeText(f.text, f.x * k, y); c.fillText(f.text, f.x * k, y); }
+  c.font = '900 15px system-ui, sans-serif'; c.lineWidth = 3; c.strokeStyle = '#000';
+  for (const f of view.floats) { c.globalAlpha = Math.min(1, 2 - f.t * 2); c.fillStyle = f.color; const [x, y0] = toScreen(f.x, f.y), y = y0 - f.t * 28; c.strokeText(f.text, x, y); c.fillText(f.text, x, y); }
   c.globalAlpha = 1;
 }
 
@@ -391,7 +367,7 @@ function openTab(name) {
     body.appendChild(kv);
   } else if (name === 'log') {
     sheetKey = `log${Math.floor(save.km)}${save.kills}${save.route}`;
-    $('sheetTitle').innerHTML = `기록 <span>${PET}와 함께한 여행</span>`;
+    $('sheetTitle').innerHTML = `기록 <span>${BOY}와 ${DOG}의 여행</span>`;
     const kv = document.createElement('div'); kv.className = 'kv';
     kv.innerHTML = `<span>이번 여행</span><b>${save.runDays}일째</b><span>최고 기록</span><b>${Math.max(save.best.days, save.runDays)}일</b><span>끝낸 노선</span><b>${save.cleared}개</b><span>가장 먼 노선</span><b>${save.best.route}</b><span>물리친 좀비</span><b>${save.kills}</b>`;
     body.appendChild(kv);
@@ -409,10 +385,10 @@ function openTab(name) {
 for (const b of document.querySelectorAll('#gnb button')) b.onclick = () => { sfx.click(); openTab(tab === b.dataset.tab ? 'room' : b.dataset.tab); };
 
 // ---------- 행동 ----------
-$('aFeed').onclick = () => { if (L.feed(save)) { sfx.eat(); view.eatT = 2; view.nap = 0; floatText('냠냠 +30', room.catSit[0], room.catSit[1] - 44, '#ffd08a'); updateUI(); } };
+$('aFeed').onclick = () => { if (L.feed(save)) { sfx.eat(); view.eatT = 2; view.nap = 0; floatText('냠냠 +30', BG.sit.cx, BG.sit.by - 170, '#ffd08a'); updateUI(); } };
 $('aStove').onclick = () => { L.toggleStove(save); sfx.click(); updateUI(); };
-$('aRepair').onclick = () => { if (L.repair(save)) { sfx.bang(); buzz(20); floatText('🔧 +25', room.winRect.x + room.winRect.w / 2, room.winRect.y + room.winRect.h, '#cfe8ff'); updateUI(); } };
-$('aHeal').onclick = () => { if (L.heal(save)) { sfx.buy(); floatText('❤️ +40', room.catAt[0], room.catAt[1] - 32, '#ff9aa8'); updateUI(); } };
+$('aRepair').onclick = () => { if (L.repair(save)) { sfx.bang(); buzz(20); floatText('🔧 +25', BG.win.x + BG.win.w / 2, BG.win.y + BG.win.h, '#cfe8ff'); updateUI(); } };
+$('aHeal').onclick = () => { if (L.heal(save)) { sfx.buy(); floatText('❤️ +40', BG.sit.cx, BG.sit.by - 170, '#ff9aa8'); updateUI(); } };
 $('aForage').onclick = () => {
   const r = L.forage(save); if (!r) return;
   sfx.click();
@@ -420,31 +396,39 @@ $('aForage').onclick = () => {
   if (save.dead) onDead();
 };
 
-// 장면 누르기: 좀비 때리기, 고양이 쓰다듬기, 난로
+// 장면 누르기: 좀비 때리기, 코기·소년 쓰다듬기, 난로
 scene.addEventListener('pointerdown', (e) => {
   if (!$('modal').hidden) return;
   audio();
   if (tab !== 'room') { openTab('room'); return; }
-  const rect = cv.getBoundingClientRect(), x = (e.clientX - rect.left) / K, y = (e.clientY - rect.top) / K;
-  const r = room.winRect;
-  if (save.zombie && x > r.x - 8 && x < r.x + r.w + 8 && y > r.y - 8 && y < r.y + r.h + 10) {
+  const rect = cv.getBoundingClientRect(), [x, y] = toBg(e.clientX - rect.left, e.clientY - rect.top);
+  const r = BG.win;
+  if (save.zombie && x > r.x - 20 && x < r.x + r.w + 20 && y > r.y - 20 && y < r.y + r.h + 30) {
     const res = L.hitZombie(save);
     if (res) {
       view.zHit = 0.1; view.shake = 0.5; sfx.hit(); buzz(12);
-      floatText(`-${L.weaponDmg(save)}`, x + (Math.random() - 0.5) * 10, y, '#ffe08a');
-      if (res.killed) { sfx.kill(); buzz([20, 30, 40]); floatText(res.scrap ? '+1 🔩' : '처치!', r.x + r.w / 2, r.y + r.h / 2, '#9fe08a'); if (res.food) floatText('+1 🥫', r.x + r.w / 2, r.y + r.h / 2 + 10, '#ffd08a'); updateUI(); }
+      floatText(`-${L.weaponDmg(save)}`, x + (Math.random() - 0.5) * 30, y, '#ffe08a');
+      if (res.killed) { sfx.kill(); buzz([20, 30, 40]); floatText(res.scrap ? '+1 🔩' : '처치!', r.x + r.w / 2, r.y + r.h / 2, '#9fe08a'); if (res.food) floatText('+1 🥫', r.x + r.w / 2, r.y + r.h / 2 + 30, '#ffd08a'); updateUI(); }
     }
     return;
   }
-  const cat = catView(), head = cat.body ? [room.catSit[0], room.catSit[1] - 26] : [room.catAt[0], room.catAt[1] - 13];
-  if (Math.hypot(x - head[0], y - head[1]) < 20) {
-    if (view.petT <= 0) { L.pet(save); sfx.meow(); buzz(10); }
-    view.petT = 1.6; view.nap = 0;
-    view.hearts.push({ x: head[0] + (Math.random() - 0.5) * 12, y: head[1] - 10, t: 0 });
+  const cb = corgiBox();
+  if (x > cb.x && x < cb.x + cb.w && y > cb.y && y < cb.y + cb.h) {
+    if (view.dogPetT <= 0) { L.pet(save); sfx.woof(); buzz(10); }
+    view.dogPetT = 1.6; view.petT = 1.2;
+    view.hearts.push({ x: cb.x + cb.w / 2 + (Math.random() - 0.5) * 40, y: cb.y + 10, t: 0 });
     return;
   }
-  const fr = room.fireRect;
-  if (x > fr.x - 6 && x < fr.x + fr.w + 6 && y > fr.y - 10 && y < fr.y + fr.h + 6) { $('aStove').click(); }
+  const boy = boyView(), [bx, by] = boyHead(boy);
+  if (Math.hypot(x - bx, y - by - 40) < 90) {
+    if (boy.mood === 'sleep') return;
+    if (view.petT <= 0) { L.pet(save); sfx.click(); }
+    view.petT = 1.6;
+    view.hearts.push({ x: bx + (Math.random() - 0.5) * 40, y: by - 10, t: 0 });
+    return;
+  }
+  const F = BG.fire;
+  if (x > F.x - 30 && x < F.x + F.w + 30 && y > F.y - 30 && y < F.y + F.h + 30) { $('aStove').click(); }
 });
 
 // ---------- 모달 ----------
@@ -479,11 +463,11 @@ function search(kind) {
 function onArrive() {
   const cfg = L.routeConfig(save.route), bonus = 5 + 3 * (save.route + 1);
   sfx.win(); buzz([30, 40, 60]);
-  modal(`<h2>🏁 ${cfg.to} 도착!</h2><p>${PET}와 함께 노선 ${save.route}을 끝까지 달렸어요.</p>
+  modal(`<h2>🏁 ${cfg.to} 도착!</h2><p>${BOY}와 ${DOG}가 함께 노선 ${save.route}을 끝까지 달렸어요.</p>
     <div class="stats"><span>지난 날</span><b>${save.runDays}일</b><span>물리친 좀비</span><b>${save.kills}</b><span>보급 고철</span><b>+${bonus} 🔩</b></div>
     <p style="font-size:13px;opacity:.8">다음 노선은 더 길고, 좀비가 더 많아요.</p>`, [[`🚃 ${L.routeConfig(save.route + 1).to}(으)로 출발`, 'main', () => { L.nextRoute(save); closeModal(); banner(`🚃 노선 ${save.route}: ${L.routeConfig(save.route).from} → ${L.routeConfig(save.route).to}`); }]]);
 }
-const DEATH = { hunger: `${PET}가 배고픔을 이기지 못했어요`, cold: `${PET}가 추위를 이기지 못했어요`, zombie: '좀비가 창문을 부수고 들어왔어요' };
+const DEATH = { hunger: `${BOY}가 배고픔을 이기지 못했어요`, cold: `${BOY}가 추위를 이기지 못했어요`, zombie: '좀비가 창문을 부수고 들어왔어요' };
 function onDead() {
   sfx.sad(); buzz([80, 60, 200]);
   modal(`<h2>💤 여기까지…</h2><p>${DEATH[save.dead] || DEATH.zombie}</p>
@@ -491,9 +475,9 @@ function onDead() {
     <p style="font-size:13px;opacity:.8">개조한 것은 그대로 남아요. 같은 노선을 처음부터 다시 달려요.</p>`, [['🐾 다시 시작', 'main', () => { L.restart(save); view.lastZombie = null; closeModal(); }]]);
 }
 function intro() {
-  modal(`<h2>🚃 좀비 열차</h2><p>좀비로 가득한 세상을 달리는 열차 객실. 보라 고양이 <b>${PET}</b>를 지켜 주세요.</p>
+  modal(`<h2>🚃 좀비 열차</h2><p>좀비로 가득한 세상을 달리는 열차 객실. 소년 <b>${BOY}</b>와 웰시코기 <b>${DOG}</b>를 지켜 주세요.</p>
     <ul>
-      <li>🍖 배고프면 <b>먹이</b>, 🔥 추우면 <b>난로</b>(연료를 씀)</li>
+      <li>🍖 배고프면 <b>밥</b>, 🔥 추우면 <b>난로</b>(연료를 씀)</li>
       <li>🧟 창문에 좀비가 붙으면 <b>눌러서 때리세요</b>. 창문이 부서지면 다쳐요</li>
       <li>🚉 50km마다 역: 수색해서 통조림·연료·고철·약을 구해요</li>
       <li>🔩 고철로 열차를 개조해요. 밤엔 좀비가 많고, 4일마다 좀비 떼가 와요</li>
@@ -513,7 +497,7 @@ function frame(now) {
     const ev = L.step(save, dt);
     for (const e of ev) {
       if (e === 'zombie') { sfx.groan(); banner('🧟 좀비가 창문에 붙었어요!', true); buzz([30, 50, 30]); }
-      if (e === 'zap') { sfx.zap(); floatText('⚡ 지지직!', room.winRect.x + room.winRect.w / 2, room.winRect.y + room.winRect.h / 2, '#a8e0ff'); }
+      if (e === 'zap') { sfx.zap(); floatText('⚡ 지지직!', BG.win.x + BG.win.w / 2, BG.win.y + BG.win.h / 2, '#a8e0ff'); }
       if (e === 'day') banner(`☀️ ${L.dayOf(save)}일째 아침`);
       if (e === 'station') onStation();
       if (e === 'arrive') onArrive();
@@ -529,7 +513,7 @@ function frame(now) {
     if (view.nap > 0) view.nap -= dt; else if (Math.random() < dt / 40) view.nap = 8 + Math.random() * 10;
     if (view.blink > 0) view.blink -= dt; else if (Math.random() < dt / 3) view.blink = 0.15;
   }
-  view.eatT = Math.max(0, view.eatT - dt); view.petT = Math.max(0, view.petT - dt); view.zHit = Math.max(0, view.zHit - dt); view.shake = Math.max(0, view.shake - dt * 2);
+  view.eatT = Math.max(0, view.eatT - dt); view.petT = Math.max(0, view.petT - dt); view.dogPetT = Math.max(0, view.dogPetT - dt); view.zHit = Math.max(0, view.zHit - dt); view.shake = Math.max(0, view.shake - dt * 2);
   for (const f of view.floats) f.t += dt; view.floats = view.floats.filter((f) => f.t < 1);
   for (const hh of view.hearts) hh.t += dt; view.hearts = view.hearts.filter((hh) => hh.t < 1);
   render();
@@ -537,10 +521,13 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 updateUI();
-if (save.station) onStation(); else if (save.dead) onDead(); else if (save.arrived) onArrive(); else if (!save.seenIntro) intro();
-requestAnimationFrame(frame);
-window.__zt = { save, L, view, room: () => room };
 window.zombieReady = true;
+loadImages(1).then(() => {
+  last = performance.now();
+  if (save.station) onStation(); else if (save.dead) onDead(); else if (save.arrived) onArrive(); else if (!save.seenIntro) intro();
+  requestAnimationFrame(frame);
+}).catch(() => { $('reload').hidden = false; });
+window.__zt = { save, L, view };
 </script>
 </body>
 </html>
