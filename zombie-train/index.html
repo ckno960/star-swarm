@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>좀비 열차</title>
+<link rel="preload" as="image" href="./img/bg.png?v=1">
+<style>
+  :root { --bg: #17110d; --card: #2a1f18; --line: #4a3a2c; --cream: #f0e2c0; --gold: #ffcf5a; --red: #e0503a; --gnb: 62px; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body {
+    margin: 0; height: 100%; background: #000; overflow: hidden; color: var(--cream);
+    font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    overscroll-behavior: none; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  body { display: flex; justify-content: center; }
+  #app { position: relative; width: 100%; max-width: 480px; height: 100%; height: 100dvh; overflow: hidden; background: #000; }
+  #scene { position: absolute; inset: 0; overflow: hidden; background: #000; }
+  #cv { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
+  #fx { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .sh { text-shadow: 0 1px 0 #000, 0 0 3px #000, 1px 0 0 #000, -1px 0 0 #000; }
+
+  /* 위: 시계, 노선, 수치 */
+  #hud { position: absolute; left: 0; right: 0; top: 0; padding: calc(8px + env(safe-area-inset-top)) 50px 10px 10px; pointer-events: none; background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0)); }
+  #clock { font: 900 15px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  #clock small { font-size: 12px; font-weight: 800; opacity: 0.85; }
+  #route { margin-top: 4px; display: flex; align-items: center; gap: 6px; font: 800 12px system-ui, sans-serif; }
+  #route i { position: relative; flex: 1; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2); }
+  #route i b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: linear-gradient(90deg, #c9a24a, #ffcf5a); }
+  #route i em { position: absolute; top: -9px; font-style: normal; font-size: 13px; transform: translateX(-50%); }
+  #km { margin-top: 3px; font: 800 11.5px system-ui, sans-serif; opacity: 0.9; font-variant-numeric: tabular-nums; }
+  #bars { margin-top: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .bar { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; gap: 2px 4px; font: 800 11px system-ui, sans-serif; white-space: nowrap; }
+  .bar i { grid-column: 1 / 3; }
+  .bar i { height: 7px; border-radius: 2px; background: rgba(12, 8, 6, 0.8); box-shadow: 0 0 0 1px #000; overflow: hidden; }
+  .bar i b { display: block; height: 100%; width: 50%; background: var(--c, #8fd06a); }
+  .bar .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar.low .lb, .bar.low .v { color: #ff8a6a; animation: blink 0.8s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+  #res { margin-top: 6px; display: flex; gap: 10px; font: 800 12.5px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  #res .low b { color: #ff8a6a; }
+  #gear { display: none; }
+  #banner { position: absolute; left: 50%; top: calc(132px + env(safe-area-inset-top)); transform: translateX(-50%); padding: 6px 12px; border-radius: 10px; background: rgba(20, 12, 8, 0.85); border: 1px solid var(--line); font: 900 13.5px system-ui, sans-serif; white-space: nowrap; pointer-events: none; transition: opacity 0.3s; z-index: 3; }
+  #banner.red { background: rgba(120, 20, 14, 0.9); border-color: #ff7a5a; }
+  #banner.hide { opacity: 0; }
+
+  /* 오른쪽 행동 버튼(쇼츠·릴스 버튼처럼) */
+  #acts { position: absolute; right: 8px; bottom: calc(var(--gnb) + env(safe-area-inset-bottom) + 14px); display: flex; flex-direction: column; gap: 10px; align-items: center; z-index: 2; }
+  .act { width: 58px; padding: 0; border: none; background: none; color: #fff; font: 800 11px/1.15 system-ui, sans-serif; text-shadow: 0 1px 2px #000, 0 0 3px #000; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .act b { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; background: rgba(20, 12, 8, 0.62); box-shadow: 0 0 0 2px rgba(255, 230, 190, 0.35), 0 3px 8px rgba(0, 0, 0, 0.5); }
+  .act small { font-size: 10px; font-weight: 700; opacity: 0.85; }
+  .act:active b { transform: scale(0.92); }
+  .act:disabled { opacity: 0.45; }
+  .act.hot b { background: rgba(150, 60, 24, 0.85); box-shadow: 0 0 0 2px #ffb070, 0 0 14px rgba(255, 140, 60, 0.6); }
+  .act.forage b { background: rgba(40, 80, 34, 0.85); }
+
+  /* 아래 GNB */
+  #gnb { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; height: calc(var(--gnb) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(5, 1fr); background: rgba(14, 9, 6, 0.94); border-top: 1px solid rgba(255, 230, 190, 0.12); }
+  #gnb button { border: none; background: none; color: rgba(240, 226, 192, 0.55); font: 800 10.5px system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; position: relative; }
+  #gnb button span { font-size: 21px; filter: grayscale(0.7); }
+  #gnb button.on { color: var(--gold); }
+  #gnb button.on span { filter: none; }
+  #gnb button .dot { position: absolute; top: 8px; right: calc(50% - 18px); width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px #0e0906; }
+
+  /* 탭 시트 */
+  #sheet { position: absolute; left: 0; right: 0; bottom: calc(var(--gnb) + env(safe-area-inset-bottom)); z-index: 5; max-height: 62%; display: flex; flex-direction: column; background: rgba(23, 17, 13, 0.97); border-top: 2px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5); animation: up 0.2s ease-out; }
+  @keyframes up { from { transform: translateY(30px); opacity: 0; } }
+  #sheet h3 { margin: 0; padding: 12px 14px 8px; display: flex; justify-content: space-between; align-items: baseline; font: 900 16px system-ui, sans-serif; color: var(--gold); }
+  #sheet h3 span { font-size: 12.5px; color: var(--cream); opacity: 0.8; font-weight: 700; }
+  #sheetBody { overflow-y: auto; padding: 0 12px 14px; display: flex; flex-direction: column; gap: 6px; -webkit-overflow-scrolling: touch; }
+  .up { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+  .up .ic { font-size: 20px; text-align: center; }
+  .up .nm { font: 900 13px system-ui, sans-serif; }
+  .up .nm em { font-style: normal; color: var(--gold); font-size: 11.5px; margin-left: 3px; }
+  .up .ds { font-size: 11px; opacity: 0.75; margin-top: 1px; }
+  .up button { min-width: 64px; min-height: 36px; border: none; border-radius: 8px; background: #c98a2a; color: #1a0f06; font: 900 13px system-ui, sans-serif; }
+  .up button:disabled { background: #3a2c20; color: #8a7a68; }
+  .up.max button { background: #2c3a2a; color: #9fd08a; }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 10px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-size: 14px; }
+  .kv b { color: #fff; text-align: right; }
+  .stops { display: flex; flex-direction: column; gap: 0; padding: 4px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+  .stop { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; padding: 6px 0; font-size: 13.5px; border-bottom: 1px dashed var(--line); }
+  .stop:last-child { border: none; }
+  .stop.done { opacity: 0.5; }
+  .stop.next { color: var(--gold); font-weight: 900; }
+
+  .screen { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.72); }
+  .card { width: 100%; max-width: 330px; padding: 18px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; background: var(--card); border: 2px solid #000; box-shadow: 0 0 0 2px var(--line), 0 12px 40px rgba(0, 0, 0, 0.6); border-radius: 14px; }
+  .card h2 { margin: 0; font: 900 22px system-ui, sans-serif; text-align: center; }
+  .card p { margin: 0; text-align: center; line-height: 1.55; font-size: 14.5px; opacity: 0.92; }
+  .card .stats { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14.5px; }
+  .card .stats b { text-align: right; color: #fff; }
+  .card ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; align-self: stretch; }
+  .btn { width: 100%; min-height: 48px; padding: 6px 10px; background: #3a2c20; color: #fff; border: none; border-radius: 10px; box-shadow: 0 3px 0 #160e08; font: 900 15.5px system-ui, sans-serif; }
+  .btn.main { background: var(--gold); color: #1a0f06; }
+  .btn.red { background: #8a2a1e; }
+  .btn small { display: block; font-size: 12px; font-weight: 700; opacity: 0.8; }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #160e08; }
+  #reload { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 9; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene">
+    <canvas id="cv"></canvas>
+    <canvas id="fx"></canvas>
+  </div>
+  <div id="hud" class="sh">
+    <div id="clock"></div>
+    <div id="route"><span id="from"></span><i><b id="rbar"></b><em id="rtrain">🚃</em></i><span id="to"></span></div>
+    <div id="km"></div>
+    <div id="bars">
+      <div class="bar" id="bHunger" style="--c:#e0a04a"><span class="lb">🍖 배부름</span><span class="v"></span><i><b></b></i></div>
+      <div class="bar" id="bWarmth" style="--c:#ff7a3a"><span class="lb">🔥 체온</span><span class="v"></span><i><b></b></i></div>
+      <div class="bar" id="bHealth" style="--c:#e04a5a"><span class="lb">❤️ 체력</span><span class="v"></span><i><b></b></i></div>
+      <div class="bar" id="bMood" style="--c:#b49af0"><span class="lb">😺 기분</span><span class="v"></span><i><b></b></i></div>
+    </div>
+    <div id="res"><span id="cFood">🥫 <b></b></span><span id="cFuel">🪵 <b></b></span><span id="cScrap">🔩 <b></b></span><span id="cMeds">💊 <b></b></span><span id="cWin">🪟 <b></b></span></div>
+  </div>
+  <div id="banner" class="hide sh"></div>
+  <div id="acts">
+    <button class="act" id="aFeed"><b>🥫</b>밥 먹기<small></small></button>
+    <button class="act" id="aStove"><b>🔥</b><span></span><small></small></button>
+    <button class="act" id="aRepair"><b>🔧</b>수리<small>🔩 2</small></button>
+    <button class="act" id="aHeal"><b>💊</b>약<small>+40</small></button>
+    <button class="act forage" id="aForage" hidden><b>🪓</b>땔감<small>2시간</small></button>
+  </div>
+  <div id="sheet" hidden><h3 id="sheetTitle"></h3><div id="sheetBody"></div></div>
+  <nav id="gnb">
+    <button data-tab="room" class="on"><span>🚃</span>객실</button>
+    <button data-tab="ups"><span>🔧</span>개조<i class="dot" id="upDot" hidden></i></button>
+    <button data-tab="route"><span>🗺️</span>노선</button>
+    <button data-tab="log"><span>🏆</span>기록</button>
+    <button data-tab="set"><span>⚙️</span>설정</button>
+  </nav>
+  <div id="modal" class="screen" hidden><div class="card" id="card"></div></div>
+  <button id="reload" class="btn main" style="width:auto" hidden onclick="location.reload()">다시 불러오기</button>
+</div>
+<script>
+  setTimeout(function () { if (!window.zombieReady) document.getElementById('reload').hidden = false; }, 4000);
+</script>
+<script type="module">
+import * as L from './logic.js?v=1';
+import { BG, IMG, loadImages, drawScene } from './scene.js?v=1';
+
+const $ = (id) => document.getElementById(id);
+const save = L.loadSave(localStorage);
+const BOY = '하루', DOG = '보리';
+
+// ---------- 화면 크기: 배경 그림(704×1520)을 화면에 꽉 차게(cover) ----------
+const cv = $('cv'), fx = $('fx'), scene = $('scene');
+let fctx = null, gctx = null;
+let SW = 390, SH = 780, DPR = 1, S = 0.5, OX = 0, OY = 0;
+function resize() {
+  SW = scene.clientWidth; SH = scene.clientHeight; DPR = Math.min(3, window.devicePixelRatio || 1);
+  S = Math.max(SW / BG.w, SH / BG.h); OX = (SW - BG.w * S) / 2; OY = (SH - BG.h * S) / 2;
+  for (const c of [cv, fx]) { c.width = Math.round(SW * DPR); c.height = Math.round(SH * DPR); c.style.width = `${SW}px`; c.style.height = `${SH}px`; }
+  fctx = fx.getContext('2d'); gctx = cv.getContext('2d');
+}
+new ResizeObserver(() => resize()).observe(scene);
+resize();
+const toScreen = (x, y) => [OX + x * S, OY + y * S];
+const toBg = (x, y) => [(x - OX) / S, (y - OY) / S];
+
+// ---------- 소리 ----------
+let ac = null;
+function audio() {
+  if (!save.sound) return null;
+  try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch { return null; }
+  return ac;
+}
+function tone(freq, dur, { type = 'sine', vol = 0.05, to = null, delay = 0 } = {}) {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t0);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + Math.min(0.05, dur / 3)); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+}
+function noise(dur, { vol = 0.1, from = 2000, to = 200, delay = 0 } = {}) {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime + delay, n = Math.floor(a.sampleRate * dur);
+  const b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = b; f.type = 'lowpass';
+  f.frequency.setValueAtTime(from, t0); f.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(f).connect(g).connect(a.destination); src.start(t0);
+}
+const sfx = {
+  clack() { noise(0.07, { vol: 0.05, from: 500, to: 90 }); noise(0.07, { vol: 0.04, from: 500, to: 90, delay: 0.13 }); },
+  groan() { tone(95, 1.3, { type: 'sawtooth', vol: 0.025, to: 62 }); tone(101, 1.1, { type: 'sawtooth', vol: 0.018, to: 70, delay: 0.1 }); },
+  bang() { noise(0.12, { vol: 0.12, from: 380, to: 60 }); },
+  hit() { noise(0.12, { vol: 0.14, from: 2600, to: 200 }); tone(140, 0.12, { type: 'square', vol: 0.03, to: 80 }); },
+  kill() { noise(0.35, { vol: 0.12, from: 900, to: 80 }); tone(70, 0.4, { type: 'sawtooth', vol: 0.03, to: 40 }); },
+  zap() { tone(1400, 0.2, { type: 'square', vol: 0.02, to: 300 }); noise(0.25, { vol: 0.06, from: 6000, to: 1000 }); },
+  woof() { tone(420, 0.12, { type: 'sawtooth', vol: 0.04, to: 300 }); tone(460, 0.14, { type: 'sawtooth', vol: 0.04, to: 320, delay: 0.18 }); },
+  eat() { [0, 0.15, 0.3].forEach((d) => noise(0.06, { vol: 0.05, from: 1800, to: 600, delay: d })); },
+  click() { tone(520, 0.05, { type: 'square', vol: 0.025 }); },
+  buy() { [660, 880, 1320].forEach((f, i) => tone(f, 0.12, { type: 'square', vol: 0.025, delay: i * 0.07 })); },
+  chime() { [784, 659, 523].forEach((f, i) => tone(f, 0.45, { type: 'triangle', vol: 0.05, delay: i * 0.3 })); },
+  crackle() { noise(0.03, { vol: 0.03, from: 3000, to: 1500 }); },
+  sad() { [392, 349, 311, 262].forEach((f, i) => tone(f, 0.5, { type: 'triangle', vol: 0.05, delay: i * 0.35 })); },
+  win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.35, { type: 'square', vol: 0.03, delay: i * 0.12 })); },
+};
+const buzz = (p) => { if (save.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch { /* 없음 */ } };
+
+// ---------- 상태(화면 전용) ----------
+const view = { dogPetT: 0, scroll: 0, t: 0, zVariant: 0, zHit: 0, eatT: 0, petT: 0, nap: 0, blink: 0, floats: [], hearts: [], shake: 0, clackT: 0, bangT: 0, crackT: 0, lastZombie: null, warned: -1 };
+function banner(text, red = false, ms = 2200) {
+  const b = $('banner');
+  b.textContent = text; b.className = `sh${red ? ' red' : ''}`;
+  clearTimeout(banner.t); banner.t = setTimeout(() => b.classList.add('hide'), ms);
+}
+function floatText(text, x, y, color = '#fff') { view.floats.push({ text, x, y, color, t: 0 }); }
+
+// ---------- 소년·코기 상태 → 그림 ----------
+function boyView() {
+  const z = save.zombie, night = L.isNight(L.hourOf(save)), t = view.t;
+  let img, mood, dx = 0, dy = 0;
+  if (save.dead || night || save.health < 35 || view.nap > 0) { mood = 'sleep'; img = Math.floor(t * 0.7) % 2 ? 'boy_sleep_2' : 'boy_sleep_1'; }
+  if (z && z.t > L.ZOMBIE_APPROACH * 0.5 && !save.dead) { mood = 'scared'; img = 'boy_scared'; dx = Math.sin(t * 40) * 1.5; }
+  else if (view.eatT > 0) { mood = 'eat'; img = Math.floor(t * 3) % 2 ? 'boy_eat_2' : 'boy_eat_1'; }
+  else if (view.petT > 0) { mood = 'happy'; img = 'boy_happy'; }
+  else if (!mood && save.warmth < 30) { mood = 'cold'; img = 'boy_cold'; dx = Math.sin(t * 30) * 1; }
+  else if (!mood) { mood = 'idle'; img = view.blink > 0 ? 'boy_blink' : Math.floor(t / 2.6) % 2 ? 'boy_idle_2' : 'boy_idle_1'; }
+  return { img, mood, dx, dy };
+}
+function corgiView() {
+  const z = save.zombie, t = view.t;
+  let dx = 0, dy = 0, sx = 1, sy = 1 + Math.sin(t * 2.4) * 0.012, mood = 'sit';
+  if (z && z.t > L.ZOMBIE_APPROACH * 0.5 && !save.dead) { mood = 'bark'; dx = Math.sin(t * 50) * 2; dy = -Math.abs(Math.sin(t * 9)) * 6; }
+  else if (view.dogPetT > 0) { mood = 'happy'; dy = -Math.abs(Math.sin(t * 8)) * 12; sx = 1 + Math.sin(t * 16) * 0.03; }
+  else if (view.eatT > 0) { mood = 'eat'; sy = 0.96 + Math.sin(t * 10) * 0.02; }
+  else if (save.hunger < 25 || save.warmth < 30) { mood = 'sad'; sy = 0.97; }
+  return { mood, dx, dy, sx, sy };
+}
+const corgiBox = () => { const im = IMG.corgi, w = im.width * BG.corgi.k, h = im.height * BG.corgi.k; return { x: BG.corgi.cx - w / 2, y: BG.corgi.by - h, w, h }; };
+const boyHead = (b) => (b.mood === 'sleep' ? [BG.sleep.x + 280, BG.sleep.y + 20] : [BG.sit.cx, BG.sit.by - 130]);
+
+// ---------- 그리기 ----------
+const isRain = () => { const b = Math.floor(save.minutes / 360); return ((b * 7919) % 5) === 0; };
+function render() {
+  const z = save.zombie;
+  let zv = null;
+  if (z) {
+    if (view.lastZombie !== z) { view.lastZombie = z; view.zVariant = Math.floor(Math.random() * 6); }
+    const k = Math.min(1, z.t / L.ZOMBIE_APPROACH);
+    zv = { k, hit: view.zHit > 0, slap: k >= 1 ? Math.floor(view.t * 2.2) % 2 : 0, variant: view.zVariant };
+  }
+  const boy = boyView(), corgi = corgiView();
+  const g = gctx;
+  const shake = view.shake > 0 ? (Math.random() - 0.5) * 6 * view.shake : 0;
+  g.setTransform(DPR * S, 0, 0, DPR * S, DPR * (OX + shake), DPR * OY);
+  drawScene(g, {
+    t: view.t, daylight: L.daylight(L.hourOf(save)), scroll: view.scroll, rain: isRain(), station: !!save.station, zombie: zv,
+    fireOn: save.stoveOn && save.fuel > 0, plates: save.up.plate, barricade: save.barricade / L.barricadeMax(save), boy, corgi,
+  });
+  drawFx(boy, corgi);
+}
+// 그림 위에 얹는 글자들
+function drawFx(boy, corgi) {
+  const c = fctx;
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  c.clearRect(0, 0, SW, SH);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  const W = BG.win, [wx, wy] = toScreen(W.x, W.y), ww = W.w * S, wh = W.h * S;
+  if (save.station) {
+    c.font = `900 ${Math.max(10, ww * 0.1)}px system-ui, sans-serif`; c.fillStyle = '#fff'; c.strokeStyle = '#000'; c.lineWidth = 3;
+    c.strokeText(save.station.name, wx + ww / 2, wy + wh * 0.42); c.fillText(save.station.name, wx + ww / 2, wy + wh * 0.42);
+  }
+  const z = save.zombie;
+  if (z && z.t > L.ZOMBIE_APPROACH * 0.6) {
+    const w = ww * 0.7, x = wx + ww / 2 - w / 2, y = wy - 10;
+    c.fillStyle = 'rgba(0,0,0,0.7)'; c.fillRect(x - 2, y - 2, w + 4, 8);
+    c.fillStyle = '#7ad04a'; c.fillRect(x, y, w * Math.max(0, z.hp / z.max), 4);
+    if (view.t % 1.2 < 0.8) { c.font = '900 13px system-ui, sans-serif'; c.fillStyle = '#ffdd66'; c.strokeStyle = '#000'; c.lineWidth = 3; c.strokeText('눌러서 때리기!', wx + ww / 2, wy + wh + 12); c.fillText('눌러서 때리기!', wx + ww / 2, wy + wh + 12); }
+  }
+  // 소년 머리 위: Zz, 배고픔 말풍선
+  const [hx, hy] = toScreen(...boyHead(boy));
+  if (boy.mood === 'sleep' && !save.dead) {
+    c.font = '900 13px system-ui, sans-serif'; c.fillStyle = '#e8e4ff'; c.strokeStyle = '#000'; c.lineWidth = 2;
+    for (let i = 0; i < 3; i++) { const p = (view.t * 0.4 + i / 3) % 1; c.globalAlpha = Math.sin(p * Math.PI); c.strokeText('z', hx + 8 + p * 12, hy - p * 22); c.fillText('z', hx + 8 + p * 12, hy - p * 22); }
+    c.globalAlpha = 1;
+  } else if (save.hunger < 25 && !save.dead) {
+    const bx = hx + 30, by = hy - 14;
+    c.fillStyle = 'rgba(255,255,255,0.92)'; c.beginPath(); c.ellipse(bx, by, 15, 12, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(bx - 13, by + 13, 3, 0, Math.PI * 2); c.fill();
+    c.font = '15px system-ui'; c.fillText('🍖', bx, by + 1);
+  }
+  // 코기: 짖기
+  const cb = corgiBox(), [cx, cy] = toScreen(cb.x + cb.w / 2, cb.y);
+  if (corgi.mood === 'bark' && view.t % 0.6 < 0.35) { c.font = '900 14px system-ui, sans-serif'; c.fillStyle = '#fff'; c.strokeStyle = '#000'; c.lineWidth = 3; c.strokeText('멍! 멍!', cx, cy - 8); c.fillText('멍! 멍!', cx, cy - 8); }
+  for (const h of view.hearts) { c.globalAlpha = 1 - h.t; c.font = '16px system-ui'; const [x, y] = toScreen(h.x, h.y); c.fillText('🧡', x, y - h.t * 24); }
+  c.globalAlpha = 1;
+  c.font = '900 15px system-ui, sans-serif'; c.lineWidth = 3; c.strokeStyle = '#000';
+  for (const f of view.floats) { c.globalAlpha = Math.min(1, 2 - f.t * 2); c.fillStyle = f.color; const [x, y0] = toScreen(f.x, f.y), y = y0 - f.t * 28; c.strokeText(f.text, x, y); c.fillText(f.text, x, y); }
+  c.globalAlpha = 1;
+}
+
+// ---------- 화면 글자 ----------
+const SEASON_ICON = (h) => (L.isNight(h) ? '🌙' : h < 7 || h >= 17 ? '🌇' : '☀️');
+let upsKey = '';
+function updateUI() {
+  const cfg = L.routeConfig(save.route), h = L.hourOf(save);
+  $('clock').innerHTML = `D+${L.dayOf(save)} · ${L.clock(save)} ${SEASON_ICON(h)} ${isRain() ? '🌧️' : ''} ${L.isNight(h) && L.hordeNight(save) ? '<small>· 🧟 좀비 떼의 밤</small>' : ''}`;
+  $('from').textContent = cfg.from; $('to').textContent = cfg.to;
+  const p = Math.min(1, save.km / cfg.length);
+  $('rbar').style.width = `${p * 100}%`; $('rtrain').style.left = `${p * 100}%`;
+  const moving = save.fuel > 0 && !save.station;
+  $('km').textContent = save.station ? `🚉 ${save.station.name}에 정차 중` : moving ? `${Math.floor(save.km)} / ${cfg.length}km · 다음 역까지 ${Math.ceil(save.nextStation - save.km)}km · ${Math.round(L.speedKmh(save))}km/h` : `${Math.floor(save.km)} / ${cfg.length}km · ⛽ 연료가 없어 멈췄어요`;
+  const bar = (id, v) => { const el = $(id); el.querySelector('b').style.width = `${v}%`; el.querySelector('.v').textContent = Math.round(v); el.classList.toggle('low', v < 25); };
+  bar('bHunger', save.hunger); bar('bWarmth', save.warmth); bar('bHealth', save.health); bar('bMood', save.mood);
+  const chip = (id, txt, low) => { const el = $(id); el.querySelector('b').textContent = txt; el.classList.toggle('low', low); };
+  chip('cFood', L.fmt(save.food), save.food < 1); chip('cFuel', L.fmt(save.fuel), save.fuel < 2); chip('cScrap', L.fmt(save.scrap), false); chip('cMeds', L.fmt(save.meds), false);
+  chip('cWin', `${Math.round(save.barricade)}/${L.barricadeMax(save)}`, save.barricade < L.barricadeMax(save) * 0.3);
+  $('aFeed').disabled = save.food < 1; $('aFeed').querySelector('small').textContent = `🥫 ${Math.floor(save.food)}`;
+  $('aStove').querySelector('b').textContent = save.stoveOn ? '🔥' : '🧊';
+  $('aStove').querySelector('span').textContent = save.stoveOn ? '난로 끄기' : '난로 켜기';
+  $('aStove').querySelector('small').textContent = save.stoveOn ? '연료 아끼기' : `🪵${L.stoveFuel(save).toFixed(2)}/시간`;
+  $('aStove').classList.toggle('hot', save.stoveOn && save.fuel > 0);
+  $('aRepair').disabled = save.scrap < L.REPAIR_COST || save.barricade >= L.barricadeMax(save);
+  $('aHeal').disabled = save.meds < 1 || save.health >= 100;
+  const fo = save.fuel < 1;
+  $('aForage').hidden = !fo;
+  const key = L.UPGRADES.map((u) => `${save.up[u.id]}:${save.scrap >= L.upgradeCost(save, u.id)}`).join(',');
+  if (key !== upsKey) { upsKey = key; $('upDot').hidden = !L.UPGRADES.some((u) => save.scrap >= L.upgradeCost(save, u.id)); if (tab === 'ups') openTab('ups'); }
+  if (tab === 'route' || tab === 'log') { const k2 = `${tab}${Math.floor(save.km)}${save.kills}${save.route}`; if (k2 !== sheetKey) openTab(tab); }
+}
+// ---------- 아래 탭(GNB) ----------
+let tab = 'room', sheetKey = '';
+function openTab(name) {
+  tab = name;
+  for (const b of document.querySelectorAll('#gnb button')) b.classList.toggle('on', b.dataset.tab === name);
+  const sh = $('sheet'), body = $('sheetBody');
+  if (name === 'room') { sh.hidden = true; return; }
+  sh.hidden = false; body.innerHTML = '';
+  const cfg = L.routeConfig(save.route);
+  if (name === 'ups') {
+    $('sheetTitle').innerHTML = `열차 개조 <span>가진 고철 🔩 ${Math.floor(save.scrap)}</span>`;
+    for (const u of L.UPGRADES) {
+      const lv = save.up[u.id], cost = L.upgradeCost(save, u.id), max = lv >= u.max;
+      const row = document.createElement('div'); row.className = `up${max ? ' max' : ''}`;
+      const tier = u.tiers ? ` · ${u.tiers[lv]}${max ? '' : ` → ${u.tiers[lv + 1]}`}` : '';
+      row.innerHTML = `<div class="ic">${u.icon}</div><div><div class="nm">${u.name}<em>${u.max > 1 ? `Lv.${lv}/${u.max}` : lv ? '설치함' : ''}</em></div><div class="ds">${u.desc}${tier}</div></div>`;
+      const b = document.createElement('button');
+      b.textContent = max ? '완료' : `🔩 ${cost}`; b.disabled = max || save.scrap < cost;
+      b.onclick = () => { if (L.buyUpgrade(save, u.id)) { sfx.buy(); buzz(15); banner(`${u.icon} ${u.name} 완료!`); persist(); updateUI(); openTab('ups'); } };
+      row.appendChild(b); body.appendChild(row);
+    }
+  } else if (name === 'route') {
+    sheetKey = `route${Math.floor(save.km)}${save.kills}${save.route}`;
+    $('sheetTitle').innerHTML = `노선 ${save.route} <span>${cfg.from} → ${cfg.to} · ${cfg.length}km</span>`;
+    const list = document.createElement('div'); list.className = 'stops';
+    const n = Math.floor((cfg.length - 1) / L.STATION_KM);
+    let html = `<div class="stop done"><span>🏙️</span><span>${cfg.from} 출발</span><span>0km</span></div>`;
+    for (let i = 1; i <= n; i++) {
+      const km = i * L.STATION_KM, done = save.km >= km, next = !done && km === save.nextStation;
+      html += `<div class="stop${done ? ' done' : ''}${next ? ' next' : ''}"><span>${done ? '✔️' : next ? '🚃' : '🚉'}</span><span>${next ? `다음 역 · ${Math.ceil(km - save.km)}km 남음` : `${i}번째 역`}</span><span>${km}km</span></div>`;
+    }
+    html += `<div class="stop"><span>🏁</span><span>${cfg.to} 피난처</span><span>${cfg.length}km</span></div>`;
+    list.innerHTML = html; body.appendChild(list);
+    const kv = document.createElement('div'); kv.className = 'kv';
+    kv.innerHTML = `<span>속도</span><b>${Math.round(L.speedKmh(save))}km/h</b><span>위험도</span><b>×${cfg.danger.toFixed(1)}</b><span>시간당 연료</span><b>🪵 ${(L.ENGINE_FUEL + (save.stoveOn ? L.stoveFuel(save) : 0)).toFixed(2)}</b>`;
+    body.appendChild(kv);
+  } else if (name === 'log') {
+    sheetKey = `log${Math.floor(save.km)}${save.kills}${save.route}`;
+    $('sheetTitle').innerHTML = `기록 <span>${BOY}와 ${DOG}의 여행</span>`;
+    const kv = document.createElement('div'); kv.className = 'kv';
+    kv.innerHTML = `<span>이번 여행</span><b>${save.runDays}일째</b><span>최고 기록</span><b>${Math.max(save.best.days, save.runDays)}일</b><span>끝낸 노선</span><b>${save.cleared}개</b><span>가장 먼 노선</span><b>${save.best.route}</b><span>물리친 좀비</span><b>${save.kills}</b>`;
+    body.appendChild(kv);
+  } else if (name === 'set') {
+    $('sheetTitle').innerHTML = '설정';
+    const btns = [
+      [`소리 ${save.sound ? '켬 🔊' : '끔 🔇'}`, '', () => { save.sound = !save.sound; persist(); openTab('set'); }],
+      [`진동 ${save.vibrate ? '켬 📳' : '끔'}`, '', () => { save.vibrate = !save.vibrate; persist(); openTab('set'); }],
+      ['❓ 하는 법', '', () => intro()],
+      ['🗑️ 처음부터 다시(개조도 지움)', 'red', () => { if (confirm('정말 모두 지울까요?')) { Object.assign(save, L.defaultSave(), { seenIntro: true }); view.lastZombie = null; persist(); openTab('room'); updateUI(); } }],
+    ];
+    for (const [label, cls, fn] of btns) { const b = document.createElement('button'); b.className = `btn ${cls}`; b.textContent = label; b.onclick = () => { sfx.click(); fn(); }; body.appendChild(b); }
+  }
+}
+for (const b of document.querySelectorAll('#gnb button')) b.onclick = () => { sfx.click(); openTab(tab === b.dataset.tab ? 'room' : b.dataset.tab); };
+
+// ---------- 행동 ----------
+$('aFeed').onclick = () => { if (L.feed(save)) { sfx.eat(); view.eatT = 2; view.nap = 0; floatText('냠냠 +30', BG.sit.cx, BG.sit.by - 170, '#ffd08a'); updateUI(); } };
+$('aStove').onclick = () => { L.toggleStove(save); sfx.click(); updateUI(); };
+$('aRepair').onclick = () => { if (L.repair(save)) { sfx.bang(); buzz(20); floatText('🔧 +25', BG.win.x + BG.win.w / 2, BG.win.y + BG.win.h, '#cfe8ff'); updateUI(); } };
+$('aHeal').onclick = () => { if (L.heal(save)) { sfx.buy(); floatText('❤️ +40', BG.sit.cx, BG.sit.by - 170, '#ff9aa8'); updateUI(); } };
+$('aForage').onclick = () => {
+  const r = L.forage(save); if (!r) return;
+  sfx.click();
+  modal(`<h2>🪓 땔감을 구해 왔어요</h2><p>멈춘 열차 밖, 버려진 집에서 2시간을 뒤졌어요.</p><div class="stats"><span>🪵 연료</span><b>+${r.fuel}</b>${r.hurt ? `<span>🩸 다침</span><b>체력 −${r.hurt}</b>` : ''}</div>`, [['계속', 'main', () => closeModal()]]);
+  if (save.dead) onDead();
+};
+
+// 장면 누르기: 좀비 때리기, 코기·소년 쓰다듬기, 난로
+scene.addEventListener('pointerdown', (e) => {
+  if (!$('modal').hidden) return;
+  audio();
+  if (tab !== 'room') { openTab('room'); return; }
+  const rect = cv.getBoundingClientRect(), [x, y] = toBg(e.clientX - rect.left, e.clientY - rect.top);
+  const r = BG.win;
+  if (save.zombie && x > r.x - 20 && x < r.x + r.w + 20 && y > r.y - 20 && y < r.y + r.h + 30) {
+    const res = L.hitZombie(save);
+    if (res) {
+      view.zHit = 0.1; view.shake = 0.5; sfx.hit(); buzz(12);
+      floatText(`-${L.weaponDmg(save)}`, x + (Math.random() - 0.5) * 30, y, '#ffe08a');
+      if (res.killed) { sfx.kill(); buzz([20, 30, 40]); floatText(res.scrap ? '+1 🔩' : '처치!', r.x + r.w / 2, r.y + r.h / 2, '#9fe08a'); if (res.food) floatText('+1 🥫', r.x + r.w / 2, r.y + r.h / 2 + 30, '#ffd08a'); updateUI(); }
+    }
+    return;
+  }
+  const cb = corgiBox();
+  if (x > cb.x && x < cb.x + cb.w && y > cb.y && y < cb.y + cb.h) {
+    if (view.dogPetT <= 0) { L.pet(save); sfx.woof(); buzz(10); }
+    view.dogPetT = 1.6; view.petT = 1.2;
+    view.hearts.push({ x: cb.x + cb.w / 2 + (Math.random() - 0.5) * 40, y: cb.y + 10, t: 0 });
+    return;
+  }
+  const boy = boyView(), [bx, by] = boyHead(boy);
+  if (Math.hypot(x - bx, y - by - 40) < 90) {
+    if (boy.mood === 'sleep') return;
+    if (view.petT <= 0) { L.pet(save); sfx.click(); }
+    view.petT = 1.6;
+    view.hearts.push({ x: bx + (Math.random() - 0.5) * 40, y: by - 10, t: 0 });
+    return;
+  }
+  const F = BG.fire;
+  if (x > F.x - 30 && x < F.x + F.w + 30 && y > F.y - 30 && y < F.y + F.h + 30) { $('aStove').click(); }
+});
+
+// ---------- 모달 ----------
+function modal(html, buttons) {
+  const card = $('card'); card.innerHTML = html;
+  const row = document.createElement('div'); row.style.cssText = 'display:flex;flex-direction:column;gap:8px;width:100%';
+  for (const [label, cls, fn] of buttons) { const b = document.createElement('button'); b.className = `btn ${cls || ''}`; b.innerHTML = label; b.onclick = () => { sfx.click(); fn(); }; row.appendChild(b); }
+  card.appendChild(row);
+  $('modal').hidden = false;
+}
+function closeModal() { $('modal').hidden = true; persist(); updateUI(); }
+const pct = (v) => `${Math.round(v * 100)}%`;
+function onStation() {
+  const st = save.station, type = L.STATION_TYPES.find((t) => t.id === st.type), radio = save.up.radio > 0;
+  sfx.chime();
+  modal(`<h2>🚉 ${st.name}</h2><p>${radio ? `📻 라디오: 이곳은 <b>${type.name}</b>. ${type.line}` : '플랫폼에 아무도 없어요. 무엇이 남아 있을까요?'}</p>
+    <p style="font-size:12.5px;opacity:.75">수색하는 동안에도 시간이 흘러요(배고픔·연료).</p>`, [
+    [`🔦 ${L.SEARCH.quick.name}<small>1시간 · 다칠 확률 ${pct(L.searchRisk(save, 'quick'))}</small>`, '', () => search('quick')],
+    [`🎒 ${L.SEARCH.deep.name}<small>3시간 · 물자 2배 이상 · 다칠 확률 ${pct(L.searchRisk(save, 'deep'))}</small>`, 'main', () => search('deep')],
+    ['🚃 그냥 출발<small>안전하지만 빈손</small>', '', () => search('leave')],
+  ]);
+}
+function search(kind) {
+  const res = L.resolveStation(save, kind);
+  if (kind === 'leave') { closeModal(); banner('🚃 출발!'); return; }
+  const g = res.gains, names = { food: '🥫 통조림', fuel: '🪵 연료', scrap: '🔩 고철', meds: '💊 약' };
+  const rows = Object.keys(names).filter((k) => g[k] > 0).map((k) => `<span>${names[k]}</span><b>+${g[k]}</b>`).join('') || '<span>아무것도 없었어요</span><b>…</b>';
+  if (res.hurt) { sfx.groan(); buzz([40, 40, 80]); } else sfx.buy();
+  modal(`<h2>${res.hurt ? '🩸 좀비에게 물릴 뻔했어요' : '🎒 수색 완료'}</h2>
+    <div class="stats">${rows}${res.hurt ? `<span>🩸 다침</span><b>체력 −${res.hurt}</b>` : ''}</div>`, [['🚃 출발', 'main', () => { closeModal(); if (save.dead) onDead(); }]]);
+}
+function onArrive() {
+  const cfg = L.routeConfig(save.route), bonus = 5 + 3 * (save.route + 1);
+  sfx.win(); buzz([30, 40, 60]);
+  modal(`<h2>🏁 ${cfg.to} 도착!</h2><p>${BOY}와 ${DOG}가 함께 노선 ${save.route}을 끝까지 달렸어요.</p>
+    <div class="stats"><span>지난 날</span><b>${save.runDays}일</b><span>물리친 좀비</span><b>${save.kills}</b><span>보급 고철</span><b>+${bonus} 🔩</b></div>
+    <p style="font-size:13px;opacity:.8">다음 노선은 더 길고, 좀비가 더 많아요.</p>`, [[`🚃 ${L.routeConfig(save.route + 1).to}(으)로 출발`, 'main', () => { L.nextRoute(save); closeModal(); banner(`🚃 노선 ${save.route}: ${L.routeConfig(save.route).from} → ${L.routeConfig(save.route).to}`); }]]);
+}
+const DEATH = { hunger: `${BOY}가 배고픔을 이기지 못했어요`, cold: `${BOY}가 추위를 이기지 못했어요`, zombie: '좀비가 창문을 부수고 들어왔어요' };
+function onDead() {
+  sfx.sad(); buzz([80, 60, 200]);
+  modal(`<h2>💤 여기까지…</h2><p>${DEATH[save.dead] || DEATH.zombie}</p>
+    <div class="stats"><span>버틴 날</span><b>${save.runDays}일</b><span>달린 거리</span><b>${Math.floor(save.km)}km</b><span>최고 기록</span><b>${Math.max(save.best.days, save.runDays)}일</b></div>
+    <p style="font-size:13px;opacity:.8">개조한 것은 그대로 남아요. 같은 노선을 처음부터 다시 달려요.</p>`, [['🐾 다시 시작', 'main', () => { L.restart(save); view.lastZombie = null; closeModal(); }]]);
+}
+function intro() {
+  modal(`<h2>🚃 좀비 열차</h2><p>좀비로 가득한 세상을 달리는 열차 객실. 소년 <b>${BOY}</b>와 웰시코기 <b>${DOG}</b>를 지켜 주세요.</p>
+    <ul>
+      <li>🍖 배고프면 <b>밥</b>, 🔥 추우면 <b>난로</b>(연료를 씀)</li>
+      <li>🧟 창문에 좀비가 붙으면 <b>눌러서 때리세요</b>. 창문이 부서지면 다쳐요</li>
+      <li>🚉 50km마다 역: 수색해서 통조림·연료·고철·약을 구해요</li>
+      <li>🔩 고철로 열차를 개조해요. 밤엔 좀비가 많고, 4일마다 좀비 떼가 와요</li>
+      <li>⏱️ 1초 = 5분. 앱을 닫으면 열차는 터널에서 기다려요</li>
+    </ul>`, [['출발!', 'main', () => { save.seenIntro = true; closeModal(); }]]);
+}
+// ---------- 루프 ----------
+function persist() { L.storeSave(localStorage, save); }
+setInterval(persist, 5000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) persist(); });
+let last = performance.now(), uiT = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  view.t += dt;
+  const paused = !$('modal').hidden;
+  if (!paused) {
+    const ev = L.step(save, dt);
+    for (const e of ev) {
+      if (e === 'zombie') { sfx.groan(); banner('🧟 좀비가 창문에 붙었어요!', true); buzz([30, 50, 30]); }
+      if (e === 'zap') { sfx.zap(); floatText('⚡ 지지직!', BG.win.x + BG.win.w / 2, BG.win.y + BG.win.h / 2, '#a8e0ff'); }
+      if (e === 'day') banner(`☀️ ${L.dayOf(save)}일째 아침`);
+      if (e === 'station') onStation();
+      if (e === 'arrive') onArrive();
+      if (e === 'dead') onDead();
+    }
+    const h = L.hourOf(save);
+    if (save.up.radio && L.hordeNight(save) && h >= 16 && h < 20 && view.warned !== L.dayOf(save)) { view.warned = L.dayOf(save); banner('📻 오늘 밤 좀비 떼 경보! 창문을 고쳐 두세요', true, 3500); }
+    const moving = save.fuel > 0 && !save.station && !save.arrived;
+    if (moving) { view.scroll += (12 + L.speedKmh(save) * 1.1) * dt; view.clackT -= dt; if (view.clackT <= 0) { view.clackT = 1.1 - Math.min(0.5, L.speedKmh(save) / 80); sfx.clack(); } }
+    if (save.zombie && save.zombie.t > L.ZOMBIE_APPROACH) { view.bangT -= dt; if (view.bangT <= 0) { view.bangT = 0.9; sfx.bang(); view.shake = Math.max(view.shake, 0.25); } }
+    if (save.stoveOn && save.fuel > 0) { view.crackT -= dt; if (view.crackT <= 0) { view.crackT = 0.4 + Math.random() * 1.5; sfx.crackle(); } }
+    // 낮잠과 깜빡임
+    if (view.nap > 0) view.nap -= dt; else if (Math.random() < dt / 40) view.nap = 8 + Math.random() * 10;
+    if (view.blink > 0) view.blink -= dt; else if (Math.random() < dt / 3) view.blink = 0.15;
+  }
+  view.eatT = Math.max(0, view.eatT - dt); view.petT = Math.max(0, view.petT - dt); view.dogPetT = Math.max(0, view.dogPetT - dt); view.zHit = Math.max(0, view.zHit - dt); view.shake = Math.max(0, view.shake - dt * 2);
+  for (const f of view.floats) f.t += dt; view.floats = view.floats.filter((f) => f.t < 1);
+  for (const hh of view.hearts) hh.t += dt; view.hearts = view.hearts.filter((hh) => hh.t < 1);
+  render();
+  uiT -= dt; if (uiT <= 0) { uiT = 0.2; updateUI(); }
+  requestAnimationFrame(frame);
+}
+updateUI();
+window.zombieReady = true;
+loadImages(1).then(() => {
+  last = performance.now();
+  if (save.station) onStation(); else if (save.dead) onDead(); else if (save.arrived) onArrive(); else if (!save.seenIntro) intro();
+  requestAnimationFrame(frame);
+}).catch(() => { $('reload').hidden = false; });
+window.__zt = { save, L, view };
+</script>
+</body>
+</html>
