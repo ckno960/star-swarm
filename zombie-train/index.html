@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>좀비 열차</title>
 <style>
-  :root { --bg: #17110d; --card: #2a1f18; --line: #4a3a2c; --cream: #f0e2c0; --gold: #ffcf5a; --red: #e0503a; }
+  :root { --bg: #17110d; --card: #2a1f18; --line: #4a3a2c; --cream: #f0e2c0; --gold: #ffcf5a; --red: #e0503a; --gnb: 62px; }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body {
@@ -14,50 +14,61 @@
     overscroll-behavior: none; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   }
   body { display: flex; justify-content: center; }
-  #app { position: relative; width: 100%; max-width: 480px; height: 100%; height: 100dvh; overflow: hidden; background: var(--bg); display: flex; flex-direction: column; }
-  #scene { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #000; }
+  #app { position: relative; width: 100%; max-width: 480px; height: 100%; height: 100dvh; overflow: hidden; background: #000; }
+  #scene { position: absolute; inset: 0; overflow: hidden; background: #000; }
   #cv { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
   #fx { position: absolute; left: 0; top: 0; pointer-events: none; }
   .sh { text-shadow: 0 1px 0 #000, 0 0 3px #000, 1px 0 0 #000, -1px 0 0 #000; }
 
-  /* 위쪽: 시계와 노선 */
-  #hud { position: absolute; left: 0; right: 0; top: 0; padding: calc(8px + env(safe-area-inset-top)) 48px 0 10px; pointer-events: none; }
+  /* 위: 시계, 노선, 수치 */
+  #hud { position: absolute; left: 0; right: 0; top: 0; padding: calc(8px + env(safe-area-inset-top)) 50px 10px 10px; pointer-events: none; background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0)); }
   #clock { font: 900 15px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
   #clock small { font-size: 12px; font-weight: 800; opacity: 0.85; }
-  #route { margin-top: 5px; display: flex; align-items: center; gap: 6px; font: 800 12px system-ui, sans-serif; }
+  #route { margin-top: 4px; display: flex; align-items: center; gap: 6px; font: 800 12px system-ui, sans-serif; }
   #route i { position: relative; flex: 1; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.55); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2); }
   #route i b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: linear-gradient(90deg, #c9a24a, #ffcf5a); }
   #route i em { position: absolute; top: -9px; font-style: normal; font-size: 13px; transform: translateX(-50%); }
   #km { margin-top: 3px; font: 800 11.5px system-ui, sans-serif; opacity: 0.9; font-variant-numeric: tabular-nums; }
-  #gear { position: absolute; right: 8px; top: calc(6px + env(safe-area-inset-top)); width: 36px; height: 36px; border: none; border-radius: 10px; background: rgba(0, 0, 0, 0.45); color: #fff; font-size: 18px; pointer-events: auto; }
-  #banner { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); padding: 6px 12px; border-radius: 10px; background: rgba(20, 12, 8, 0.85); border: 1px solid var(--line); font: 900 13.5px system-ui, sans-serif; white-space: nowrap; pointer-events: none; transition: opacity 0.3s; }
+  #bars { margin-top: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .bar { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-items: center; gap: 2px 4px; font: 800 11px system-ui, sans-serif; white-space: nowrap; }
+  .bar i { grid-column: 1 / 3; }
+  .bar i { height: 7px; border-radius: 2px; background: rgba(12, 8, 6, 0.8); box-shadow: 0 0 0 1px #000; overflow: hidden; }
+  .bar i b { display: block; height: 100%; width: 50%; background: var(--c, #8fd06a); }
+  .bar .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar.low .lb, .bar.low .v { color: #ff8a6a; animation: blink 0.8s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+  #res { margin-top: 6px; display: flex; gap: 10px; font: 800 12.5px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  #res .low b { color: #ff8a6a; }
+  #gear { display: none; }
+  #banner { position: absolute; left: 50%; top: calc(132px + env(safe-area-inset-top)); transform: translateX(-50%); padding: 6px 12px; border-radius: 10px; background: rgba(20, 12, 8, 0.85); border: 1px solid var(--line); font: 900 13.5px system-ui, sans-serif; white-space: nowrap; pointer-events: none; transition: opacity 0.3s; z-index: 3; }
   #banner.red { background: rgba(120, 20, 14, 0.9); border-color: #ff7a5a; }
   #banner.hide { opacity: 0; }
 
-  /* 아래 패널 */
-  #panel { flex: none; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 2px solid #000; box-shadow: 0 -1px 0 var(--line) inset; display: flex; flex-direction: column; gap: 7px; max-height: 46%; }
-  #bars { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; }
-  .bar { display: grid; grid-template-columns: auto 1fr 2em; white-space: nowrap; align-items: center; gap: 6px; font: 800 12px system-ui, sans-serif; }
-  .bar i { height: 9px; border-radius: 2px; background: #0c0806; box-shadow: 0 0 0 1px #000, 0 0 0 2px var(--line); overflow: hidden; }
-  .bar i b { display: block; height: 100%; width: 50%; background: var(--c, #8fd06a); }
-  .bar .v { text-align: right; font-variant-numeric: tabular-nums; opacity: 0.9; }
-  .bar.low .lb, .bar.low .v { color: #ff8a6a; animation: blink 0.8s steps(2) infinite; }
-  @keyframes blink { 50% { opacity: 0.35; } }
-  #res { display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 8px; background: #0e0a07; font: 800 13px system-ui, sans-serif; font-variant-numeric: tabular-nums; }
-  #res b { color: #fff; }
-  #res .low b { color: #ff8a6a; }
-  #acts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  #acts.five { grid-template-columns: repeat(5, 1fr); }
-  .act { min-height: 50px; padding: 4px 2px; border: none; border-radius: 10px; background: #4a3424; box-shadow: 0 3px 0 #22160e, inset 0 1px 0 rgba(255, 255, 255, 0.12); color: #fff; font: 900 12.5px/1.2 system-ui, sans-serif; }
-  .act small { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 700; opacity: 0.75; }
-  .act:active { transform: translateY(2px); box-shadow: 0 1px 0 #22160e; }
-  .act:disabled { opacity: 0.4; }
-  .act.hot { background: #8a3a22; }
-  .act.forage { background: #2f4a2a; }
-  #upsHead { display: flex; justify-content: space-between; font: 900 13px system-ui, sans-serif; color: var(--gold); }
-  #upsHead span { color: var(--cream); font-weight: 700; font-size: 12px; opacity: 0.8; }
-  #ups { overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 0; -webkit-overflow-scrolling: touch; }
-  .up { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+  /* 오른쪽 행동 버튼(쇼츠·릴스 버튼처럼) */
+  #acts { position: absolute; right: 8px; bottom: calc(var(--gnb) + env(safe-area-inset-bottom) + 14px); display: flex; flex-direction: column; gap: 10px; align-items: center; z-index: 2; }
+  .act { width: 58px; padding: 0; border: none; background: none; color: #fff; font: 800 11px/1.15 system-ui, sans-serif; text-shadow: 0 1px 2px #000, 0 0 3px #000; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .act b { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; background: rgba(20, 12, 8, 0.62); box-shadow: 0 0 0 2px rgba(255, 230, 190, 0.35), 0 3px 8px rgba(0, 0, 0, 0.5); }
+  .act small { font-size: 10px; font-weight: 700; opacity: 0.85; }
+  .act:active b { transform: scale(0.92); }
+  .act:disabled { opacity: 0.45; }
+  .act.hot b { background: rgba(150, 60, 24, 0.85); box-shadow: 0 0 0 2px #ffb070, 0 0 14px rgba(255, 140, 60, 0.6); }
+  .act.forage b { background: rgba(40, 80, 34, 0.85); }
+
+  /* 아래 GNB */
+  #gnb { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; height: calc(var(--gnb) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(5, 1fr); background: rgba(14, 9, 6, 0.94); border-top: 1px solid rgba(255, 230, 190, 0.12); }
+  #gnb button { border: none; background: none; color: rgba(240, 226, 192, 0.55); font: 800 10.5px system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; position: relative; }
+  #gnb button span { font-size: 21px; filter: grayscale(0.7); }
+  #gnb button.on { color: var(--gold); }
+  #gnb button.on span { filter: none; }
+  #gnb button .dot { position: absolute; top: 8px; right: calc(50% - 18px); width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px #0e0906; }
+
+  /* 탭 시트 */
+  #sheet { position: absolute; left: 0; right: 0; bottom: calc(var(--gnb) + env(safe-area-inset-bottom)); z-index: 5; max-height: 62%; display: flex; flex-direction: column; background: rgba(23, 17, 13, 0.97); border-top: 2px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5); animation: up 0.2s ease-out; }
+  @keyframes up { from { transform: translateY(30px); opacity: 0; } }
+  #sheet h3 { margin: 0; padding: 12px 14px 8px; display: flex; justify-content: space-between; align-items: baseline; font: 900 16px system-ui, sans-serif; color: var(--gold); }
+  #sheet h3 span { font-size: 12.5px; color: var(--cream); opacity: 0.8; font-weight: 700; }
+  #sheetBody { overflow-y: auto; padding: 0 12px 14px; display: flex; flex-direction: column; gap: 6px; -webkit-overflow-scrolling: touch; }
+  .up { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
   .up .ic { font-size: 20px; text-align: center; }
   .up .nm { font: 900 13px system-ui, sans-serif; }
   .up .nm em { font-style: normal; color: var(--gold); font-size: 11.5px; margin-left: 3px; }
@@ -65,8 +76,15 @@
   .up button { min-width: 64px; min-height: 36px; border: none; border-radius: 8px; background: #c98a2a; color: #1a0f06; font: 900 13px system-ui, sans-serif; }
   .up button:disabled { background: #3a2c20; color: #8a7a68; }
   .up.max button { background: #2c3a2a; color: #9fd08a; }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 10px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-size: 14px; }
+  .kv b { color: #fff; text-align: right; }
+  .stops { display: flex; flex-direction: column; gap: 0; padding: 4px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+  .stop { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; padding: 6px 0; font-size: 13.5px; border-bottom: 1px dashed var(--line); }
+  .stop:last-child { border: none; }
+  .stop.done { opacity: 0.5; }
+  .stop.next { color: var(--gold); font-weight: 900; }
 
-  .screen { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.72); }
+  .screen { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, 0.72); }
   .card { width: 100%; max-width: 330px; padding: 18px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; background: var(--card); border: 2px solid #000; box-shadow: 0 0 0 2px var(--line), 0 12px 40px rgba(0, 0, 0, 0.6); border-radius: 14px; }
   .card h2 { margin: 0; font: 900 22px system-ui, sans-serif; text-align: center; }
   .card p { margin: 0; text-align: center; line-height: 1.55; font-size: 14.5px; opacity: 0.92; }
@@ -78,7 +96,6 @@
   .btn.red { background: #8a2a1e; }
   .btn small { display: block; font-size: 12px; font-weight: 700; opacity: 0.8; }
   .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #160e08; }
-  .row { display: flex; gap: 8px; width: 100%; }
   #reload { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 9; }
 </style>
 </head>
@@ -87,34 +104,35 @@
   <div id="scene">
     <canvas id="cv"></canvas>
     <canvas id="fx"></canvas>
-    <div id="hud" class="sh">
-      <div id="clock"></div>
-      <div id="route"><span id="from"></span><i><b id="rbar"></b><em id="rtrain">🚃</em></i><span id="to"></span></div>
-      <div id="km"></div>
-    </div>
-    <button id="gear" aria-label="설정">⚙</button>
-    <div id="banner" class="hide sh"></div>
   </div>
-  <div id="panel">
+  <div id="hud" class="sh">
+    <div id="clock"></div>
+    <div id="route"><span id="from"></span><i><b id="rbar"></b><em id="rtrain">🚃</em></i><span id="to"></span></div>
+    <div id="km"></div>
     <div id="bars">
-      <div class="bar" id="bHunger" style="--c:#e0a04a"><span class="lb">🍖 배부름</span><i><b></b></i><span class="v"></span></div>
-      <div class="bar" id="bWarmth" style="--c:#ff7a3a"><span class="lb">🔥 체온</span><i><b></b></i><span class="v"></span></div>
-      <div class="bar" id="bHealth" style="--c:#e04a5a"><span class="lb">❤️ 체력</span><i><b></b></i><span class="v"></span></div>
-      <div class="bar" id="bMood" style="--c:#b49af0"><span class="lb">😺 기분</span><i><b></b></i><span class="v"></span></div>
+      <div class="bar" id="bHunger" style="--c:#e0a04a"><span class="lb">🍖 배부름</span><span class="v"></span><i><b></b></i></div>
+      <div class="bar" id="bWarmth" style="--c:#ff7a3a"><span class="lb">🔥 체온</span><span class="v"></span><i><b></b></i></div>
+      <div class="bar" id="bHealth" style="--c:#e04a5a"><span class="lb">❤️ 체력</span><span class="v"></span><i><b></b></i></div>
+      <div class="bar" id="bMood" style="--c:#b49af0"><span class="lb">😺 기분</span><span class="v"></span><i><b></b></i></div>
     </div>
-    <div id="res">
-      <span id="cFood">🥫 <b></b></span><span id="cFuel">🪵 <b></b></span><span id="cScrap">🔩 <b></b></span><span id="cMeds">💊 <b></b></span><span id="cWin">🪟 <b></b></span>
-    </div>
-    <div id="acts">
-      <button class="act" id="aFeed">🥫 먹이 주기<small>통조림 1개</small></button>
-      <button class="act" id="aStove">🔥 난로<small></small></button>
-      <button class="act" id="aRepair">🔧 창문 수리<small>🔩 2</small></button>
-      <button class="act" id="aHeal">💊 약 먹이기<small>체력 +40</small></button>
-      <button class="act forage" id="aForage" hidden>🪓 땔감<small>2시간·위험</small></button>
-    </div>
-    <div id="upsHead">열차 개조 <span>고철 🔩로 사요</span></div>
-    <div id="ups"></div>
+    <div id="res"><span id="cFood">🥫 <b></b></span><span id="cFuel">🪵 <b></b></span><span id="cScrap">🔩 <b></b></span><span id="cMeds">💊 <b></b></span><span id="cWin">🪟 <b></b></span></div>
   </div>
+  <div id="banner" class="hide sh"></div>
+  <div id="acts">
+    <button class="act" id="aFeed"><b>🥫</b>먹이<small></small></button>
+    <button class="act" id="aStove"><b>🔥</b><span></span><small></small></button>
+    <button class="act" id="aRepair"><b>🔧</b>수리<small>🔩 2</small></button>
+    <button class="act" id="aHeal"><b>💊</b>약<small>+40</small></button>
+    <button class="act forage" id="aForage" hidden><b>🪓</b>땔감<small>2시간</small></button>
+  </div>
+  <div id="sheet" hidden><h3 id="sheetTitle"></h3><div id="sheetBody"></div></div>
+  <nav id="gnb">
+    <button data-tab="room" class="on"><span>🚃</span>객실</button>
+    <button data-tab="ups"><span>🔧</span>개조<i class="dot" id="upDot" hidden></i></button>
+    <button data-tab="route"><span>🗺️</span>노선</button>
+    <button data-tab="log"><span>🏆</span>기록</button>
+    <button data-tab="set"><span>⚙️</span>설정</button>
+  </nav>
   <div id="modal" class="screen" hidden><div class="card" id="card"></div></div>
   <button id="reload" class="btn main" style="width:auto" hidden onclick="location.reload()">다시 불러오기</button>
 </div>
@@ -129,8 +147,8 @@ const $ = (id) => document.getElementById(id);
 const save = L.loadSave(localStorage);
 const PET = '모모';
 
-// ---------- 화면 크기: 낮은 해상도(가로 180픽셀)로 그리고 픽셀 그대로 키운다 ----------
-const AW = 180;
+// ---------- 화면 크기: 낮은 해상도(가로 200픽셀)로 그리고 픽셀 그대로 키워 화면을 꽉 채운다 ----------
+const AW = 200;
 const cv = $('cv'), fx = $('fx'), scene = $('scene');
 let room = null, buf = null, img = null, actx = null, art = null, fctx = null;
 let SW = 390, SH = 480, K = 2, DPR = 1;
@@ -286,7 +304,7 @@ function drawFx(cat) {
     if (view.t % 1.2 < 0.8) { c.font = '900 12px system-ui, sans-serif'; c.fillStyle = '#ffdd66'; c.strokeStyle = '#000'; c.lineWidth = 3; c.strokeText('눌러서 때리기!', (r.x + r.w / 2) * k, (r.y + r.h + 6) * k); c.fillText('눌러서 때리기!', (r.x + r.w / 2) * k, (r.y + r.h + 6) * k); }
   }
   // 고양이 머리 위: Zz, 배고픔 말풍선
-  const head = cat.body ? [room.catSit[0], room.catSit[1] - 30] : [room.catAt[0], room.catAt[1] - 18];
+  const head = cat.body ? [room.catSit[0], room.catSit[1] - 38] : [room.catAt[0], room.catAt[1] - 26];
   if (cat.mood === 'sleep' && !save.dead) {
     c.font = '900 11px system-ui, sans-serif'; c.fillStyle = '#e8e4ff';
     for (let i = 0; i < 3; i++) { const p = (view.t * 0.4 + i / 3) % 1; c.globalAlpha = Math.sin(p * Math.PI); c.fillText('z', (head[0] + 8 + p * 8) * k, (head[1] + 4 - p * 12) * k); }
@@ -322,35 +340,79 @@ function updateUI() {
   const chip = (id, txt, low) => { const el = $(id); el.querySelector('b').textContent = txt; el.classList.toggle('low', low); };
   chip('cFood', L.fmt(save.food), save.food < 1); chip('cFuel', L.fmt(save.fuel), save.fuel < 2); chip('cScrap', L.fmt(save.scrap), false); chip('cMeds', L.fmt(save.meds), false);
   chip('cWin', `${Math.round(save.barricade)}/${L.barricadeMax(save)}`, save.barricade < L.barricadeMax(save) * 0.3);
-  $('aFeed').disabled = save.food < 1;
-  $('aStove').innerHTML = save.stoveOn ? `🔥 난로 끄기<small>연료 아끼기</small>` : `🧊 난로 켜기<small>시간당 🪵${L.stoveFuel(save).toFixed(2)}</small>`;
+  $('aFeed').disabled = save.food < 1; $('aFeed').querySelector('small').textContent = `🥫 ${Math.floor(save.food)}`;
+  $('aStove').querySelector('b').textContent = save.stoveOn ? '🔥' : '🧊';
+  $('aStove').querySelector('span').textContent = save.stoveOn ? '난로 끄기' : '난로 켜기';
+  $('aStove').querySelector('small').textContent = save.stoveOn ? '연료 아끼기' : `🪵${L.stoveFuel(save).toFixed(2)}/시간`;
   $('aStove').classList.toggle('hot', save.stoveOn && save.fuel > 0);
   $('aRepair').disabled = save.scrap < L.REPAIR_COST || save.barricade >= L.barricadeMax(save);
   $('aHeal').disabled = save.meds < 1 || save.health >= 100;
   const fo = save.fuel < 1;
-  $('aForage').hidden = !fo; $('acts').classList.toggle('five', fo);
+  $('aForage').hidden = !fo;
   const key = L.UPGRADES.map((u) => `${save.up[u.id]}:${save.scrap >= L.upgradeCost(save, u.id)}`).join(',');
-  if (key !== upsKey) { upsKey = key; buildUps(); }
+  if (key !== upsKey) { upsKey = key; $('upDot').hidden = !L.UPGRADES.some((u) => save.scrap >= L.upgradeCost(save, u.id)); if (tab === 'ups') openTab('ups'); }
+  if (tab === 'route' || tab === 'log') { const k2 = `${tab}${Math.floor(save.km)}${save.kills}${save.route}`; if (k2 !== sheetKey) openTab(tab); }
 }
-function buildUps() {
-  const el = $('ups'); el.innerHTML = '';
-  for (const u of L.UPGRADES) {
-    const lv = save.up[u.id], cost = L.upgradeCost(save, u.id), max = lv >= u.max;
-    const row = document.createElement('div'); row.className = `up${max ? ' max' : ''}`;
-    const tier = u.tiers ? ` · ${u.tiers[lv]}${max ? '' : ` → ${u.tiers[lv + 1]}`}` : '';
-    row.innerHTML = `<div class="ic">${u.icon}</div><div><div class="nm">${u.name}<em>${u.max > 1 ? `Lv.${lv}/${u.max}` : lv ? '설치함' : ''}</em></div><div class="ds">${u.desc}${tier}</div></div>`;
-    const b = document.createElement('button');
-    b.textContent = max ? '완료' : `🔩 ${cost}`; b.disabled = max || save.scrap < cost;
-    b.onclick = () => { if (L.buyUpgrade(save, u.id)) { sfx.buy(); buzz(15); banner(`${u.icon} ${u.name} 완료!`); persist(); updateUI(); } };
-    row.appendChild(b); el.appendChild(row);
+// ---------- 아래 탭(GNB) ----------
+let tab = 'room', sheetKey = '';
+function openTab(name) {
+  tab = name;
+  for (const b of document.querySelectorAll('#gnb button')) b.classList.toggle('on', b.dataset.tab === name);
+  const sh = $('sheet'), body = $('sheetBody');
+  if (name === 'room') { sh.hidden = true; return; }
+  sh.hidden = false; body.innerHTML = '';
+  const cfg = L.routeConfig(save.route);
+  if (name === 'ups') {
+    $('sheetTitle').innerHTML = `열차 개조 <span>가진 고철 🔩 ${Math.floor(save.scrap)}</span>`;
+    for (const u of L.UPGRADES) {
+      const lv = save.up[u.id], cost = L.upgradeCost(save, u.id), max = lv >= u.max;
+      const row = document.createElement('div'); row.className = `up${max ? ' max' : ''}`;
+      const tier = u.tiers ? ` · ${u.tiers[lv]}${max ? '' : ` → ${u.tiers[lv + 1]}`}` : '';
+      row.innerHTML = `<div class="ic">${u.icon}</div><div><div class="nm">${u.name}<em>${u.max > 1 ? `Lv.${lv}/${u.max}` : lv ? '설치함' : ''}</em></div><div class="ds">${u.desc}${tier}</div></div>`;
+      const b = document.createElement('button');
+      b.textContent = max ? '완료' : `🔩 ${cost}`; b.disabled = max || save.scrap < cost;
+      b.onclick = () => { if (L.buyUpgrade(save, u.id)) { sfx.buy(); buzz(15); banner(`${u.icon} ${u.name} 완료!`); persist(); updateUI(); openTab('ups'); } };
+      row.appendChild(b); body.appendChild(row);
+    }
+  } else if (name === 'route') {
+    sheetKey = `route${Math.floor(save.km)}${save.kills}${save.route}`;
+    $('sheetTitle').innerHTML = `노선 ${save.route} <span>${cfg.from} → ${cfg.to} · ${cfg.length}km</span>`;
+    const list = document.createElement('div'); list.className = 'stops';
+    const n = Math.floor((cfg.length - 1) / L.STATION_KM);
+    let html = `<div class="stop done"><span>🏙️</span><span>${cfg.from} 출발</span><span>0km</span></div>`;
+    for (let i = 1; i <= n; i++) {
+      const km = i * L.STATION_KM, done = save.km >= km, next = !done && km === save.nextStation;
+      html += `<div class="stop${done ? ' done' : ''}${next ? ' next' : ''}"><span>${done ? '✔️' : next ? '🚃' : '🚉'}</span><span>${next ? `다음 역 · ${Math.ceil(km - save.km)}km 남음` : `${i}번째 역`}</span><span>${km}km</span></div>`;
+    }
+    html += `<div class="stop"><span>🏁</span><span>${cfg.to} 피난처</span><span>${cfg.length}km</span></div>`;
+    list.innerHTML = html; body.appendChild(list);
+    const kv = document.createElement('div'); kv.className = 'kv';
+    kv.innerHTML = `<span>속도</span><b>${Math.round(L.speedKmh(save))}km/h</b><span>위험도</span><b>×${cfg.danger.toFixed(1)}</b><span>시간당 연료</span><b>🪵 ${(L.ENGINE_FUEL + (save.stoveOn ? L.stoveFuel(save) : 0)).toFixed(2)}</b>`;
+    body.appendChild(kv);
+  } else if (name === 'log') {
+    sheetKey = `log${Math.floor(save.km)}${save.kills}${save.route}`;
+    $('sheetTitle').innerHTML = `기록 <span>${PET}와 함께한 여행</span>`;
+    const kv = document.createElement('div'); kv.className = 'kv';
+    kv.innerHTML = `<span>이번 여행</span><b>${save.runDays}일째</b><span>최고 기록</span><b>${Math.max(save.best.days, save.runDays)}일</b><span>끝낸 노선</span><b>${save.cleared}개</b><span>가장 먼 노선</span><b>${save.best.route}</b><span>물리친 좀비</span><b>${save.kills}</b>`;
+    body.appendChild(kv);
+  } else if (name === 'set') {
+    $('sheetTitle').innerHTML = '설정';
+    const btns = [
+      [`소리 ${save.sound ? '켬 🔊' : '끔 🔇'}`, '', () => { save.sound = !save.sound; persist(); openTab('set'); }],
+      [`진동 ${save.vibrate ? '켬 📳' : '끔'}`, '', () => { save.vibrate = !save.vibrate; persist(); openTab('set'); }],
+      ['❓ 하는 법', '', () => intro()],
+      ['🗑️ 처음부터 다시(개조도 지움)', 'red', () => { if (confirm('정말 모두 지울까요?')) { Object.assign(save, L.defaultSave(), { seenIntro: true }); view.lastZombie = null; persist(); openTab('room'); updateUI(); } }],
+    ];
+    for (const [label, cls, fn] of btns) { const b = document.createElement('button'); b.className = `btn ${cls}`; b.textContent = label; b.onclick = () => { sfx.click(); fn(); }; body.appendChild(b); }
   }
 }
+for (const b of document.querySelectorAll('#gnb button')) b.onclick = () => { sfx.click(); openTab(tab === b.dataset.tab ? 'room' : b.dataset.tab); };
 
 // ---------- 행동 ----------
-$('aFeed').onclick = () => { if (L.feed(save)) { sfx.eat(); view.eatT = 2; view.nap = 0; floatText('냠냠 +30', room.catSit[0], room.catSit[1] - 34, '#ffd08a'); updateUI(); } };
+$('aFeed').onclick = () => { if (L.feed(save)) { sfx.eat(); view.eatT = 2; view.nap = 0; floatText('냠냠 +30', room.catSit[0], room.catSit[1] - 44, '#ffd08a'); updateUI(); } };
 $('aStove').onclick = () => { L.toggleStove(save); sfx.click(); updateUI(); };
 $('aRepair').onclick = () => { if (L.repair(save)) { sfx.bang(); buzz(20); floatText('🔧 +25', room.winRect.x + room.winRect.w / 2, room.winRect.y + room.winRect.h, '#cfe8ff'); updateUI(); } };
-$('aHeal').onclick = () => { if (L.heal(save)) { sfx.buy(); floatText('❤️ +40', room.catAt[0], room.catAt[1] - 24, '#ff9aa8'); updateUI(); } };
+$('aHeal').onclick = () => { if (L.heal(save)) { sfx.buy(); floatText('❤️ +40', room.catAt[0], room.catAt[1] - 32, '#ff9aa8'); updateUI(); } };
 $('aForage').onclick = () => {
   const r = L.forage(save); if (!r) return;
   sfx.click();
@@ -362,6 +424,7 @@ $('aForage').onclick = () => {
 scene.addEventListener('pointerdown', (e) => {
   if (!$('modal').hidden) return;
   audio();
+  if (tab !== 'room') { openTab('room'); return; }
   const rect = cv.getBoundingClientRect(), x = (e.clientX - rect.left) / K, y = (e.clientY - rect.top) / K;
   const r = room.winRect;
   if (save.zombie && x > r.x - 8 && x < r.x + r.w + 8 && y > r.y - 8 && y < r.y + r.h + 10) {
@@ -373,8 +436,8 @@ scene.addEventListener('pointerdown', (e) => {
     }
     return;
   }
-  const cat = catView(), head = cat.body ? [room.catSit[0], room.catSit[1] - 22] : [room.catAt[0], room.catAt[1] - 9];
-  if (Math.hypot(x - head[0], y - head[1]) < 16) {
+  const cat = catView(), head = cat.body ? [room.catSit[0], room.catSit[1] - 26] : [room.catAt[0], room.catAt[1] - 13];
+  if (Math.hypot(x - head[0], y - head[1]) < 20) {
     if (view.petT <= 0) { L.pet(save); sfx.meow(); buzz(10); }
     view.petT = 1.6; view.nap = 0;
     view.hearts.push({ x: head[0] + (Math.random() - 0.5) * 12, y: head[1] - 10, t: 0 });
@@ -437,17 +500,6 @@ function intro() {
       <li>⏱️ 1초 = 5분. 앱을 닫으면 열차는 터널에서 기다려요</li>
     </ul>`, [['출발!', 'main', () => { save.seenIntro = true; closeModal(); }]]);
 }
-$('gear').onclick = () => {
-  const draw = () => modal(`<h2>⚙ 설정</h2><div class="stats"><span>노선</span><b>${save.route} (${L.routeConfig(save.route).from} → ${L.routeConfig(save.route).to})</b><span>최고 기록</span><b>${Math.max(save.best.days, save.runDays)}일</b><span>물리친 좀비</span><b>${save.kills}</b></div>`, [
-    [`소리 ${save.sound ? '켬 🔊' : '끔 🔇'}`, '', () => { save.sound = !save.sound; draw(); }],
-    [`진동 ${save.vibrate ? '켬 📳' : '끔'}`, '', () => { save.vibrate = !save.vibrate; draw(); }],
-    ['❓ 하는 법', '', () => intro()],
-    ['🗑️ 처음부터 다시(개조도 지움)', 'red', () => { if (confirm('정말 모두 지울까요?')) { Object.assign(save, L.defaultSave(), { seenIntro: true }); view.lastZombie = null; closeModal(); } }],
-    ['닫기', 'main', () => closeModal()],
-  ]);
-  draw();
-};
-
 // ---------- 루프 ----------
 function persist() { L.storeSave(localStorage, save); }
 setInterval(persist, 5000);

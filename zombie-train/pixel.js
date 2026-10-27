@@ -22,12 +22,12 @@ const steps = (k, n, x, y) => Math.floor(k * n + bayer(x, y)) / n;
 
 // ---------- 버퍼 ----------
 export class Buf {
-  constructor(w, h) { this.w = w; this.h = h; this.d = new Uint32Array(w * h); }
-  px(x, y, c) { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < this.w && y < this.h && c) this.d[y * this.w + x] = c; }
+  constructor(w, h) { this.w = w; this.h = h; this.d = new Uint32Array(w * h); this.id = new Uint16Array(w * h); this.cur = 0; }
+  px(x, y, c) { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < this.w && y < this.h && c) { this.d[y * this.w + x] = c; this.id[y * this.w + x] = this.cur; } }
   get(x, y) { x |= 0; y |= 0; return x >= 0 && y >= 0 && x < this.w && y < this.h ? this.d[y * this.w + x] : 0; }
   rect(x, y, w, h, c) {
     const x0 = Math.max(0, Math.round(x)), y0 = Math.max(0, Math.round(y)), x1 = Math.min(this.w, Math.round(x + w)), y1 = Math.min(this.h, Math.round(y + h));
-    for (let yy = y0; yy < y1; yy++) for (let xx = x0; xx < x1; xx++) { const v = typeof c === 'function' ? c(xx, yy) : c; if (v) this.d[yy * this.w + xx] = v; }
+    for (let yy = y0; yy < y1; yy++) for (let xx = x0; xx < x1; xx++) { const v = typeof c === 'function' ? c(xx, yy) : c; if (v) { this.d[yy * this.w + xx] = v; this.id[yy * this.w + xx] = this.cur; } }
   }
   // 다각형 채우기(픽셀 중심 기준, 가장자리 섞임 없음). c는 색이거나 (x, y) → 색(0이면 건너뜀)
   poly(pts, c) {
@@ -44,7 +44,7 @@ export class Buf {
       xs.sort((p, q) => p - q);
       for (let k = 0; k + 1 < xs.length; k += 2) {
         const xa = Math.max(0, Math.ceil(xs[k] - 0.5)), xb = Math.min(this.w - 1, Math.floor(xs[k + 1] - 0.5));
-        for (let x = xa; x <= xb; x++) { const v = typeof c === 'function' ? c(x, y) : c; if (v) this.d[y * this.w + x] = v; }
+        for (let x = xa; x <= xb; x++) { const v = typeof c === 'function' ? c(x, y) : c; if (v) { this.d[y * this.w + x] = v; this.id[y * this.w + x] = this.cur; } }
       }
     }
   }
@@ -83,6 +83,23 @@ export class Buf {
     for (let y = Math.max(0, y0); y < Math.min(this.h, y1); y++) for (let x = Math.max(0, x0), i = y * w + x; x < Math.min(w, x1); x++, i++) { const v = s[i]; if (v) d[i] = v; }
   }
 }
+// 픽셀 아트 외곽선: 나중에 그린(더 가까운) 물체의 가장자리, 투명한 곳과 맞닿은 가장자리를 어둡게
+const INK = rgb('#1c1014');
+export function inkEdges(b) {
+  const { w, h, d, id } = b, out = d.slice();
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x, c = d[i];
+    if (!c) continue;
+    const a = id[i];
+    let edge = false;
+    if (x > 0) { const n = i - 1; if (!d[n] || id[n] < a) edge = true; }
+    if (!edge && x < w - 1) { const n = i + 1; if (!d[n] || id[n] < a) edge = true; }
+    if (!edge && y > 0) { const n = i - w; if (!d[n] || id[n] < a) edge = true; }
+    if (!edge && y < h - 1) { const n = i + w; if (!d[n] || id[n] < a) edge = true; }
+    if (edge) out[i] = mix(mul(c, 0.42), INK, 0.35);
+  }
+  b.d.set(out);
+}
 // 실루엣에 바깥 테두리를 두른다
 function outline(s, col) {
   const out = new Buf(s.w + 2, s.h + 2);
@@ -110,37 +127,40 @@ const C = Object.fromEntries(Object.entries({
 const BOOKS = ['#7a2e2a', '#2e4a6a', '#3e6a3a', '#8a6a2a', '#5a3a6a', '#a0522d', '#2f5f5f', '#6b4226', '#9c8a5a', '#405060'].map(rgb);
 
 // ---------- 고양이 / 좀비 스프라이트 ----------
-// 고양이 머리(앞발 포함). mood: sleep | awake | happy | scared | eat
+// 고양이 머리(앞발 포함), 영상처럼 크게. mood: sleep | awake | happy | scared | eat
 export function catSprite(mood, frame = 0) {
-  const s = new Buf(22, 17), cx = 11, cy = 9;
-  const ear = (pts) => s.poly(pts, (x, y) => (y < 3 ? C.catL : C.cat));
-  const flat = mood === 'scared';
-  ear(flat ? [[2, 7], [2, 2], [8, 4]] : [[2, 7], [4, -0.5], [9, 4]]);
-  ear(flat ? [[20, 7], [20, 2], [14, 4]] : [[20, 7], [18, -0.5], [13, 4]]);
-  s.poly(flat ? [[3, 5], [3, 3.5], [6, 4.5]] : [[4, 5], [4.6, 2], [7, 4]], C.pink);
-  s.poly(flat ? [[19, 5], [19, 3.5], [16, 4.5]] : [[18, 5], [17.4, 2], [15, 4]], C.pink);
-  s.ellipse(cx, cy, 9, 6.6, (x, y, u, v) => (v > 0.55 ? C.catD : u < -0.2 && v < -0.2 ? C.catL : C.cat));
-  s.ellipse(cx, cy + 3, 3.6, 2.2, C.catW);
-  const k = C.catO;
-  if (mood === 'sleep') { for (const ox of [0, 8]) { s.px(6 + ox, 9, k); s.px(7 + ox, 10, k); s.px(8 + ox, 10, k); s.px(9 + ox, 9, k); } }
-  else if (mood === 'happy') { for (const ox of [0, 8]) { s.px(6 + ox, 10, k); s.px(7 + ox, 9, k); s.px(8 + ox, 9, k); s.px(9 + ox, 10, k); } }
-  else if (mood === 'scared') { for (const ox of [0, 8]) { s.rect(6 + ox, 7, 3, 3, C.catW); s.px(7 + ox, 8, k); } }
-  else { for (const ox of [0, 8]) { s.rect(7 + ox, 7, 2, 3, k); s.px(7 + ox, 7, C.catW); } }
-  s.px(5, 11, C.pink); s.px(6, 11, C.pink); s.px(16, 11, C.pink); s.px(17, 11, C.pink);
-  s.px(11, 11, C.catN);
-  if (mood === 'scared' || (mood === 'eat' && frame)) { s.rect(10, 12, 3, 2, C.zMouth); s.px(10, 12, C.catW); s.px(12, 12, C.catW); }
-  else { s.px(10, 12, k); s.px(12, 12, k); }
-  // 앞발
-  for (const px of [6, 16]) { s.ellipse(px, 15, 2.8, 1.9, C.catL); s.px(px - 1, 16, C.catD); s.px(px + 1, 16, C.catD); }
+  const W = 32, H = 25, s = new Buf(W, H), cx = 16, cy = 13;
+  const flat = mood === 'scared', k = C.catO;
+  const ear = (pts) => s.poly(pts, (x, y) => (y < 4 ? C.catL : C.cat));
+  ear(flat ? [[2, 11], [2, 3], [11, 6]] : [[2, 11], [5, 0], [13, 5]]);
+  ear(flat ? [[30, 11], [30, 3], [21, 6]] : [[30, 11], [27, 0], [19, 5]]);
+  s.poly(flat ? [[4, 8], [4, 5], [8, 6.5]] : [[5, 8], [6, 3], [10, 6]], C.pink);
+  s.poly(flat ? [[28, 8], [28, 5], [24, 6.5]] : [[27, 8], [26, 3], [22, 6]], C.pink);
+  // 머리: 위는 밝게, 아래는 그늘(3단)
+  s.ellipse(cx, cy, 13.5, 9.6, (x, y, u, v) => (v > 0.62 ? C.catD : u < -0.25 && v < -0.15 ? C.catL : C.cat));
+  s.px(8, 6, C.catW); s.px(9, 6, C.catW); s.px(7, 7, C.catW);   // 머리 윤기
+  s.ellipse(cx, cy + 4.5, 5.2, 3.2, C.catW);
+  if (mood === 'sleep') for (const ox of [0, 12]) { s.px(8 + ox, 13, k); s.px(9 + ox, 14, k); s.px(10 + ox, 14, k); s.px(11 + ox, 14, k); s.px(12 + ox, 13, k); }
+  else if (mood === 'happy') for (const ox of [0, 12]) { s.px(8 + ox, 14, k); s.px(9 + ox, 13, k); s.px(10 + ox, 12, k); s.px(11 + ox, 13, k); s.px(12 + ox, 14, k); }
+  else if (mood === 'scared') for (const ox of [0, 12]) { s.rect(8 + ox, 10, 5, 5, C.catW); s.rect(10 + ox, 12, 2, 2, k); }
+  else for (const ox of [0, 12]) { s.rect(9 + ox, 10, 3, 5, k); s.px(9 + ox, 10, C.catW); s.px(10 + ox, 11, C.catW); }
+  for (const bx of [6, 24]) { s.rect(bx, 16, 3, 1, C.pink); }
+  s.rect(15, 15, 2, 1, C.catN);
+  if (mood === 'scared' || (mood === 'eat' && frame)) { s.rect(14, 17, 4, 3, C.zMouth); s.px(14, 17, C.catW); s.px(17, 17, C.catW); }
+  else { s.px(14, 17, k); s.px(15, 18, k); s.px(16, 18, k); s.px(17, 17, k); }
+  // 수염
+  for (const [x0, dir] of [[4, -1], [28, 1]]) { s.px(x0, 15, C.catW); s.px(x0 + dir, 15, C.catW); s.px(x0, 17, C.catW); s.px(x0 + dir, 18, C.catW); }
+  // 앞발(이불 위에 올림)
+  for (const px of [8, 24]) { s.ellipse(px, 22, 4, 2.6, (x, y, u, v) => (v > 0.4 ? C.catD : C.catL)); s.px(px - 1, 23, k); s.px(px + 1, 23, k); }
   return outline(s, C.catO);
 }
 // 앉은 몸통 + 꼬리(깨어 있을 때 머리 아래에 둔다)
 export function catBody(frame = 0) {
-  const s = new Buf(24, 14);
-  s.ellipse(11, 7, 7.5, 6.5, (x, y, u, v) => (v > 0.5 ? C.catD : u < -0.3 ? C.catL : C.cat));
-  s.ellipse(11, 6, 3, 4, C.catW);
+  const s = new Buf(34, 18);
+  s.ellipse(16, 9, 10.5, 8.5, (x, y, u, v) => (v > 0.55 ? C.catD : u < -0.3 ? C.catL : C.cat));
+  s.ellipse(16, 8, 4.5, 6, C.catW);
   const sw = frame ? 1 : 0;
-  for (let i = 0; i < 8; i++) { const a = i / 7; s.rect(17 + a * 5, 11 - Math.sin(a * Math.PI) * (6 + sw * 2) - a * 2, 2, 2, i > 5 ? C.catL : C.cat); }
+  for (let i = 0; i < 10; i++) { const a = i / 9; s.rect(25 + a * 7, 14 - Math.sin(a * Math.PI) * (8 + sw * 2) - a * 3, 3, 3, i > 7 ? C.catL : C.cat); }
   return outline(s, C.catO);
 }
 // 창문에 들러붙은 좀비(가로 w). slap: 손 위치 번갈아
@@ -177,17 +197,19 @@ export function zombieSprite(w, slap = 0, variant = 0) {
 
 // ---------- 방 ----------
 // 세계 좌표: X는 좌우(-1~1), Y는 높이(바닥 0, 천장 CEIL), D는 카메라에서의 깊이(뒷벽 BACK)
-export const HALF = 1, CEIL = 2.4, EYE = 1.55, BACK = 3.6;
+export const HALF = 1, CEIL = 2.4, EYE = 2.0, BACK = 3.6;
 export const WIN = { x0: -0.74, x1: 0.74, y0: 1.02, y1: 2.14 };
 
 export function createRoom(AW, AH) {
-  const f = AW * 0.585, cx = AW / 2, hy = Math.round(AH * 0.3);
+  const f = AW * 0.9, cx = AW / 2, hy = Math.round(AH * 0.19);
   const P = (X, Y, D) => [cx + (f * X) / D, hy - (f * (Y - EYE)) / D];
   const back = new Buf(AW, AH), front = new Buf(AW, AH);
   const winHole = new Uint8Array(AW * AH);
 
   // 축에 맞춘 면 하나: 픽셀마다 광선-평면 교차로 세계 좌표를 되찾아 shader(X, Y, D, x, y)에 넘긴다
+  let seq = 10;
   function face(b, axis, val, a0, a1, b0, b1, shader) {
+    b.cur = ++seq;
     let pts;
     if (axis === 'D') pts = [P(a0, b0, val), P(a1, b0, val), P(a1, b1, val), P(a0, b1, val)];
     else if (axis === 'Y') pts = [P(a0, val, b0), P(a1, val, b0), P(a1, val, b1), P(a0, val, b1)];
@@ -207,7 +229,7 @@ export function createRoom(AW, AH) {
     if (y1 < EYE && sh.top) face(b, 'Y', y1, x0, x1, d0, d1, sh.top);
     if (sh.front) face(b, 'D', d0, x0, x1, y0, y1, sh.front);
   }
-  const grain = (base, x, y, k = 0.1) => mul(base, 1 - k + hash(x, y >> 1, 7) * k * 2);
+  const grain = (base, x, y, k = 0.1) => (hash(x, y >> 2, 7) < 0.12 ? mul(base, 1 - k * 1.6) : hash(x, y >> 3, 8) > 0.94 ? mul(base, 1 + k) : base);
 
   // --- 껍데기: 픽셀마다 광선이 처음 닿는 면 ---
   for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {
@@ -222,6 +244,7 @@ export function createRoom(AW, AH) {
     else c = ceilTex(X, D, x, y);
     if (c === 0) winHole[y * AW + x] = 1;
     back.d[y * AW + x] = c;
+    back.id[y * AW + x] = D === BACK ? 1 : D === dSide ? 2 : D === dFloor ? 3 : 4;
   }
   function backWall(X, Y, x, y) {
     // 창문(모서리 둥근 열차 창): 구멍은 0, 둘레는 금속 틀
@@ -271,22 +294,22 @@ export function createRoom(AW, AH) {
   // 액자(뒷벽 왼쪽)
   face(back, 'D', BACK - 0.01, -0.95, -0.79, 1.42, 1.66, (X, Y, D, x, y) => (X < -0.935 || X > -0.805 || Y < 1.435 || Y > 1.645 ? C.brassD : Y < 1.5 ? rgb('#5d7a4a') : rgb('#a7b8c2')));
   // 침대 머리판(금속)
-  for (const px of [-0.94, 0.56]) face(back, 'D', 3.56, px, px + 0.05, 0, 1.0, (X) => (X < px + 0.02 ? C.metalL : C.metal));
-  for (const ry of [0.62, 0.94]) face(back, 'D', 3.56, -0.94, 0.61, ry, ry + 0.04, C.metalL);
+  for (const px of [-0.6, 0.5]) face(back, 'D', 3.56, px, px + 0.05, 0, 1.0, (X) => (X < px + 0.02 ? C.metalL : C.metal));
+  for (const ry of [0.62, 0.94]) face(back, 'D', 3.56, -0.6, 0.55, ry, ry + 0.04, C.metalL);
   // 침대: 틀, 매트리스, 베개, 이불
-  box(back, -0.98, 0.6, 0.1, 0.42, 1.85, 3.55, { front: (X, Y, D, x, y) => grain(Y > 0.38 ? C.woodL : C.wood, x, y) });
-  for (const lx of [-0.95, 0.52]) face(back, 'D', 1.86, lx, lx + 0.06, 0, 0.12, C.woodD);
-  face(back, 'Y', 0.6, -0.98, 0.6, 3.1, 3.55, C.sheet);
-  box(back, -0.7, 0.28, 0.6, 0.78, 3.15, 3.5, { top: (X, Y, D, x, y) => (Math.abs(X + 0.21) > 0.45 || D > 3.46 ? C.pillowD : grain(C.pillow, x, y, 0.04)), front: (X, Y, D, x, y) => (Y < 0.64 ? C.pillowD : C.pillow) });
+  box(back, -0.62, 0.56, 0.1, 0.42, 1.85, 3.55, { front: (X, Y, D, x, y) => grain(Y > 0.38 ? C.woodL : C.wood, x, y) });
+  for (const lx of [-0.6, 0.48]) face(back, 'D', 1.86, lx, lx + 0.06, 0, 0.12, C.woodD);
+  face(back, 'Y', 0.6, -0.62, 0.56, 3.1, 3.55, C.sheet);
+  box(back, -0.46, 0.4, 0.6, 0.78, 3.15, 3.5, { top: (X, Y, D, x, y) => (Math.abs(X + 0.03) > 0.4 || D > 3.46 ? C.pillowD : grain(C.pillow, x, y, 0.04)), front: (X, Y, D, x, y) => (Y < 0.64 ? C.pillowD : C.pillow) });
   const blanket = (X, Y, D, x, y) => {
     const fold = Math.sin(X * 10 + Math.sin(D * 6) * 1.6) * 0.5 + vnoise(X * 4, D * 4, 11) - 0.5;
     const k = steps(Math.max(0, Math.min(1, 0.55 + fold * 0.55)), 3, x, y);
     const c = k < 0.34 ? C.blanketD : k > 0.67 ? C.blanketL : C.blanket;
     return hash(x, y, 2) < 0.06 ? mul(c, 0.94) : (x + y) % 2 && hash(x >> 1, y, 5) < 0.2 ? mul(c, 1.04) : c;
   };
-  face(back, 'Y', 0.64, -0.98, 0.6, 1.8, 3.12, blanket);
-  face(back, 'D', 3.12, -0.98, 0.6, 0.6, 0.67, C.blanketL);   // 접힌 이불 끝
-  face(back, 'D', 1.8, -0.98, 0.6, 0.14, 0.64, (X, Y, D, x, y) => {
+  face(back, 'Y', 0.64, -0.64, 0.58, 1.8, 3.12, blanket);
+  face(back, 'D', 3.12, -0.64, 0.58, 0.6, 0.67, C.blanketL);   // 접힌 이불 끝
+  face(back, 'D', 1.8, -0.64, 0.58, 0.14, 0.64, (X, Y, D, x, y) => {
     const hem = 0.18 + Math.sin(X * 17) * 0.03 + Math.sin(X * 5.3) * 0.04;
     if (Y < hem) return 0;
     const k = Math.sin(X * 22 + 1) * 0.5 + 0.5;
@@ -295,9 +318,9 @@ export function createRoom(AW, AH) {
   // 난로(오른쪽 뒤 구석): 불 창은 비워 두고 매 프레임 그린다
   const stove = { x0: 0.64, x1: 0.98, y0: 0.08, y1: 0.8, d0: 2.95, d1: 3.5, door: { x0: 0.7, x1: 0.92, y0: 0.22, y1: 0.5 } };
   for (const [lx, ld] of [[0.66, 2.97], [0.93, 2.97]]) face(back, 'D', ld, lx, lx + 0.04, 0, 0.09, C.iron);
-  face(back, 'X', 0.64, 0.08, 0.8, 2.95, 3.5, (X, Y, D, x, y) => grain(Y > 0.74 ? C.ironL : C.iron, x, y, 0.15));
-  face(back, 'Y', 0.8, 0.64, 0.98, 2.95, 3.5, (X, Y, D, x, y) => (Math.hypot(X - 0.81, D - 3.22) < 0.1 ? C.metalD : C.ironL));
-  face(back, 'D', 2.95, 0.64, 0.98, 0.08, 0.8, (X, Y, D, x, y) => {
+  face(back, 'X', 0.62, 0.08, 0.8, 2.95, 3.5, (X, Y, D, x, y) => grain(Y > 0.74 ? C.ironL : C.iron, x, y, 0.15));
+  face(back, 'Y', 0.8, 0.62, 0.98, 2.95, 3.5, (X, Y, D, x, y) => (Math.hypot(X - 0.81, D - 3.22) < 0.1 ? C.metalD : C.ironL));
+  face(back, 'D', 2.95, 0.62, 0.98, 0.08, 0.8, (X, Y, D, x, y) => {
     const dr = stove.door;
     if (X > dr.x0 && X < dr.x1 && Y > dr.y0 && Y < dr.y1) return 0;
     if (X > dr.x0 - 0.03 && X < dr.x1 + 0.03 && Y > dr.y0 - 0.03 && Y < dr.y1 + 0.03) return C.ironL;
@@ -309,9 +332,9 @@ export function createRoom(AW, AH) {
   // 연통
   face(back, 'D', 3.25, 0.77, 0.86, 0.8, CEIL, (X, Y, D, x, y) => (Math.floor(Y * 6) !== Math.floor((Y - 0.02) * 6) ? C.ironL : X < 0.79 ? C.ironL : C.iron));
   // 오른쪽 벽: 선반(통조림 자리), 지도와 신문
-  face(back, 'Y', 1.3, 0.8, 0.995, 1.5, 2.55, (X, Y, D, x, y) => grain(C.woodL, x, y));
-  face(back, 'X', 0.8, 1.26, 1.3, 1.5, 2.55, C.woodD);
-  const papers = [[1.45, 2.0, 1.5, 1.95, 0], [2.05, 2.5, 1.6, 2.15, 1], [1.7, 2.1, 1.92, 2.24, 2], [2.65, 3.2, 1.35, 1.95, 3]];
+  face(back, 'Y', 1.3, 0.8, 0.995, 1.85, 2.9, (X, Y, D, x, y) => grain(C.woodL, x, y));
+  face(back, 'X', 0.8, 1.26, 1.3, 1.85, 2.9, C.woodD);
+  const papers = [[1.9, 2.35, 1.5, 1.95, 0], [2.4, 2.8, 1.6, 2.15, 1], [2.05, 2.4, 1.92, 2.24, 2], [2.95, 3.45, 1.35, 1.95, 3]];
   for (const [d0, d1, y0, y1, k] of papers) face(back, 'X', 0.993 - k * 0.001, y0, y1, d0, d1, (X, Y, D, x, y) => {
     if (Y > y1 - 0.03 && Math.abs(D - (d0 + d1) / 2) < 0.025) return C.red;   // 압정
     const u = (D - d0) / (d1 - d0), v = (y1 - Y) / (y1 - y0);
@@ -328,11 +351,11 @@ export function createRoom(AW, AH) {
 
   // --- 앞쪽 물건 ---
   // 왼쪽 벽 책장
-  face(front, 'X', -0.79, 0, 2.12, 1.0, 1.75, (X, Y, D, x, y) => grain(C.woodD, x, y));
+  face(front, 'X', -0.79, 0, 2.12, 1.8, 3.2, (X, Y, D, x, y) => grain(C.woodD, x, y));
   const shelves = [0.04, 0.52, 1.0, 1.48, 1.96];
   for (let si = 0; si < shelves.length - 1; si++) {
-    let d = 1.02;
-    while (d < 1.7) {
+    let d = 1.83;
+    while (d < 3.12) {
       const r = hash(si, Math.round(d * 100), 21), w = 0.035 + r * 0.05, top = shelves[si] + 0.04 + 0.26 + hash(si, Math.round(d * 100), 22) * 0.12;
       if (r > 0.86) {   // 유리병(톱니바퀴)
         face(front, 'X', -0.8, shelves[si] + 0.04, shelves[si] + 0.3, d, d + 0.12, (X, Y, D, x, y) => (Y > shelves[si] + 0.27 ? C.brassD : Math.hypot(D - d - 0.06, Y - shelves[si] - 0.14) < 0.05 ? (hash(x, y) < 0.5 ? C.brass : C.brassD) : mix(C.woodD, rgb('#9fb4b0'), 0.45)));
@@ -343,60 +366,73 @@ export function createRoom(AW, AH) {
       d += w + 0.004;
     }
   }
-  for (const sy of shelves) face(front, 'X', -0.78, sy, sy + 0.04, 1.0, 1.75, C.woodL);
-  face(front, 'D', 1.0, -1.0, -0.78, 0, 2.12, C.woodM);
+  for (const sy of shelves) face(front, 'X', -0.78, sy, sy + 0.04, 1.8, 3.2, C.woodL);
+  face(front, 'D', 1.8, -1.0, -0.78, 0, 2.12, C.woodM);
   // 발판 의자(오른쪽 앞): 방석
-  for (const [lx, ld] of [[0.42, 1.03], [0.92, 1.03]]) face(front, 'D', ld, lx, lx + 0.04, 0, 0.3, C.woodD);
-  box(front, 0.36, 0.98, 0.3, 0.48, 1.0, 1.34, {
+  for (const [lx, ld] of [[0.44, 1.08], [0.92, 1.08]]) face(front, 'D', ld, lx, lx + 0.04, 0, 0.3, C.woodD);
+  box(front, 0.4, 0.98, 0.3, 0.48, 1.05, 1.42, {
     side: (X, Y, D, x, y) => (Y < 0.34 ? C.woodD : grain(C.blanketD, x, y)),
-    top: (X, Y, D, x, y) => { const u = ((X - 0.36) % 0.2) / 0.2, v = ((D - 1.0) % 0.17) / 0.17; return Math.hypot(u - 0.5, v - 0.5) < 0.09 ? C.woodD : u < 0.06 || v < 0.08 ? C.blanketD : u + v < 0.7 ? C.blanketL : C.blanket; },
+    top: (X, Y, D, x, y) => { const u = ((X - 0.4) % 0.2) / 0.2, v = ((D - 1.05) % 0.17) / 0.17; return Math.hypot(u - 0.5, v - 0.5) < 0.09 ? C.woodD : u < 0.06 || v < 0.08 ? C.blanketD : u + v < 0.7 ? C.blanketL : C.blanket; },
     front: (X, Y, D, x, y) => (Y < 0.34 ? C.woodM : grain(C.blanket, x, y)),
   });
   // 바구니(바닥 가운데 앞): 공구가 꽂혀 있음
-  { const [bx, by] = P(0.0, 0.42, 1.18), [bx2] = P(0.32, 0.42, 1.18); for (let i = 0; i < 3; i++) { const tx = bx + (bx2 - bx) * (0.25 + i * 0.25); front.line(tx, by + 8, tx + (i - 1) * 4, by - 2, C.metalL); front.rect(tx + (i - 1) * 4 - 2, by - 4, 5, 3, C.metal); } }
-  box(front, 0.0, 0.32, 0, 0.24, 1.16, 1.34, {
-    top: (X, Y, D, x, y) => mix(C.woodD, C.metalD, 0.5),
-    front: (X, Y, D, x, y) => ((Math.floor(X * 30) + Math.floor(Y * 26)) % 2 ? C.woodL : C.woodM),
+  box(front, 0.0, 0.32, 0, 0.24, 1.12, 1.28, {
+    top: (X, Y, D, x, y) => (hash(x, y, 12) < 0.3 ? C.woodM : C.woodD),
+    front: (X, Y, D, x, y) => { const a = Math.floor(X * 34), b = Math.floor(Y * 28); return Y > 0.21 ? C.woodH : (a + b) % 2 ? C.woodL : (a % 2 ? C.woodM : C.wood); },
   });
+  { front.cur = 900;
+    const tools = [[0.07, 0.4, -0.04], [0.16, 0.46, 0.02], [0.25, 0.39, 0.05]];
+    for (const [tx, ty, lean] of tools) {
+      const [x0, y0] = P(tx, 0.18, 1.2), [x1, y1] = P(tx + lean, ty, 1.2);
+      front.line(x0, y0, x1, y1, C.metalL); front.line(x0 + 1, y0, x1 + 1, y1, C.metal);
+      front.ellipse(x1, y1 - 1, 3.2, 2.6, C.metal); front.px(x1 - 1, y1 - 2, C.metalL);
+    }
+    const [hx, hy2] = P(0.16, 0.3, 1.13); front.rect(hx - 9, hy2, 4, 3, C.red); front.rect(hx + 5, hy2 + 1, 5, 2, rgb('#e2c03a'));
+  }
   // 식탁(왼쪽 앞): 체크무늬 식탁보
-  for (const lx of [-0.9, -0.16]) face(front, 'D', 1.03, lx, lx + 0.05, 0, 0.62, C.woodM);
+  for (const lx of [-0.9, -0.16]) face(front, 'D', 1.08, lx, lx + 0.05, 0, 0.62, C.woodM);
   const check = (X, D, x, y) => ((Math.floor((X + 2) / 0.08) + Math.floor(D / 0.08)) % 2 ? C.clothB : mix(C.clothA, C.clothB, (Math.floor((X + 2) / 0.08) % 2) * 0.45));
-  box(front, -0.98, -0.05, 0.62, 0.8, 1.0, 1.42, {
+  box(front, -0.98, -0.05, 0.62, 0.8, 1.05, 1.5, {
     side: (X, Y, D, x, y) => (Y < 0.62 + Math.sin(D * 40) * 0.02 + 0.02 ? 0 : check(D, Y, x, y)),
     top: (X, Y, D, x, y) => check(X, D, x, y),
     front: (X, Y, D, x, y) => (Y < 0.62 + Math.sin(X * 40) * 0.02 + 0.02 ? 0 : mul(check(X, Y + 1, x, y), 0.92)),
   });
   // 펼친 책
-  face(front, 'Y', 0.805, -0.52, -0.16, 1.04, 1.2, (X, Y, D, x, y) => (Math.abs(X + 0.34) < 0.012 ? C.paperD : Math.floor(D * 60) % 3 === 0 && Math.abs(X + 0.34) > 0.04 ? C.paperD : C.paper));
+  face(front, 'Y', 0.805, -0.52, -0.16, 1.09, 1.25, (X, Y, D, x, y) => (Math.abs(X + 0.34) < 0.012 ? C.paperD : Math.floor(D * 60) % 3 === 0 && Math.abs(X + 0.34) > 0.04 ? C.paperD : C.paper));
   // 라디오
-  const radio = { x0: -0.56, x1: -0.38, y0: 0.8, y1: 0.93, d0: 1.3, d1: 1.4 };
+  const radio = { x0: -0.95, x1: -0.7, y0: 0.8, y1: 0.96, d0: 1.3, d1: 1.44 };
   box(front, radio.x0, radio.x1, radio.y0, radio.y1, radio.d0, radio.d1, {
     side: C.woodD, top: C.woodL,
-    front: (X, Y, D, x, y) => (Y > 0.91 ? C.woodL : X < -0.48 ? ((x + y) % 2 ? C.metalD : C.metal) : Y > 0.86 ? rgb('#3a2a10') : C.woodM),
+    front: (X, Y, D, x, y) => (Y > 0.93 ? C.woodL : X < -0.83 ? ((x + y) % 2 ? C.metalD : C.metal) : Y > 0.87 ? rgb('#3a2a10') : C.woodM),
   });
   // 스탠드(전구는 매 프레임)
-  const lampAt = P(-0.72, 0.81, 1.3), bulb = P(-0.64, 1.28, 1.28);
-  front.ellipse(lampAt[0], lampAt[1], 4, 1.5, C.metalD);
-  front.line(lampAt[0], lampAt[1] - 1, lampAt[0] - 2, bulb[1] + 6, C.metalD);
-  front.line(lampAt[0] - 2, bulb[1] + 6, bulb[0] - 1, bulb[1] - 4, C.metalD);
-  front.poly([[bulb[0] - 6, bulb[1] - 1], [bulb[0] - 2, bulb[1] - 6], [bulb[0] + 4, bulb[1] - 5], [bulb[0] + 6, bulb[1] - 1]], C.metal);
-  front.line(bulb[0] - 6, bulb[1] - 1, bulb[0] + 6, bulb[1] - 1, C.metalL);
+  const lampAt = P(-0.5, 0.81, 1.42), bulb = P(-0.42, 1.32, 1.4);
+  { front.cur = 901;
+    const u = f / 1.4, [lx, ly] = lampAt, [bx, by] = bulb;
+    front.ellipse(lx, ly, u * 0.07, u * 0.025, (x, y, uu, vv) => (vv < -0.2 ? C.metalL : C.metalD));
+    front.line(lx, ly - 1, lx - u * 0.03, by + u * 0.12, C.metalD); front.line(lx + 1, ly - 1, lx + 1 - u * 0.03, by + u * 0.12, C.metal);
+    front.line(lx - u * 0.03, by + u * 0.12, bx - 2, by - u * 0.06, C.metalD); front.line(lx + 1 - u * 0.03, by + u * 0.12, bx - 1, by - u * 0.06, C.metal);
+    front.poly([[bx - u * 0.1, by - u * 0.01], [bx - u * 0.05, by - u * 0.075], [bx + u * 0.05, by - u * 0.075], [bx + u * 0.1, by - u * 0.01]], (x, y) => (x < bx - u * 0.04 ? C.metalL : C.metal));
+  }
   // 머그(연필)
-  { const [mx, my] = P(-0.88, 0.81, 1.1); front.rect(mx - 2, my - 4, 5, 5, C.pillow); front.px(mx, my - 2, rgb('#e2a43a')); for (let i = 0; i < 3; i++) front.line(mx - 1 + i, my - 5, mx - 2 + i * 2, my - 9, [C.red, rgb('#e2c03a'), rgb('#3a6ae2')][i]); }
+  { const [mx, my] = P(-0.25, 0.81, 1.38); front.rect(mx - 2, my - 4, 5, 5, C.pillow); front.px(mx, my - 2, rgb('#e2a43a')); for (let i = 0; i < 3; i++) front.line(mx - 1 + i, my - 5, mx - 2 + i * 2, my - 9, [C.red, rgb('#e2c03a'), rgb('#3a6ae2')][i]); }
 
   // 화면 좌표로 쓰는 자리들
   const winRect = (() => { const a = P(WIN.x0, WIN.y1, BACK), b = P(WIN.x1, WIN.y0, BACK); return { x: Math.round(a[0]), y: Math.round(a[1]), w: Math.round(b[0] - a[0]), h: Math.round(b[1] - a[1]) }; })();
   const doorPts = [P(stove.door.x0, stove.door.y1, stove.d0), P(stove.door.x1, stove.door.y0, stove.d0)];
   const fireRect = { x: Math.round(doorPts[0][0]), y: Math.round(doorPts[0][1]), w: Math.round(doorPts[1][0] - doorPts[0][0]), h: Math.round(doorPts[1][1] - doorPts[0][1]) };
-  const catAt = P(-0.18, 0.7, 3.2);   // 고양이 머리 아래쪽(앞발)이 이불 끝에 닿는 자리
-  const catSit = P(-0.2, 0.64, 2.55);
-  const bucket = P(0.55, 0, 2.75), cans = [];
-  for (let i = 0; i < 10; i++) { const d = 1.62 + (i % 5) * 0.19, row = Math.floor(i / 5); cans.push({ p: P(0.86 + row * 0.08, 1.3, d + row * 0.08), s: f / (d + row * 0.08) }); }
-  const dial = P(-0.43, 0.885, 1.3);
+  const catAt = P(-0.03, 0.7, 3.2);   // 고양이 머리 아래쪽(앞발)이 이불 끝에 닿는 자리
+  const catSit = P(-0.03, 0.64, 2.55);
+  const bucket = P(0.76, 0, 2.78), cans = [];
+  for (let i = 0; i < 10; i++) { const d = 1.95 + (i % 5) * 0.18, row = Math.floor(i / 5); cans.push({ p: P(0.86 + row * 0.08, 1.3, d + row * 0.08), s: f / (d + row * 0.08) }); }
+  const dial = P(-0.76, 0.9, 1.3);
   const lights = { lamp: bulb, stove: P(0.81, 0.36, 2.95), win: P(0, 1.55, BACK) };
   // 빛의 퍼짐(화면 거리) 미리 계산
-  const fall = (p, r) => { const a = new Float32Array(AW * AH); for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) { const d = Math.hypot(x - p[0], (y - p[1]) * 1.1) / r; a[y * AW + x] = d < 1 ? (1 - d) * (1 - d) : 0; } return a; };
-  const lampF = fall(bulb, AW * 0.62), stoveF = fall(lights.stove, AW * 0.42), winF = fall(lights.win, AW * 0.95);
+  // 빛 웅덩이는 4단계 고리로 끊고, 고리 경계만 2×2 체크로 섞는다(픽셀 아트식 조명)
+  const D2 = [0.25, 0.75, 1, 0.5];
+  const fall = (p, r) => { const a = new Float32Array(AW * AH); for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) { const d = Math.hypot(x - p[0], (y - p[1]) * 1.1) / r, v = d < 1 ? (1 - d) * (1 - d) : 0; a[y * AW + x] = Math.floor(v * 4 + D2[(x & 1) + ((y & 1) << 1)] * 0.6) / 4; } return a; };
+  const lampF = fall(bulb, AW * 0.7), stoveF = fall(lights.stove, AW * 0.42), winF = fall(lights.win, AW * 0.95);
+  inkEdges(back); inkEdges(front);
   return { AW, AH, f, cx, hy, P, back, front, winHole, winRect, fireRect, catAt, catSit, bucket, cans, dial, bulb, lights, lampF, stoveF, winF };
 }
 
@@ -520,7 +556,7 @@ export function compose(out, room, o) {
   }
   for (let x = 1; x < fr.w; x += 3) for (let y = 0; y < fr.h; y++) out.px(fr.x + x, fr.y + y, C.ironL);
   // 석탄 양동이
-  { const [bx, by] = room.bucket, s = room.f / 2.75, w = Math.round(s * 0.22), h = Math.round(s * 0.2), lvl = Math.min(1, o.fuel / 10);
+  { const [bx, by] = room.bucket, s = room.f / 2.78, w = Math.round(s * 0.22), h = Math.round(s * 0.2), lvl = Math.min(1, o.fuel / 10);
     out.rect(bx - w / 2, by - h, w, h, (x, y) => (x < bx - w / 2 + 1 ? C.metalL : y < by - h + 1 ? C.metalL : C.metal));
     const coal = Math.round(h * 0.9 * lvl);
     for (let i = 0; i < coal * w * 0.7; i++) { const x = bx - w / 2 + 1 + hash(i, 1, 44) * (w - 2), y = by - h - coal * 0.5 + hash(i, 2, 44) * coal; out.px(x, y, hash(i, 3, 44) < 0.3 ? rgb('#4a4a50') : rgb('#16161a')); }
@@ -534,15 +570,15 @@ export function compose(out, room, o) {
   // 고양이
   if (o.cat) {
     const c = o.cat;
-    if (c.body) out.blit(c.body, room.catSit[0] - 11 + c.dx, room.catSit[1] - c.body.h + c.dy, c.tint);
-    const at = c.body ? [room.catSit[0], room.catSit[1] - c.body.h + 4] : room.catAt;
+    if (c.body) out.blit(c.body, room.catSit[0] - 16 + c.dx, room.catSit[1] - c.body.h + c.dy, c.tint);
+    const at = c.body ? [room.catSit[0], room.catSit[1] - c.body.h + 6] : room.catAt;
     out.blit(c.sprite, at[0] - c.sprite.w / 2 + c.dx, at[1] - c.sprite.h + c.dy, c.tint);
   }
   out.over(room.front);
   // 라디오 다이얼, 전구
   if (o.radioOn) { const [x, y] = room.dial; out.rect(x - 2, y - 1, 4, 2, rgb('#ffcf6a')); }
   const [bx, by] = room.bulb;
-  out.ellipse(bx, by + 1, 2.2, 1.8, o.lampOn ? rgb('#fff2b8') : rgb('#8a8670'));
+  out.ellipse(bx, by + 1, 3.6, 3, o.lampOn ? rgb('#fff2b8') : rgb('#8a8670'));
   // 조명
   light(out, room, o);
 }
@@ -578,26 +614,26 @@ function drawBarricade(out, room, o) {
 // 조명: 주변광 + 스탠드 + 난로 + 창빛, 단계로 끊고 바이어 디더링
 function light(out, room, o) {
   const { AW, AH, lampF, stoveF, winF, winHole } = room, d = out.d, dl = o.daylight;
-  const amb = [0.2 + 0.36 * dl, 0.22 + 0.36 * dl, 0.34 + 0.28 * dl];
-  const lamp = o.lampOn ? [1.05, 0.78, 0.45] : [0, 0, 0];
+  const amb = [0.42 + 0.34 * dl, 0.38 + 0.34 * dl, 0.48 + 0.22 * dl];
+  const lamp = o.lampOn ? [0.75, 0.55, 0.28] : [0, 0, 0];
   const fl = o.fire * (0.85 + 0.15 * Math.sin(o.t * 13) * Math.sin(o.t * 7.3));
   const st = [1.1 * fl, 0.55 * fl, 0.22 * fl];
-  const wn = [0.5 * dl, 0.5 * dl, 0.46 * dl];
+  const wn = [0.3 * dl, 0.3 * dl, 0.28 * dl];
   const fr = room.fireRect, glowOn = o.fire > 0;
   for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {
     const i = y * AW + x;
     if (winHole[i] && !room.back.d[i] && isOutside(out, room, x, y)) continue;
     if (glowOn && x >= fr.x && x < fr.x + fr.w && y >= fr.y && y < fr.y + fr.h) continue;
-    const a = lampF[i], s = stoveF[i], w = winF[i], th = BAYER[(x & 3) + ((y & 3) << 2)];
-    const lr = Math.floor((amb[0] + lamp[0] * a + st[0] * s + wn[0] * w) * 9 + th) / 9;
-    const lg = Math.floor((amb[1] + lamp[1] * a + st[1] * s + wn[1] * w) * 9 + th) / 9;
-    const lb = Math.floor((amb[2] + lamp[2] * a + st[2] * s + wn[2] * w) * 9 + th) / 9;
+    const a = lampF[i], s = stoveF[i], w = winF[i];
+    const lr = amb[0] + lamp[0] * a + st[0] * s + wn[0] * w;
+    const lg = amb[1] + lamp[1] * a + st[1] * s + wn[1] * w;
+    const lb = amb[2] + lamp[2] * a + st[2] * s + wn[2] * w;
     const c = d[i];
     d[i] = pack(cR(c) * lr, cG(c) * lg, cB(c) * lb);
   }
   // 전구는 밝게 그대로
   const [bx, by] = room.bulb;
-  if (o.lampOn) out.ellipse(bx, by + 1, 2.2, 1.8, rgb('#fff6c8'));
+  if (o.lampOn) { out.ellipse(bx, by + 1, 3.6, 3, rgb('#ffe9a0')); out.ellipse(bx - 0.5, by + 0.5, 2, 1.6, rgb('#fffbe6')); }
   if (o.radioOn) { const [x, y] = room.dial; out.rect(x - 2, y - 1, 4, 2, rgb('#ffcf6a')); }
 }
 // 창 구멍 안의 픽셀이 바깥 풍경인지(철판·금은 방 안 물건이라 조명을 받는다)
