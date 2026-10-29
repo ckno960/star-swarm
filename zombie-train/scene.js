@@ -106,8 +106,9 @@ export function drawScene(g, o) {
   const fx0 = vpx - FV.vx * fm, fy0 = vpy - FV.vy * fm;
   const moving = !o.station && o.speed > 0, phase = ((o.scroll / 17) % 1 + 1) % 1;
   const layer = (name, a) => { if (!IMG[name] || a <= 0.01) return; g.globalAlpha = a; g.drawImage(frontView(name, phase, moving), fx0, fy0, FW, FW); g.globalAlpha = 1; };
-  if (o.station) { layer('front_station_night', 1); layer('front_station', dl); }
-  else { layer('front_night', 1); layer('front_day', dl); layer('front_dusk', dusk); }
+  // 위에 덮이는 그림이 완전히 불투명하면 아래 그림은 건너뛴다(창밖은 매 프레임 다시 계산해서 무겁다)
+  if (o.station) { if (dl < 0.99) layer('front_station_night', 1); layer('front_station', dl); }
+  else { if (dl < 0.99) layer('front_night', 1); layer('front_day', dl); layer('front_dusk', dusk); }
   if (o.rain) {
     g.strokeStyle = dl > 0.5 ? 'rgba(220,226,232,0.55)' : 'rgba(150,170,200,0.5)'; g.lineWidth = 1.2; g.beginPath();
     for (let i = 0; i < 46; i++) { const x = W.x + ((i * 53.7 + o.t * 60) % W.w), y = W.y + ((i * 97.3 + o.t * 420) % W.h); g.moveTo(x, y); g.lineTo(x - 4, y - 12); }
@@ -129,17 +130,27 @@ export function drawScene(g, o) {
   // 유리 반사, 금, 철판
   g.fillStyle = 'rgba(255,255,255,0.07)';
   g.beginPath(); g.moveTo(W.x + 20, W.y + W.h); g.lineTo(W.x + 70, W.y); g.lineTo(W.x + 95, W.y); g.lineTo(W.x + 45, W.y + W.h); g.fill();
-  const cracks = o.barricade >= 0.95 ? 0 : Math.ceil((1 - o.barricade) * 7);
+  // 유리 금: 배경 그림의 픽셀 크기(약 3)에 맞춘 각진 점선, 창밖이 비쳐 보이게 옅게
+  const cracks = o.barricade >= 0.95 ? 0 : Math.ceil((1 - o.barricade) * 6);
   if (cracks) {
-    g.strokeStyle = 'rgba(235,242,246,0.85)'; g.lineWidth = 1.6;
+    const PX = 3, dots = new Set();
+    const seg = (x0, y0, x1, y1) => {
+      const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / PX);
+      for (let i = 0; i <= n; i++) dots.add(`${Math.round((x0 + (x1 - x0) * i / n) / PX)},${Math.round((y0 + (y1 - y0) * i / n) / PX)}`);
+    };
     const ox = W.x + W.w * 0.6, oy = W.y + W.h * 0.42;
     for (let i = 0; i < cracks; i++) {
       let x = ox, y = oy; const a = i * 2.39 + 0.4;
-      g.beginPath(); g.moveTo(x, y);
-      for (let s = 0; s < 4; s++) { x += Math.cos(a + Math.sin(i * 7 + s) * 0.5) * W.w * 0.11; y += Math.sin(a + Math.cos(i * 5 + s) * 0.5) * W.h * 0.1; g.lineTo(x, y); }
-      g.stroke();
+      for (let k = 0; k < 4; k++) {
+        const nx = x + Math.cos(a + Math.sin(i * 7 + k) * 0.5) * W.w * 0.085, ny = y + Math.sin(a + Math.cos(i * 5 + k) * 0.5) * W.h * 0.08;
+        seg(x, y, nx, ny); x = nx; y = ny;
+      }
     }
-    if (o.barricade <= 0) { g.beginPath(); g.ellipse(ox, oy, W.w * 0.15, W.h * 0.13, 0, 0, Math.PI * 2); g.stroke(); }
+    if (o.barricade <= 0) for (let k = 0; k < 24; k++) { const t0 = (k / 24) * Math.PI * 2, t1 = ((k + 1) / 24) * Math.PI * 2; seg(ox + Math.cos(t0) * W.w * 0.13, oy + Math.sin(t0) * W.h * 0.11, ox + Math.cos(t1) * W.w * 0.13, oy + Math.sin(t1) * W.h * 0.11); }
+    g.fillStyle = 'rgba(20,26,32,0.28)';
+    for (const d of dots) { const [px, py] = d.split(',').map(Number); g.fillRect(px * PX + 1, py * PX + 1, PX, PX); }
+    g.fillStyle = 'rgba(226,236,240,0.55)';
+    for (const d of dots) { const [px, py] = d.split(',').map(Number); g.fillRect(px * PX, py * PX, PX, PX); }
   }
   const plate = (x, y, w, h) => {
     g.fillStyle = '#5c5a58'; g.fillRect(x, y, w, h);

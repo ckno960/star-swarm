@@ -116,7 +116,7 @@
       <div class="bar" id="bHealth" style="--c:#e04a5a"><span class="lb">❤️ 체력</span><span class="v"></span><i><b></b></i></div>
       <div class="bar" id="bMood" style="--c:#b49af0"><span class="lb">😺 기분</span><span class="v"></span><i><b></b></i></div>
     </div>
-    <div id="res"><span id="cFood">🥫 <b></b></span><span id="cFuel">🪵 <b></b></span><span id="cScrap">🔩 <b></b></span><span id="cMeds">💊 <b></b></span><span id="cWin">🪟 <b></b></span></div>
+    <div id="res"><span id="cFood">🥫 <b></b></span><span id="cFuel">🪵 <b></b></span><span id="cScrap">🔩 <b></b></span><span id="cMeds">💊 <b></b></span><span id="cWin">🛡️ <b></b></span></div>
   </div>
   <div id="banner" class="hide sh"></div>
   <div id="acts">
@@ -142,7 +142,7 @@
 </script>
 <script type="module">
 import * as L from './logic.js?v=1';
-import { BG, IMG, SIGN, loadImages, drawScene, frontToBg } from './scene.js?v=3';
+import { BG, IMG, SIGN, loadImages, drawScene, frontToBg } from './scene.js?v=4';
 
 const $ = (id) => document.getElementById(id);
 const save = L.loadSave(localStorage);
@@ -199,6 +199,7 @@ const sfx = {
   woof() { tone(420, 0.12, { type: 'sawtooth', vol: 0.04, to: 300 }); tone(460, 0.14, { type: 'sawtooth', vol: 0.04, to: 320, delay: 0.18 }); },
   eat() { [0, 0.15, 0.3].forEach((d) => noise(0.06, { vol: 0.05, from: 1800, to: 600, delay: d })); },
   click() { tone(520, 0.05, { type: 'square', vol: 0.025 }); },
+  alert() { tone(880, 0.12, { type: 'square', vol: 0.03 }); tone(660, 0.16, { type: 'square', vol: 0.03, delay: 0.14 }); },
   buy() { [660, 880, 1320].forEach((f, i) => tone(f, 0.12, { type: 'square', vol: 0.025, delay: i * 0.07 })); },
   chime() { [784, 659, 523].forEach((f, i) => tone(f, 0.45, { type: 'triangle', vol: 0.05, delay: i * 0.3 })); },
   crackle() { noise(0.03, { vol: 0.03, from: 3000, to: 1500 }); },
@@ -208,7 +209,7 @@ const sfx = {
 const buzz = (p) => { if (save.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch { /* 없음 */ } };
 
 // ---------- 상태(화면 전용) ----------
-const view = { dogPetT: 0, scroll: 0, t: 0, zVariant: 0, zHit: 0, eatT: 0, petT: 0, nap: 0, blink: 0, floats: [], hearts: [], shake: 0, clackT: 0, bangT: 0, crackT: 0, lastZombie: null, warned: -1 };
+const view = { dogPetT: 0, scroll: 0, t: 0, zVariant: 0, zHit: 0, eatT: 0, petT: 0, nap: 0, blink: 0, floats: [], hearts: [], shake: 0, clackT: 0, bangT: 0, crackT: 0, lastZombie: null, warned: -1, alerts: {} };
 function banner(text, red = false, ms = 2200) {
   const b = $('banner');
   b.textContent = text; b.className = `sh${red ? ' red' : ''}`;
@@ -325,7 +326,7 @@ function updateUI() {
   $('aStove').classList.toggle('hot', save.stoveOn && save.fuel > 0);
   $('aRepair').disabled = save.scrap < L.REPAIR_COST || save.barricade >= L.barricadeMax(save);
   $('aHeal').disabled = save.meds < 1 || save.health >= 100;
-  const fo = save.fuel < 1;
+  const fo = save.fuel <= 0;   // 연료가 완전히 떨어져 멈췄을 때만
   $('aForage').hidden = !fo;
   const key = L.UPGRADES.map((u) => `${save.up[u.id]}:${save.scrap >= L.upgradeCost(save, u.id)}`).join(',');
   if (key !== upsKey) { upsKey = key; $('upDot').hidden = !L.UPGRADES.some((u) => save.scrap >= L.upgradeCost(save, u.id)); if (tab === 'ups') openTab('ups'); }
@@ -507,6 +508,11 @@ function frame(now) {
     }
     const h = L.hourOf(save);
     if (save.up.radio && L.hordeNight(save) && h >= 16 && h < 20 && view.warned !== L.dayOf(save)) { view.warned = L.dayOf(save); banner('📻 오늘 밤 좀비 떼 경보! 창문을 고쳐 두세요', true, 3500); }
+    // 위험 알림: 기준 아래로 떨어질 때 한 번(회복하면 다시 알림)
+    for (const [key, v, low, ok, msg] of [['hunger', save.hunger, 20, 35, `🍖 ${BOY}가 배고파요! 밥을 먹여 주세요`], ['warmth', save.warmth, 25, 40, '🥶 너무 추워요! 난로를 켜 주세요'], ['health', save.health, 30, 45, '❤️ 체력이 위험해요! 약을 먹이거나 쉬게 해 주세요'], ['fuel', save.fuel, 1, 2, '🪵 연료가 거의 없어요! 다음 역에서 구해야 해요']]) {
+      if (v < low && !view.alerts[key]) { view.alerts[key] = true; banner(msg, true, 3200); buzz([60, 40, 60]); sfx.alert(); }
+      else if (v > ok) view.alerts[key] = false;
+    }
     const moving = save.fuel > 0 && !save.station && !save.arrived;
     if (moving) { view.scroll += (12 + L.speedKmh(save) * 1.1) * dt; view.clackT -= dt; if (view.clackT <= 0) { view.clackT = 1.1 - Math.min(0.5, L.speedKmh(save) / 80); sfx.clack(); } }
     if (save.zombie && save.zombie.t > L.ZOMBIE_APPROACH) { view.bangT -= dt; if (view.bangT <= 0) { view.bangT = 0.9; sfx.bang(); view.shake = Math.max(view.shake, 0.25); } }
@@ -524,7 +530,7 @@ function frame(now) {
 }
 updateUI();
 window.zombieReady = true;
-loadImages(2).then(() => {
+loadImages(3).then(() => {
   last = performance.now();
   if (save.station) onStation(); else if (save.dead) onDead(); else if (save.arrived) onArrive(); else if (!save.seenIntro) intro();
   requestAnimationFrame(frame);
