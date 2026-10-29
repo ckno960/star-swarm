@@ -39,9 +39,10 @@ function zombieCanvas(variant, slap) {
 }
 
 // ---------- 앞 창밖: 레일이 앞으로 흘러간다 ----------
-// 앞을 본 그림(512×512, 소실점 VX·VY)에서 레일과 자갈 바닥만 원근에 맞춰 당겨 온다.
-// 화면의 한 줄(깊이 z = 1/(y−VY))에 더 먼 깊이(z + Δ)의 줄을 그리면 바닥이 다가오는 것처럼 보인다.
-const FV = { size: 512, vx: 256, vy: 259, step: 0.0016 };
+// 앞을 본 그림(512×512, 소실점 VX·VY). 화면의 한 줄은 깊이 z = 1/(y−VY).
+// 그림의 침목 간격이 고르지 않아서, 가장 선명한 앞쪽의 침목 한 칸(깊이 z0~z0+P)만 잘라
+// 모든 깊이에 원근대로 이어 붙인다. 시간에 따라 깊이를 밀면 이음새 없이 계속 다가온다.
+const FV = { size: 512, vx: 256, vy: 259, z0: 1 / (470 - 259), period: 0.00106, fadeTop: 300, fadeBot: 360 };
 const frontCache = {};
 let corridor = null;
 function corridorMask() {
@@ -53,6 +54,11 @@ function corridorMask() {
     m.globalAlpha = i === 0 ? 1 : 0.16;
     m.fillStyle = '#fff'; m.beginPath(); m.moveTo(FV.vx, FV.vy + 4); m.lineTo(26 - e, FV.size); m.lineTo(488 + e, FV.size); m.closePath(); m.fill();
   }
+  // 먼 쪽(안개)은 원래 그림을 살린다: 소실점 근처에서 서서히 사라지게
+  m.globalCompositeOperation = 'destination-in';
+  const gr = m.createLinearGradient(0, FV.fadeTop, 0, FV.fadeBot);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)');
+  m.globalAlpha = 1; m.fillStyle = gr; m.fillRect(0, 0, FV.size, FV.size);
   return corridor;
 }
 function frontView(name, phase, moving) {
@@ -63,20 +69,18 @@ function frontView(name, phase, moving) {
     c = frontCache[name] = { r: mk(), t: mk() };
   }
   const R = c.r.getContext('2d');
-  R.globalAlpha = 1; R.clearRect(0, 0, FV.size, FV.size); R.drawImage(src, 0, 0, FV.size, FV.size);
+  R.clearRect(0, 0, FV.size, FV.size); R.drawImage(src, 0, 0, FV.size, FV.size);
   if (!moving) return c.r;
-  const T = c.t.getContext('2d'), d = phase * FV.step;
+  const T = c.t.getContext('2d'), P = FV.period, d = phase * P, k = src.width / FV.size;
   T.globalCompositeOperation = 'source-over'; T.clearRect(0, 0, FV.size, FV.size);
-  const srcY = (y) => FV.vy + 1 / (1 / (y - FV.vy) + d);
-  for (let y = FV.vy + 3; y < FV.size; y++) {
-    const ys = srcY(y), r = (ys - FV.vy) / (y - FV.vy), sh = Math.max(0.6, srcY(y + 1) - ys);
-    T.drawImage(src, (FV.vx - FV.vx * r) * (src.width / FV.size), ys * (src.height / FV.size), FV.size * r * (src.width / FV.size), sh * (src.height / FV.size), 0, y, FV.size, 1.02);
+  // 깊이 z를 침목 한 칸 안으로 접어 그 줄을 가져온다
+  const bandY = (z) => FV.vy + 1 / (FV.z0 + ((((z - FV.z0) % P) + P) % P));
+  for (let y = FV.fadeTop; y < FV.size; y++) {
+    const z = 1 / (y - FV.vy) + d, ys = bandY(z), r = (ys - FV.vy) / (y - FV.vy);
+    T.drawImage(src, (FV.vx - FV.vx * r) * k, ys * k, FV.size * r * k, Math.max(0.6, r) * k, 0, y, FV.size, 1.02);
   }
   T.globalCompositeOperation = 'destination-in'; T.drawImage(corridorMask(), 0, 0);
-  // 한 바퀴 끝에서 원래 그림으로 살짝 겹쳐 넘긴다(침목 간격이 그림마다 조금씩 달라서)
-  R.globalAlpha = phase > 0.8 ? 1 - (phase - 0.8) / 0.2 : 1;
   R.drawImage(c.t, 0, 0);
-  R.globalAlpha = 1;
   return c.r;
 }
 
@@ -100,7 +104,7 @@ export function drawScene(g, o) {
   // 소실점을 창 가운데 조금 위에 두고 그림을 창보다 넉넉하게 놓는다
   const FW = W.w * 1.4, fm = FW / FV.size, vpx = W.x + W.w / 2, vpy = W.y + W.h * 0.45 + (o.station ? 0 : Math.sin(o.t * 9) * 0.6);
   const fx0 = vpx - FV.vx * fm, fy0 = vpy - FV.vy * fm;
-  const moving = !o.station && o.speed > 0, phase = ((o.scroll / 26) % 1 + 1) % 1;
+  const moving = !o.station && o.speed > 0, phase = ((o.scroll / 17) % 1 + 1) % 1;
   const layer = (name, a) => { if (!IMG[name] || a <= 0.01) return; g.globalAlpha = a; g.drawImage(frontView(name, phase, moving), fx0, fy0, FW, FW); g.globalAlpha = 1; };
   if (o.station) { layer('front_station_night', 1); layer('front_station', dl); }
   else { layer('front_night', 1); layer('front_day', dl); layer('front_dusk', dusk); }
