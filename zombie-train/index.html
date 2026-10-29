@@ -142,7 +142,7 @@
 </script>
 <script type="module">
 import * as L from './logic.js?v=1';
-import { BG, IMG, loadImages, drawScene } from './scene.js?v=1';
+import { BG, IMG, SIGN, loadImages, drawScene, frontToBg } from './scene.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const save = L.loadSave(localStorage);
@@ -255,7 +255,7 @@ function render() {
   const shake = view.shake > 0 ? (Math.random() - 0.5) * 6 * view.shake : 0;
   g.setTransform(DPR * S, 0, 0, DPR * S, DPR * (OX + shake), DPR * OY);
   drawScene(g, {
-    t: view.t, daylight: L.daylight(L.hourOf(save)), scroll: view.scroll, rain: isRain(), station: !!save.station, zombie: zv,
+    t: view.t, daylight: L.daylight(L.hourOf(save)), scroll: view.scroll, speed: save.fuel > 0 && !save.arrived ? 1 : 0, rain: isRain(), station: !!save.station, zombie: zv,
     fireOn: save.stoveOn && save.fuel > 0, plates: save.up.plate, barricade: save.barricade / L.barricadeMax(save), boy, corgi,
   });
   drawFx(boy, corgi);
@@ -267,9 +267,11 @@ function drawFx(boy, corgi) {
   c.clearRect(0, 0, SW, SH);
   c.textAlign = 'center'; c.textBaseline = 'middle';
   const W = BG.win, [wx, wy] = toScreen(W.x, W.y), ww = W.w * S, wh = W.h * S;
-  if (save.station) {
-    c.font = `900 ${Math.max(10, ww * 0.1)}px system-ui, sans-serif`; c.fillStyle = '#fff'; c.strokeStyle = '#000'; c.lineWidth = 3;
-    c.strokeText(save.station.name, wx + ww / 2, wy + wh * 0.42); c.fillText(save.station.name, wx + ww / 2, wy + wh * 0.42);
+  if (save.station) {   // 역 그림의 초록 간판에 역 이름
+    const [sx, sy] = toScreen(...frontToBg(SIGN.x, SIGN.y)), sw = (SIGN.w * BG.win.w * 1.4 / 512) * S;
+    c.save(); c.beginPath(); c.rect(wx, wy, ww, wh); c.clip();
+    c.font = `900 ${Math.max(7, sw * 0.24)}px system-ui, sans-serif`; c.fillStyle = '#f4f0e0';
+    c.fillText(save.station.name, sx, sy + 1); c.restore();
   }
   const z = save.zombie;
   if (z && z.t > L.ZOMBIE_APPROACH * 0.6) {
@@ -522,7 +524,7 @@ function frame(now) {
 }
 updateUI();
 window.zombieReady = true;
-loadImages(1).then(() => {
+loadImages(2).then(() => {
   last = performance.now();
   if (save.station) onStation(); else if (save.dead) onDead(); else if (save.arrived) onArrive(); else if (!save.seenIntro) intro();
   requestAnimationFrame(frame);
