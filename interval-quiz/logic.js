@@ -17,6 +17,9 @@ const MAJOR_OFFSETS = { '-3': '겹감', '-2': '감', '-1': '단', 0: '장', 1: '
 // 오선 안팎으로 보여줄 범위: 가운데 도(덧줄 1개) ~ 높은 도(덧줄 2개)
 export const LOW_STEP = 28;
 export const HIGH_STEP = 42;
+// 화면 아래 건반(가운데 도 ~ 높은 도, 2옥타브)으로 칠 수 있는 음만 낸다
+export const KEY_LOW = 48;
+export const KEY_HIGH = 72;
 
 export function isPerfectType(degree) {
   return PERFECT_DEGREES.includes(degree);
@@ -132,6 +135,7 @@ export function makeQuestion(stageIndex, rng = Math.random) {
       if (stage.maxAcc === 1 && stage.onlyTritone && lo.a === 0 && hi.a === 0 && rng() < 0.7) continue;
     }
     if (pitch(hi) < pitch(lo)) continue;
+    if (pitch(lo) < KEY_LOW || pitch(hi) > KEY_HIGH) continue;
     const iv = interval(lo, hi);
     if (!iv || !iv.quality) continue;
     const down = stage.down && rng() < 0.5;

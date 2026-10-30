@@ -67,6 +67,9 @@
     box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
   }
   .paper svg { display: block; width: 100%; height: auto; }
+  /* 문제 화면의 오선지는 남는 높이만큼만 차지한다 (노치·홈 바가 있는 폰에서도 건반까지 들어오게) */
+  #staff { flex: 1 1 0; min-height: 80px; max-height: 200px; display: flex; }
+  #staff svg { height: 100%; }
   #feedback {
     min-height: 48px; display: flex; flex-direction: column; justify-content: center; align-items: center;
     text-align: center; font-size: 14px; color: var(--dim); padding: 4px 0;
@@ -86,7 +89,53 @@
   .choice.right { border-color: var(--ok); background: #163824; color: var(--ok); }
   .choice.wrong { border-color: var(--bad); background: #3d1820; color: var(--bad); }
   .spacer { flex: 1; min-height: 10px; }
-  #answer-preview { text-align: center; font-weight: 800; font-size: 15px; color: var(--accent); min-height: 22px; margin-bottom: 6px; }
+
+  /* 듣기 버튼과 건반 */
+  .controls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 10px; }
+  .ctl {
+    min-height: 40px; border-radius: 12px; border: 2px solid var(--line);
+    background: var(--panel); font-weight: 800; font-size: 15px; padding: 0 10px;
+  }
+  .ctl.toggle { font-size: 13px; color: var(--dim); }
+  #keyboard { margin-top: 6px; }
+  #keyboard[hidden] { display: none; }
+  .kb-labels { position: relative; height: 22px; }
+  .kb-labels span {
+    position: absolute; bottom: 3px; transform: translateX(-50%); white-space: nowrap;
+    font-size: 12px; font-weight: 800; padding: 1px 6px; border-radius: 6px; color: #10131c;
+  }
+  .kb-labels span.left { transform: translateX(-100%); }
+  .kb-labels span.right { transform: none; }
+  .keys { position: relative; display: flex; height: 84px; touch-action: none; }
+  .wkey {
+    flex: 1; position: relative; padding: 0; margin-right: -1px;
+    background: #fbf7ec; border: 1px solid #1d1d1f; border-radius: 0 0 5px 5px;
+  }
+  .wkey small { position: absolute; bottom: 3px; left: 0; right: 0; font-size: 9px; color: #8a8576; text-align: center; }
+  .bkey {
+    position: absolute; top: 0; z-index: 1; height: 56%; width: 4.1%; transform: translateX(-50%);
+    padding: 0; border: none; background: #1d1d1f; border-radius: 0 0 4px 4px;
+  }
+  .m1 { --mark: var(--accent); }
+  .m2 { --mark: #4dd6ff; }
+  .wkey.m1, .wkey.m2, .bkey.m1, .bkey.m2 { background: var(--mark); }
+  .wkey.m1.m2, .bkey.m1.m2, .kb-labels span.m1.m2 { background: linear-gradient(90deg, var(--accent) 50%, #4dd6ff 50%); }
+  .kb-labels span.m1, .kb-labels span.m2 { background: var(--mark); }
+  .wkey.press { filter: brightness(0.8); }
+  .bkey.press { filter: brightness(2.2); }
+
+  /* 키가 작은 휴대폰 */
+  @media (max-height: 760px) {
+    #feedback { min-height: 40px; }
+    .label { margin: 4px 2px; }
+    .grid { gap: 6px; }
+    .grid.q4 { margin-top: 6px; }
+    .choice { min-height: 38px; font-size: 16px; }
+    .wide { min-height: 46px; }
+    .ctl { min-height: 36px; }
+    .keys { height: 66px; }
+    .kb-labels { height: 20px; }
+  }
 
   /* 결과 */
   #result { justify-content: center; align-items: stretch; gap: 12px; text-align: center; }
@@ -127,9 +176,17 @@
   <div class="grid q4" id="q-row2"></div>
   <div class="label" style="margin-top:12px">도수</div>
   <div class="grid q4" id="d-grid" style="margin-top:0"></div>
-  <div class="spacer"></div>
-  <div id="answer-preview"></div>
+  <div style="height:12px"></div>
   <button class="wide fill" id="submit">확인</button>
+  <div class="controls">
+    <button class="ctl" id="play-together">같이 듣기</button>
+    <button class="ctl" id="play-apart">따로 듣기</button>
+    <button class="ctl toggle" id="toggle-keys"></button>
+  </div>
+  <div id="keyboard">
+    <div class="kb-labels" id="kb-labels"></div>
+    <div class="keys" id="keys"></div>
+  </div>
 </section>
 
 <section id="result" class="screen" hidden>
@@ -150,7 +207,7 @@
 </section>
 
 <script type="module">
-import * as L from './logic.js?v=1';
+import * as L from './logic.js?v=2';
 
 const PROGRESS_KEY = 'intervalQuiz.progress';
 const WRONGS_KEY = 'intervalQuiz.wrongs';
@@ -313,11 +370,10 @@ function refreshChoices() {
     b.className = 'choice' + mark(picked.degree === Number(k), q.answer.degree === Number(k));
   }
   const ready = picked.quality && picked.degree;
-  $('answer-preview').textContent = checked ? ''
-    : !picked.quality && !picked.degree ? '성질과 도수를 골라 주세요'
-    : `${picked.quality ?? '?'}${picked.degree ?? '?'}도`;
   $('submit').disabled = !checked && !ready;
-  $('submit').textContent = !checked ? '확인' : round.index + 1 < round.questions.length ? '다음 문제' : '결과 보기';
+  $('submit').textContent = checked ? (round.index + 1 < round.questions.length ? '다음 문제' : '결과 보기')
+    : !picked.quality && !picked.degree ? '성질과 도수를 골라 주세요'
+    : `${picked.quality ?? '?'}${picked.degree ?? '?'}도 확인`;
 }
 
 function mark(isPicked, isAnswer) {
@@ -331,6 +387,7 @@ function nextQuestion() {
   picked = { quality: null, degree: null };
   checked = false;
   $('staff').replaceChildren(drawStaff(q));
+  markKeys(q);
   $('feedback').replaceChildren(el('span', {
     textContent: L.step(q.a) > L.step(q.b) ? '내려가는 음정이에요' : '두 음 사이의 음정은?',
   }));
@@ -367,6 +424,131 @@ $('submit').onclick = () => {
 };
 
 $('quit').onclick = () => { round = null; home(); };
+
+// ── 소리 (Web Audio로 만든 피아노 비슷한 소리) ──
+let actx = null;
+function audio() {
+  actx ??= new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+
+// p: logic.js의 pitch 값(가운데 도 = 48)
+function tone(p, delay = 0, dur = 1.6) {
+  const ctx = audio();
+  const f = 440 * 2 ** ((p + 12 - 69) / 12);
+  const t = ctx.currentTime + 0.02 + delay;
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0.0001, t);
+  out.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+  out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(f * 6, t);
+  lp.frequency.exponentialRampToValueAtTime(f * 1.5, t + dur);
+  lp.connect(out);
+  out.connect(ctx.destination);
+  for (const [type, mul, g] of [['triangle', 1, 1], ['sine', 2, 0.3], ['sine', 3, 0.1]]) {
+    const o = ctx.createOscillator();
+    const og = ctx.createGain();
+    o.type = type;
+    o.frequency.value = f * mul;
+    og.gain.value = g;
+    o.connect(og);
+    og.connect(lp);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+  setTimeout(() => flashKey(p), delay * 1000);
+}
+
+$('play-together').onclick = () => {
+  const q = round?.questions[round.index];
+  if (!q) return;
+  tone(L.pitch(q.a));
+  tone(L.pitch(q.b));
+};
+$('play-apart').onclick = () => {
+  const q = round?.questions[round.index];
+  if (!q) return;
+  tone(L.pitch(q.a), 0, 1.2);
+  tone(L.pitch(q.b), 0.75, 1.4);
+};
+
+// ── 건반 (가운데 도 ~ 높은 도) ──
+const KEYS_KEY = 'intervalQuiz.keyboard';
+const keyEls = {};
+const whiteCount = (L.KEY_HIGH - L.KEY_LOW) / 12 * 7 + 1;
+
+function buildKeyboard() {
+  const box = $('keys');
+  for (let i = 0; i < whiteCount; i++) {
+    const n = { l: i % 7, o: 4 + Math.floor(i / 7), a: 0 };
+    const w = el('button', { className: 'wkey', ariaLabel: L.noteName(n) });
+    if (n.l === 0) w.append(el('small', { textContent: '도' }));
+    addKey(w, L.pitch(n), (i + 0.5) / whiteCount);
+    box.append(w);
+    // 도·레·파·솔·라 오른쪽에 검은 건반
+    if ([0, 1, 3, 4, 5].includes(n.l) && i < whiteCount - 1) {
+      const b = el('button', { className: 'bkey', ariaLabel: L.noteName({ ...n, a: 1 }) });
+      b.style.left = ((i + 1) / whiteCount) * 100 + '%';
+      addKey(b, L.pitch(n) + 1, (i + 1) / whiteCount);
+      box.append(b);
+    }
+  }
+}
+
+function addKey(e, p, x) {
+  keyEls[p] = { e, x };
+  e.onpointerdown = ev => { ev.preventDefault(); tone(p, 0, 1.2); };
+}
+
+function flashKey(p) {
+  const k = keyEls[p];
+  if (!k) return;
+  k.e.classList.add('press');
+  setTimeout(() => k.e.classList.remove('press'), 300);
+}
+
+// 문제의 두 음을 건반에 색으로 표시하고, 위에 음 이름을 단다 (왼쪽 음 노랑, 오른쪽 음 파랑)
+function markKeys(q) {
+  for (const { e } of Object.values(keyEls)) e.classList.remove('m1', 'm2');
+  const labels = $('kb-labels');
+  labels.replaceChildren();
+  const pa = L.pitch(q.a), pb = L.pitch(q.b);
+  keyEls[pa]?.e.classList.add('m1');
+  keyEls[pb]?.e.classList.add('m2');
+  if (pa === pb) {
+    if (keyEls[pa]) labels.append(label(`${L.noteName(q.a)}·${L.noteName(q.b)}`, 'm1 m2', keyEls[pa].x));
+    return;
+  }
+  // 두 건반이 가까우면 이름표가 겹치지 않게 양옆으로 벌린다
+  const close = keyEls[pa] && keyEls[pb] && Math.abs(keyEls[pa].x - keyEls[pb].x) < 0.1;
+  for (const [n, p, m, other] of [[q.a, pa, 'm1', pb], [q.b, pb, 'm2', pa]]) {
+    if (!keyEls[p]) continue;
+    const side = close ? (p < other ? ' left' : ' right') : '';
+    labels.append(label(L.noteName(n), m + side, keyEls[p].x));
+  }
+}
+
+function label(text, cls, x) {
+  const span = el('span', { className: cls, textContent: text });
+  span.style.left = x * 100 + '%';
+  return span;
+}
+
+let showKeys = load(KEYS_KEY, true);
+function applyKeysToggle() {
+  $('keyboard').hidden = !showKeys;
+  $('toggle-keys').textContent = showKeys ? '건반 숨기기' : '건반 보이기';
+}
+$('toggle-keys').onclick = () => {
+  showKeys = !showKeys;
+  save(KEYS_KEY, showKeys);
+  applyKeysToggle();
+};
+buildKeyboard();
+applyKeysToggle();
 
 // ── 결과 ──
 function finish() {

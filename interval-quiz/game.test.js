@@ -56,6 +56,11 @@ test('noteAbove is the inverse of interval', () => {
   }
 });
 
+test('the keyboard spans two octaves from middle C', () => {
+  assert.equal(L.KEY_LOW, L.pitch(n('C')));
+  assert.equal(L.KEY_HIGH, L.pitch(n('C', 6)));
+});
+
 test('note names', () => {
   assert.equal(L.noteName(n('F#')), '파♯');
   assert.equal(L.noteName(n('Bbb')), '시𝄫');
@@ -78,6 +83,7 @@ test('every stage makes valid questions within the staff range', () => {
       assert.equal(iv.degree, q.answer.degree);
       for (const x of [q.a, q.b]) {
         assert.ok(L.step(x) >= L.LOW_STEP && L.step(x) <= L.HIGH_STEP, 'on the staff');
+        assert.ok(L.pitch(x) >= L.KEY_LOW && L.pitch(x) <= L.KEY_HIGH, 'on the keyboard');
         assert.ok(Math.abs(x.a) <= Math.max(L.STAGES[s].maxAcc, 0));
       }
       seenQualities.add(iv.quality);
