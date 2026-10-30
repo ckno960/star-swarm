@@ -35,6 +35,7 @@
     background: var(--panel); border: 2px solid var(--line); border-radius: 16px; text-align: left;
   }
   .menu b { font-size: 20px; }
+  .credit { margin: 14px 0 0; text-align: center; font-size: 11px; color: var(--dim); opacity: 0.7; }
   .menu span { font-size: 14px; color: var(--dim); }
   .list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
   .stage {
@@ -174,6 +175,7 @@
   <button class="menu" id="open-stages"><b>단계별 연습</b><span id="stages-summary"></span></button>
   <button class="menu" id="open-free"><b>자유연습</b><span>성질과 문제 수를 골라서 연습</span></button>
   <button id="open-wrongs" class="wide" style="margin-top:8px"></button>
+  <p class="credit">피아노 소리: Salamander Grand Piano (Alexander Holm, CC BY 3.0)</p>
 </section>
 
 <section id="stages-screen" class="screen" hidden>
@@ -245,7 +247,7 @@
 </section>
 
 <script type="module">
-import * as L from './logic.js?v=2';
+import * as L from './logic.js?v=3';
 
 const PROGRESS_KEY = 'intervalQuiz.progress';
 const WRONGS_KEY = 'intervalQuiz.wrongs';
@@ -405,6 +407,7 @@ $('free-start').onclick = () => startRound('free');
 let round = null;
 
 function startRound(mode) {
+  loadPiano();
   const questions = mode === 'review' ? wrongs.slice(0, L.QUESTION_COUNT).map(w => ({ ...w }))
     : mode === 'free' ? L.makeFreeRound(freeOpts)
     : L.makeRound(mode);
@@ -515,17 +518,52 @@ $('quit').onclick = () => {
   else stagesScreen();
 };
 
-// ── 소리 (Web Audio로 만든 피아노 비슷한 소리) ──
-let actx = null;
+// ── 소리: 그랜드 피아노 녹음(Salamander Grand Piano) ──
+// 단3도 간격 녹음 9개를 받아 두고, 가장 가까운 녹음의 재생 속도를 바꿔 나머지 음을 낸다
+const PIANO_SAMPLES = { C4: 48, Ds4: 51, Fs4: 54, A4: 57, C5: 60, Ds5: 63, Fs5: 66, A5: 69, C6: 72 };
+let actx = null, piano = null;
 function audio() {
   actx ??= new (window.AudioContext || window.webkitAudioContext)();
   if (actx.state === 'suspended') actx.resume();
   return actx;
 }
 
-// p: logic.js의 pitch 값(가운데 도 = 48)
-function tone(p, delay = 0, dur = 1.6) {
+// 녹음을 못 받으면 null → 직접 만든 소리로 대신 낸다
+function loadPiano() {
   const ctx = audio();
+  piano ??= Promise.all(Object.entries(PIANO_SAMPLES).map(async ([name, p]) => {
+    const res = await fetch(`piano/${name}.mp3`);
+    if (!res.ok) throw new Error(name);
+    const data = await res.arrayBuffer();
+    const buf = await new Promise((ok, fail) => ctx.decodeAudioData(data, ok, fail));
+    return [p, buf];
+  })).then(Object.fromEntries).catch(() => null);
+  return piano;
+}
+
+// p: logic.js의 pitch 값(가운데 도 = 48)
+async function tone(p, delay = 0, dur = 1.6) {
+  const samples = await loadPiano();
+  const ctx = audio();
+  setTimeout(() => flashKey(p), delay * 1000);
+  if (!samples) return synthTone(ctx, p, delay, dur);
+  const base = Object.values(PIANO_SAMPLES).reduce((a, b) => (Math.abs(b - p) < Math.abs(a - p) ? b : a));
+  const t = ctx.currentTime + 0.02 + delay;
+  const src = ctx.createBufferSource();
+  src.buffer = samples[base];
+  src.playbackRate.value = 2 ** ((p - base) / 12);
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(1.5, t);
+  out.gain.setValueAtTime(1.5, t + dur);
+  out.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.5);
+  src.connect(out);
+  out.connect(ctx.destination);
+  src.start(t);
+  src.stop(t + dur + 0.55);
+}
+
+// 녹음이 없을 때 쓰는 피아노 비슷한 소리
+function synthTone(ctx, p, delay, dur) {
   const f = 440 * 2 ** ((p + 12 - 69) / 12);
   const t = ctx.currentTime + 0.02 + delay;
   const out = ctx.createGain();
@@ -549,7 +587,6 @@ function tone(p, delay = 0, dur = 1.6) {
     o.start(t);
     o.stop(t + dur + 0.05);
   }
-  setTimeout(() => flashKey(p), delay * 1000);
 }
 
 $('play-together').onclick = () => {
