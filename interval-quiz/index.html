@@ -524,9 +524,25 @@ const PIANO_SAMPLES = { C4: 48, Ds4: 51, Fs4: 54, A4: 57, C5: 60, Ds5: 63, Fs5: 
 let actx = null, piano = null;
 function audio() {
   actx ??= new (window.AudioContext || window.webkitAudioContext)();
-  if (actx.state === 'suspended') actx.resume();
+  // 아이폰은 다른 앱에 갔다 오면 'interrupted'가 되므로 running이 아니면 모두 깨운다
+  if (actx.state !== 'running') actx.resume().catch(() => {});
   return actx;
 }
+
+// 아이폰 사파리는 화면을 누른 그 순간에 소리를 시작해야 오디오가 열린다.
+// 녹음을 불러오는 동안 기다리면 그 순간이 지나 버리므로, 누를 때마다 들리지 않는 아주 짧은 소리를 먼저 낸다
+function unlockAudio() {
+  const ctx = audio();
+  const src = ctx.createBufferSource();
+  src.buffer = ctx.createBuffer(1, 1, 22050);
+  src.connect(ctx.destination);
+  src.start(0);
+}
+for (const type of ['touchend', 'click']) {
+  addEventListener(type, unlockAudio, { capture: true, passive: true });
+}
+// iOS 17+: 무음 모드에서도 음악처럼 소리가 나게
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* 지원 안 하는 기기 */ }
 
 // 녹음을 못 받으면 null → 직접 만든 소리로 대신 낸다
 function loadPiano() {
@@ -545,6 +561,7 @@ function loadPiano() {
 async function tone(p, delay = 0, dur = 1.6) {
   const samples = await loadPiano();
   const ctx = audio();
+  if (ctx.state !== 'running') await Promise.race([ctx.resume(), new Promise(ok => setTimeout(ok, 300))]).catch(() => {});
   setTimeout(() => flashKey(p), delay * 1000);
   if (!samples) return synthTone(ctx, p, delay, dur);
   const base = Object.values(PIANO_SAMPLES).reduce((a, b) => (Math.abs(b - p) < Math.abs(a - p) ? b : a));
@@ -627,7 +644,7 @@ function buildKeyboard() {
 
 function addKey(e, p, x) {
   keyEls[p] = { e, x };
-  e.onpointerdown = ev => { ev.preventDefault(); tone(p, 0, 1.2); };
+  e.onpointerdown = ev => { ev.preventDefault(); unlockAudio(); tone(p, 0, 1.2); };
 }
 
 function flashKey(p) {
