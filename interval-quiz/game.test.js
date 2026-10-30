@@ -110,6 +110,26 @@ test('a round has 10 questions', () => {
   assert.equal(L.makeRound(2, seeded(1)).length, L.QUESTION_COUNT);
 });
 
+test('free practice asks only the chosen qualities, as many as asked', () => {
+  const rng = seeded(11);
+  for (const qualities of [['완전'], ['겹증', '겹감'], ['장', '단', '증'], L.QUALITIES]) {
+    for (const down of [false, true]) {
+      const qs = L.makeFreeRound({ qualities, count: 50, down }, rng);
+      assert.equal(qs.length, 50);
+      const seen = new Set(qs.map(q => q.answer.quality));
+      assert.deepEqual([...seen].sort(), [...qualities].sort(), qualities.join());
+      const hasDown = qs.some(q => L.step(q.a) > L.step(q.b));
+      assert.equal(hasDown, down);
+      for (const q of qs) {
+        assert.equal(q.stage, 'free');
+        for (const x of [q.a, q.b]) assert.ok(L.pitch(x) >= L.KEY_LOW && L.pitch(x) <= L.KEY_HIGH);
+      }
+    }
+  }
+  assert.equal(L.makeFreeRound({ qualities: ['장'], count: 5 }, rng).length, 5);
+  assert.throws(() => L.makeFreeRound({ qualities: [], count: 5 }, rng));
+});
+
 test('grading and explanation', () => {
   const q = { a: n('D'), b: n('F#'), answer: { quality: '장', degree: 3 } };
   assert.ok(L.isCorrect(q, '장', 3));
