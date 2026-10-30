@@ -30,6 +30,13 @@
   #home { justify-content: center; gap: 10px; }
   #home h1 { margin: 0; text-align: center; font-size: 34px; letter-spacing: 2px; }
   #home .sub { margin: 0 0 14px; text-align: center; color: var(--dim); font-size: 15px; }
+  .menu {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px 18px;
+    background: var(--panel); border: 2px solid var(--line); border-radius: 16px; text-align: left;
+  }
+  .menu b { font-size: 20px; }
+  .menu span { font-size: 14px; color: var(--dim); }
+  .list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
   .stage {
     display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px;
     background: var(--panel); border: 2px solid var(--line); border-radius: 14px; text-align: left;
@@ -58,7 +65,7 @@
   .back {
     width: 40px; height: 40px; border: none; background: none; font-size: 22px; padding: 0;
   }
-  .top .title { flex: 1; font-weight: 800; font-size: 16px; }
+  .top .title { flex: 1; min-width: 0; font-weight: 800; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .top .count { font-weight: 800; color: var(--dim); font-variant-numeric: tabular-nums; }
   .bar { height: 6px; background: var(--panel); border-radius: 3px; overflow: hidden; margin: 6px 0 10px; }
   .bar i { display: block; height: 100%; background: var(--accent); transition: width 0.25s; }
@@ -151,6 +158,12 @@
   .wrong-item .txt b { color: var(--ok); }
   .wrong-item .txt s { color: var(--bad); }
   .empty { color: var(--dim); text-align: center; margin-top: 40px; }
+
+  /* 자유연습 설정 */
+  #free .hint { font-size: 13px; color: var(--dim); margin: -2px 2px 6px; min-height: 18px; }
+  #free .grid.q5 { grid-template-columns: repeat(5, 1fr); }
+  #free .grid.q2 { grid-template-columns: repeat(2, 1fr); }
+  #free .choice { font-size: 16px; }
 </style>
 </head>
 <body>
@@ -158,8 +171,33 @@
 <section id="home" class="screen">
   <h1>음정 퀴즈</h1>
   <p class="sub">악보의 두 음 사이 음정을 맞혀 보세요</p>
-  <div id="stages" style="display:flex;flex-direction:column;gap:10px"></div>
+  <button class="menu" id="open-stages"><b>단계별 연습</b><span id="stages-summary"></span></button>
+  <button class="menu" id="open-free"><b>자유연습</b><span>성질과 문제 수를 골라서 연습</span></button>
   <button id="open-wrongs" class="wide" style="margin-top:8px"></button>
+</section>
+
+<section id="stages-screen" class="screen" hidden>
+  <div class="top">
+    <button class="back" id="stages-back" aria-label="뒤로">←</button>
+    <span class="title">단계별 연습</span>
+  </div>
+  <div class="list" id="stages"></div>
+</section>
+
+<section id="free" class="screen" hidden>
+  <div class="top">
+    <button class="back" id="free-back" aria-label="뒤로">←</button>
+    <span class="title">자유연습</span>
+  </div>
+  <div class="label" style="margin-top:12px">성질 (여러 개 선택)</div>
+  <div class="grid q4" id="free-q" style="margin-top:0"></div>
+  <div class="hint" id="free-hint"></div>
+  <div class="label">문제 수</div>
+  <div class="grid q5" id="free-count"></div>
+  <div class="label" style="margin-top:14px">방향</div>
+  <div class="grid q2" id="free-down"></div>
+  <div class="spacer"></div>
+  <button class="wide fill" id="free-start">시작</button>
 </section>
 
 <section id="quiz" class="screen" hidden>
@@ -298,6 +336,18 @@ function drawStaff(q, width = 200) {
 
 // ── 처음 화면 ──
 function home() {
+  const cleared = L.STAGES.filter((_, i) => L.isCleared(progress, i)).length;
+  $('stages-summary').textContent = `${L.STAGES.length}단계 중 ${cleared}단계 통과`;
+  $('open-wrongs').textContent = `오답 노트 (${wrongs.length})`;
+  show('home');
+}
+$('open-wrongs').onclick = () => openWrongs();
+$('open-stages').onclick = () => stagesScreen();
+$('open-free').onclick = () => freeScreen();
+$('stages-back').onclick = home;
+$('free-back').onclick = home;
+
+function stagesScreen() {
   const list = $('stages');
   list.replaceChildren();
   L.STAGES.forEach((st, i) => {
@@ -316,19 +366,52 @@ function home() {
     b.onclick = () => startRound(i);
     list.append(b);
   });
-  $('open-wrongs').textContent = `오답 노트 (${wrongs.length})`;
-  show('home');
+  show('stages-screen');
 }
-$('open-wrongs').onclick = () => openWrongs();
+
+// ── 자유연습 설정 ──
+const FREE_KEY = 'intervalQuiz.free';
+let freeOpts = { qualities: [...L.QUALITIES], count: 10, down: false, ...load(FREE_KEY, {}) };
+
+function freeScreen() {
+  const chip = (text, on, onClick) => {
+    const b = el('button', { className: 'choice' + (on ? ' on' : ''), textContent: text });
+    b.onclick = () => { onClick(); save(FREE_KEY, freeOpts); freeScreen(); };
+    return b;
+  };
+  const order = ['완전', '장', '단', '증', '감', '겹증', '겹감'];
+  $('free-q').replaceChildren(
+    ...order.map(q => chip(q, freeOpts.qualities.includes(q), () => {
+      freeOpts.qualities = freeOpts.qualities.includes(q)
+        ? freeOpts.qualities.filter(x => x !== q) : [...freeOpts.qualities, q];
+    })),
+    chip(freeOpts.qualities.length === order.length ? '모두 끄기' : '모두', false, () => {
+      freeOpts.qualities = freeOpts.qualities.length === order.length ? [] : [...order];
+    }),
+  );
+  $('free-hint').textContent = freeOpts.qualities.length ? '' : '성질을 하나 이상 골라 주세요';
+  $('free-count').replaceChildren(...L.FREE_COUNTS.map(n => chip(String(n), freeOpts.count === n, () => { freeOpts.count = n; })));
+  $('free-down').replaceChildren(
+    chip('올라가는 음정만', !freeOpts.down, () => { freeOpts.down = false; }),
+    chip('내려가는 음정도', freeOpts.down, () => { freeOpts.down = true; }),
+  );
+  $('free-start').disabled = !freeOpts.qualities.length;
+  show('free');
+}
+$('free-start').onclick = () => startRound('free');
 
 // ── 문제 풀기 ──
-// mode: 단계 번호, 또는 'review'(오답 다시 풀기)
+// mode: 단계 번호, 'free'(자유연습), 'review'(오답 다시 풀기)
 let round = null;
 
 function startRound(mode) {
-  const questions = mode === 'review' ? wrongs.slice(0, L.QUESTION_COUNT).map(w => ({ ...w })) : L.makeRound(mode);
+  const questions = mode === 'review' ? wrongs.slice(0, L.QUESTION_COUNT).map(w => ({ ...w }))
+    : mode === 'free' ? L.makeFreeRound(freeOpts)
+    : L.makeRound(mode);
   round = { mode, questions, index: 0, score: 0 };
-  $('quiz-title').textContent = mode === 'review' ? '오답 다시 풀기' : `${mode + 1}단계 · ${L.STAGES[mode].name}`;
+  $('quiz-title').textContent = mode === 'review' ? '오답 다시 풀기'
+    : mode === 'free' ? `자유연습 · ${freeOpts.qualities.length === L.QUALITIES.length ? '모든 성질' : freeOpts.qualities.join('·')}`
+    : `${mode + 1}단계 · ${L.STAGES[mode].name}`;
   nextQuestion();
   show('quiz');
 }
@@ -423,7 +506,14 @@ $('submit').onclick = () => {
   else finish();
 };
 
-$('quit').onclick = () => { round = null; home(); };
+// 그만두면 들어온 화면으로 돌아간다
+$('quit').onclick = () => {
+  const mode = round?.mode;
+  round = null;
+  if (mode === 'free') freeScreen();
+  else if (mode === 'review') openWrongs();
+  else stagesScreen();
+};
 
 // ── 소리 (Web Audio로 만든 피아노 비슷한 소리) ──
 let actx = null;
@@ -559,6 +649,11 @@ function finish() {
     $('result-title').textContent = '오답 다시 풀기';
     $('result-msg').textContent = wrongs.length ? `오답 노트에 ${wrongs.length}문제 남았어요` : '오답 노트를 모두 비웠어요!';
     if (wrongs.length) buttons.push(['한 번 더', true, () => startRound('review')]);
+  } else if (mode === 'free') {
+    $('result-title').textContent = '자유연습';
+    $('result-msg').textContent = `${Math.round(score / total * 100)}% 맞혔어요`;
+    buttons.push(['같은 설정으로 다시', true, () => startRound('free')]);
+    buttons.push(['설정 바꾸기', false, freeScreen]);
   } else {
     const wasUnlocked = L.isUnlocked(progress, mode + 1);
     progress = L.recordRound(progress, mode, score);

@@ -117,7 +117,26 @@ function randomLow(rng, degree, maxAcc) {
 
 // 문제 하나: { a, b } (a를 먼저 왼쪽에 그림)와 정답 음정
 export function makeQuestion(stageIndex, rng = Math.random) {
-  const stage = STAGES[stageIndex];
+  return makeFrom(STAGES[stageIndex], stageIndex, rng);
+}
+
+// 자유연습: 고른 성질들이 고르게 나온다. 임시표는 겹올림·겹내림까지
+export const FREE_COUNTS = [5, 10, 20, 30, 50];
+export function freeStage(options) {
+  return {
+    pool: Object.fromEntries(options.qualities.map(q => [q, 1])),
+    maxAcc: 2,
+    down: !!options.down,
+  };
+}
+
+export function makeFreeRound(options, rng = Math.random) {
+  if (!options.qualities.length) throw new Error('성질을 하나 이상 골라야 함');
+  const stage = freeStage(options);
+  return collect(() => makeFrom(stage, 'free', rng), options.count);
+}
+
+function makeFrom(stage, tag, rng) {
   for (let tries = 0; tries < 500; tries++) {
     const degree = pick(rng, DEGREES);
     let lo, hi;
@@ -139,16 +158,21 @@ export function makeQuestion(stageIndex, rng = Math.random) {
     const iv = interval(lo, hi);
     if (!iv || !iv.quality) continue;
     const down = stage.down && rng() < 0.5;
-    return { a: down ? hi : lo, b: down ? lo : hi, answer: { quality: iv.quality, degree: iv.degree }, stage: stageIndex };
+    return { a: down ? hi : lo, b: down ? lo : hi, answer: { quality: iv.quality, degree: iv.degree }, stage: tag };
   }
-  throw new Error('문제를 만들 수 없음: 단계 ' + stageIndex);
+  throw new Error('문제를 만들 수 없음: ' + tag);
 }
 
 export function makeRound(stageIndex, rng = Math.random) {
+  return collect(() => makeQuestion(stageIndex, rng), QUESTION_COUNT);
+}
+
+// 같은 문제가 겹치지 않게 모은다 (겹치지 않는 문제가 40개를 넘으면 겹쳐도 허용)
+function collect(make, count) {
   const qs = [];
   const seen = new Set();
-  while (qs.length < QUESTION_COUNT) {
-    const q = makeQuestion(stageIndex, rng);
+  while (qs.length < count) {
+    const q = make();
     const key = questionKey(q);
     if (seen.has(key) && seen.size < 40) continue;
     seen.add(key);
