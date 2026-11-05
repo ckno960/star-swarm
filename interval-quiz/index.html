@@ -35,6 +35,9 @@
     background: var(--panel); border: 2px solid var(--line); border-radius: 16px; text-align: left;
   }
   .menu b { font-size: 20px; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--panel); border-radius: 14px; margin-bottom: 4px; }
+  .tabs button { min-height: 44px; border: none; border-radius: 10px; background: none; color: var(--dim); font-weight: 800; font-size: 17px; }
+  .tabs button.on { background: var(--accent); color: #2a1f00; }
   .credit { margin: 14px 0 0; text-align: center; font-size: 11px; color: var(--dim); opacity: 0.7; }
   .menu span { font-size: 14px; color: var(--dim); }
   .list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
@@ -112,6 +115,8 @@
     position: absolute; bottom: 3px; transform: translateX(-50%); white-space: nowrap;
     font-size: 12px; font-weight: 800; padding: 1px 6px; border-radius: 6px; color: #10131c;
   }
+  .kb-labels.two { height: 40px; }
+  .kb-labels span.row2 { bottom: 21px; }
   .kb-labels span.left { transform: translateX(-100%); }
   .kb-labels span.right { transform: none; }
   .keys { position: relative; display: flex; height: 84px; touch-action: none; }
@@ -143,6 +148,8 @@
     .ctl { min-height: 36px; }
     .keys { height: 66px; }
     .kb-labels { height: 20px; }
+    .kb-labels.two { height: 38px; }
+    .opts .choice { min-height: 50px; }
   }
 
   /* 결과 */
@@ -165,15 +172,21 @@
   #free .grid.q5 { grid-template-columns: repeat(5, 1fr); }
   #free .grid.q2 { grid-template-columns: repeat(2, 1fr); }
   #free .choice { font-size: 16px; }
+  #free .choice.sym { font-size: 15px; padding: 0 2px; white-space: nowrap; }
+  .opts .choice { min-height: 56px; font-size: 21px; }
 </style>
 </head>
 <body>
 
 <section id="home" class="screen">
-  <h1>음정 퀴즈</h1>
-  <p class="sub">악보의 두 음 사이 음정을 맞혀 보세요</p>
+  <h1 id="home-title">음정 퀴즈</h1>
+  <p class="sub" id="home-sub"></p>
+  <div class="tabs" id="kind-tabs">
+    <button data-kind="interval">음정</button>
+    <button data-kind="chord">코드</button>
+  </div>
   <button class="menu" id="open-stages"><b>단계별 연습</b><span id="stages-summary"></span></button>
-  <button class="menu" id="open-free"><b>자유연습</b><span>성질과 문제 수를 골라서 연습</span></button>
+  <button class="menu" id="open-free"><b>자유연습</b><span id="free-summary"></span></button>
   <button id="open-wrongs" class="wide" style="margin-top:8px"></button>
   <p class="credit">피아노 소리: Salamander Grand Piano (Alexander Holm, CC BY 3.0)</p>
 </section>
@@ -181,7 +194,7 @@
 <section id="stages-screen" class="screen" hidden>
   <div class="top">
     <button class="back" id="stages-back" aria-label="뒤로">←</button>
-    <span class="title">단계별 연습</span>
+    <span class="title" id="stages-title">단계별 연습</span>
   </div>
   <div class="list" id="stages"></div>
 </section>
@@ -189,14 +202,14 @@
 <section id="free" class="screen" hidden>
   <div class="top">
     <button class="back" id="free-back" aria-label="뒤로">←</button>
-    <span class="title">자유연습</span>
+    <span class="title" id="free-title">자유연습</span>
   </div>
-  <div class="label" style="margin-top:12px">성질 (여러 개 선택)</div>
+  <div class="label" style="margin-top:12px" id="free-q-label">성질 (여러 개 선택)</div>
   <div class="grid q4" id="free-q" style="margin-top:0"></div>
   <div class="hint" id="free-hint"></div>
   <div class="label">문제 수</div>
   <div class="grid q5" id="free-count"></div>
-  <div class="label" style="margin-top:14px">방향</div>
+  <div class="label" style="margin-top:14px" id="free-down-label">방향</div>
   <div class="grid q2" id="free-down"></div>
   <div class="spacer"></div>
   <button class="wide fill" id="free-start">시작</button>
@@ -211,11 +224,17 @@
   <div class="bar"><i id="quiz-bar"></i></div>
   <div class="paper" id="staff"></div>
   <div id="feedback"></div>
-  <div class="label">성질</div>
-  <div class="grid q3" id="q-row1"></div>
-  <div class="grid q4" id="q-row2"></div>
-  <div class="label" style="margin-top:12px">도수</div>
-  <div class="grid q4" id="d-grid" style="margin-top:0"></div>
+  <div id="iv-answer">
+    <div class="label">성질</div>
+    <div class="grid q3" id="q-row1"></div>
+    <div class="grid q4" id="q-row2"></div>
+    <div class="label" style="margin-top:12px">도수</div>
+    <div class="grid q4" id="d-grid" style="margin-top:0"></div>
+  </div>
+  <div id="ch-answer" hidden>
+    <div class="label">코드 이름</div>
+    <div class="grid q2 opts" id="ch-options" style="grid-template-columns: 1fr 1fr"></div>
+  </div>
   <div style="height:12px"></div>
   <button class="wide fill" id="submit">확인</button>
   <div class="controls">
@@ -239,7 +258,7 @@
 <section id="wrongs" class="screen" hidden>
   <div class="top">
     <button class="back" id="wrongs-back" aria-label="뒤로">←</button>
-    <span class="title">오답 노트</span>
+    <span class="title" id="wrongs-title">오답 노트</span>
     <span class="count" id="wrongs-count"></span>
   </div>
   <div id="wrong-list"></div>
@@ -247,12 +266,28 @@
 </section>
 
 <script type="module">
-import * as L from './logic.js?v=3';
+import * as L from './logic.js?v=4';
+import * as C from './chords.js?v=2';
 
+// 음정 퀴즈와 코드 퀴즈는 진행·오답 노트를 따로 저장한다
 const PROGRESS_KEY = 'intervalQuiz.progress';
 const WRONGS_KEY = 'intervalQuiz.wrongs';
+const CHORD_PROGRESS_KEY = 'intervalQuiz.chordProgress';
+const CHORD_WRONGS_KEY = 'intervalQuiz.chordWrongs';
+const KIND_KEY = 'intervalQuiz.kind';
 let progress = load(PROGRESS_KEY, {});
 let wrongs = load(WRONGS_KEY, []);
+let chordProgress = load(CHORD_PROGRESS_KEY, {});
+let chordWrongs = load(CHORD_WRONGS_KEY, []);
+let kind = load(KIND_KEY, 'interval');
+const isChord = () => kind === 'chord';
+const stages = () => (isChord() ? C.CHORD_STAGES : L.STAGES);
+const prog = () => (isChord() ? chordProgress : progress);
+const wrongList = () => (isChord() ? chordWrongs : wrongs);
+function setWrongs(list) {
+  if (isChord()) save(CHORD_WRONGS_KEY, chordWrongs = list);
+  else save(WRONGS_KEY, wrongs = list);
+}
 
 function load(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
@@ -321,9 +356,45 @@ function note(n, x) {
   return g;
 }
 
+function ledgerSteps(s) {
+  const out = [];
+  for (let k = 28; k >= s; k -= 2) out.push(k);
+  for (let k = 40; k <= s; k += 2) out.push(k);
+  return out;
+}
+
+// 화음: 음을 세로로 쌓는다. 2도로 붙은 음은 오른쪽으로 비켜 쓰고, 임시표는 겹치지 않게 왼쪽으로 줄을 나눠 단다
+function chord(notes, x) {
+  const g = svg('g', {});
+  const sorted = [...notes].sort((a, b) => L.step(a) - L.step(b));
+  const shifted = [];
+  sorted.forEach((n, i) => {
+    shifted[i] = i > 0 && L.step(n) - L.step(sorted[i - 1]) === 1 && !shifted[i - 1];
+  });
+  const anyShift = shifted.some(Boolean);
+  const ledgers = new Set(sorted.flatMap(n => ledgerSteps(L.step(n))));
+  for (const k of ledgers) {
+    g.append(svg('line', { x1: x - 11, x2: x + (anyShift ? 24 : 11), y1: yOf(k), y2: yOf(k), stroke: '#1d1d1f', 'stroke-width': 1.2 }));
+  }
+  sorted.forEach((n, i) => {
+    const cx = x + (shifted[i] ? 13 : 0), y = yOf(L.step(n));
+    g.append(svg('ellipse', { cx, cy: y, rx: 6.6, ry: 4.6, fill: '#1d1d1f' }));
+    g.append(svg('ellipse', { cx, cy: y, rx: 3.9, ry: 2.2, fill: '#fbf7ec', transform: `rotate(-35 ${cx} ${y})` }));
+  });
+  // 위 음부터 임시표를 달고, 6도 안쪽에 이미 단 임시표가 있으면 한 칸 왼쪽 줄로
+  const columns = [];
+  for (const n of [...sorted].reverse().filter(n => n.a)) {
+    let c = 0;
+    while ((columns[c] ?? []).some(s => Math.abs(s - L.step(n)) < 6)) c++;
+    (columns[c] ??= []).push(L.step(n));
+    g.append(accidental(n.a, x - 14 - c * 11 - (n.a === -2 ? 4 : 0), yOf(L.step(n))));
+  }
+  return g;
+}
+
 function drawStaff(q, width = 200) {
   const root = svg('svg', { viewBox: `0 -8 ${width} 104`, role: 'img' });
-  root.setAttribute('aria-label', '오선지 위의 두 음');
+  root.setAttribute('aria-label', q.kind === 'chord' ? '오선지 위의 화음' : '오선지 위의 두 음');
   for (let i = 0; i < 5; i++) {
     root.append(svg('line', { x1: 4, x2: width - 4, y1: 30 + i * 10, y2: 30 + i * 10, stroke: '#1d1d1f', 'stroke-width': 1 }));
   }
@@ -331,6 +402,10 @@ function drawStaff(q, width = 200) {
   clef.append(svg('path', { d: CLEF, fill: 'none', stroke: '#1d1d1f', 'stroke-width': 2.6, 'stroke-linecap': 'round' }));
   clef.append(svg('circle', { cx: 15.5, cy: 49.5, r: 3.2, fill: '#1d1d1f' }));
   root.append(clef);
+  if (q.kind === 'chord') {
+    root.append(chord(q.notes, width * 0.6));
+    return root;
+  }
   const x1 = width * 0.45, x2 = width * 0.75;
   root.append(note(q.a, x1), note(q.b, x2));
   return root;
@@ -338,10 +413,18 @@ function drawStaff(q, width = 200) {
 
 // ── 처음 화면 ──
 function home() {
-  const cleared = L.STAGES.filter((_, i) => L.isCleared(progress, i)).length;
-  $('stages-summary').textContent = `${L.STAGES.length}단계 중 ${cleared}단계 통과`;
-  $('open-wrongs').textContent = `오답 노트 (${wrongs.length})`;
+  const cleared = stages().filter((_, i) => L.isCleared(prog(), i)).length;
+  $('home-title').textContent = isChord() ? '코드 퀴즈' : '음정 퀴즈';
+  $('home-sub').textContent = isChord() ? '악보의 화음을 보고 코드 이름을 맞혀 보세요' : '악보의 두 음 사이 음정을 맞혀 보세요';
+  document.title = isChord() ? '코드 퀴즈' : '음정 퀴즈';
+  for (const b of $('kind-tabs').children) b.className = b.dataset.kind === kind ? 'on' : '';
+  $('stages-summary').textContent = `${stages().length}단계 중 ${cleared}단계 통과`;
+  $('free-summary').textContent = isChord() ? '코드 종류와 문제 수를 골라서 연습' : '성질과 문제 수를 골라서 연습';
+  $('open-wrongs').textContent = `오답 노트 (${wrongList().length})`;
   show('home');
+}
+for (const b of $('kind-tabs').children) {
+  b.onclick = () => { kind = b.dataset.kind; save(KIND_KEY, kind); home(); };
 }
 $('open-wrongs').onclick = () => openWrongs();
 $('open-stages').onclick = () => stagesScreen();
@@ -352,10 +435,11 @@ $('free-back').onclick = home;
 function stagesScreen() {
   const list = $('stages');
   list.replaceChildren();
-  L.STAGES.forEach((st, i) => {
-    const unlocked = L.isUnlocked(progress, i);
-    const cleared = L.isCleared(progress, i);
-    const best = progress.best?.[i];
+  $('stages-title').textContent = `단계별 연습 · ${isChord() ? '코드' : '음정'}`;
+  stages().forEach((st, i) => {
+    const unlocked = L.isUnlocked(prog(), i);
+    const cleared = L.isCleared(prog(), i);
+    const best = prog().best?.[i];
     const badge = !unlocked ? '🔒' : cleared ? `CLEAR ${best}/10` : best !== undefined ? `최고 ${best}/10` : '';
     const b = el('button', { className: 'stage' + (cleared ? ' cleared' : ''), disabled: !unlocked }, [
       el('span', { className: 'num', textContent: i + 1 }),
@@ -375,7 +459,14 @@ function stagesScreen() {
 const FREE_KEY = 'intervalQuiz.free';
 let freeOpts = { qualities: [...L.QUALITIES], count: 10, down: false, ...load(FREE_KEY, {}) };
 
+const CHORD_FREE_KEY = 'intervalQuiz.chordFree';
+let chordFreeOpts = { types: C.CHORD_TYPES.map(t => t.id), count: 10, inversions: false, ...load(CHORD_FREE_KEY, {}) };
+
 function freeScreen() {
+  $('free-title').textContent = `자유연습 · ${isChord() ? '코드' : '음정'}`;
+  if (isChord()) return chordFreeScreen();
+  $('free-q-label').textContent = '성질 (여러 개 선택)';
+  $('free-down-label').textContent = '방향';
   const chip = (text, on, onClick) => {
     const b = el('button', { className: 'choice' + (on ? ' on' : ''), textContent: text });
     b.onclick = () => { onClick(); save(FREE_KEY, freeOpts); freeScreen(); };
@@ -400,6 +491,35 @@ function freeScreen() {
   $('free-start').disabled = !freeOpts.qualities.length;
   show('free');
 }
+
+// 코드 자유연습: 종류(C를 근음으로 한 기호로 보여줌), 자리바꿈, 문제 수
+function chordFreeScreen() {
+  const o = chordFreeOpts;
+  $('free-q-label').textContent = '코드 종류 (여러 개 선택)';
+  $('free-down-label').textContent = '자리바꿈';
+  const chip = (text, on, onClick, cls = '') => {
+    const b = el('button', { className: 'choice' + cls + (on ? ' on' : ''), textContent: text });
+    b.onclick = () => { onClick(); save(CHORD_FREE_KEY, o); freeScreen(); };
+    return b;
+  };
+  const all = C.CHORD_TYPES.map(t => t.id);
+  $('free-q').replaceChildren(
+    ...C.CHORD_TYPES.map(t => chip('C' + t.symbol, o.types.includes(t.id), () => {
+      o.types = o.types.includes(t.id) ? o.types.filter(x => x !== t.id) : [...o.types, t.id];
+    }, ' sym')),
+    chip(o.types.length === all.length ? '모두 끄기' : '모두', false, () => {
+      o.types = o.types.length === all.length ? [] : [...all];
+    }, ' sym'),
+  );
+  $('free-hint').textContent = o.types.length ? '' : '코드 종류를 하나 이상 골라 주세요';
+  $('free-count').replaceChildren(...C.FREE_COUNTS.map(n => chip(String(n), o.count === n, () => { o.count = n; })));
+  $('free-down').replaceChildren(
+    chip('기본형만', !o.inversions, () => { o.inversions = false; }),
+    chip('자리바꿈도', o.inversions, () => { o.inversions = true; }),
+  );
+  $('free-start').disabled = !o.types.length;
+  show('free');
+}
 $('free-start').onclick = () => startRound('free');
 
 // ── 문제 풀기 ──
@@ -408,18 +528,22 @@ let round = null;
 
 function startRound(mode) {
   loadPiano();
-  const questions = mode === 'review' ? wrongs.slice(0, L.QUESTION_COUNT).map(w => ({ ...w }))
-    : mode === 'free' ? L.makeFreeRound(freeOpts)
-    : L.makeRound(mode);
+  const questions = mode === 'review' ? wrongList().slice(0, L.QUESTION_COUNT).map(w => ({ ...w }))
+    : mode === 'free' ? (isChord() ? C.makeFreeChordRound(chordFreeOpts) : L.makeFreeRound(freeOpts))
+    : isChord() ? C.makeChordRound(mode) : L.makeRound(mode);
   round = { mode, questions, index: 0, score: 0 };
+  const types = chordFreeOpts.types;
   $('quiz-title').textContent = mode === 'review' ? '오답 다시 풀기'
+    : mode === 'free' && isChord() ? `자유연습 · ${types.length === C.CHORD_TYPES.length ? '모든 코드' : types.length <= 3 ? types.map(t => 'C' + C.TYPE_BY_ID[t].symbol).join('·') : `코드 ${types.length}종류`}`
     : mode === 'free' ? `자유연습 · ${freeOpts.qualities.length === L.QUALITIES.length ? '모든 성질' : freeOpts.qualities.join('·')}`
-    : `${mode + 1}단계 · ${L.STAGES[mode].name}`;
+    : `${mode + 1}단계 · ${stages()[mode].name}`;
+  $('iv-answer').hidden = isChord();
+  $('ch-answer').hidden = !isChord();
   nextQuestion();
   show('quiz');
 }
 
-let picked = { quality: null, degree: null }, checked = false;
+let picked = { quality: null, degree: null, name: null }, checked = false;
 const qButtons = {}, dButtons = {};
 
 function buildChoices() {
@@ -449,6 +573,7 @@ function choose(kind, value) {
 
 function refreshChoices() {
   const q = round.questions[round.index];
+  if (q.kind === 'chord') return refreshChordChoices(q);
   for (const [k, b] of Object.entries(qButtons)) {
     b.className = 'choice' + mark(picked.quality === k, q.answer.quality === k);
   }
@@ -462,6 +587,15 @@ function refreshChoices() {
     : `${picked.quality ?? '?'}${picked.degree ?? '?'}도 확인`;
 }
 
+function refreshChordChoices(q) {
+  for (const b of $('ch-options').children) {
+    b.className = 'choice' + mark(picked.name === b.textContent, q.answer.name === b.textContent);
+  }
+  $('submit').disabled = !checked && !picked.name;
+  $('submit').textContent = checked ? (round.index + 1 < round.questions.length ? '다음 문제' : '결과 보기')
+    : picked.name ? `${picked.name} 확인` : '코드 이름을 골라 주세요';
+}
+
 function mark(isPicked, isAnswer) {
   if (!checked) return isPicked ? ' on' : '';
   if (isAnswer) return ' right';
@@ -470,12 +604,19 @@ function mark(isPicked, isAnswer) {
 
 function nextQuestion() {
   const q = round.questions[round.index];
-  picked = { quality: null, degree: null };
+  picked = { quality: null, degree: null, name: null };
   checked = false;
   $('staff').replaceChildren(drawStaff(q));
   markKeys(q);
+  if (q.kind === 'chord') {
+    $('ch-options').replaceChildren(...q.options.map(name => {
+      const b = el('button', { className: 'choice', textContent: name });
+      b.onclick = () => choose('name', name);
+      return b;
+    }));
+  }
   $('feedback').replaceChildren(el('span', {
-    textContent: L.step(q.a) > L.step(q.b) ? '내려가는 음정이에요' : '두 음 사이의 음정은?',
+    textContent: q.kind === 'chord' ? '이 코드의 이름은?' : L.step(q.a) > L.step(q.b) ? '내려가는 음정이에요' : '두 음 사이의 음정은?',
   }));
   $('quiz-count').textContent = `${round.index + 1} / ${round.questions.length}`;
   $('quiz-bar').style.width = (round.index / round.questions.length) * 100 + '%';
@@ -486,19 +627,20 @@ $('submit').onclick = () => {
   if (!round) return;
   const q = round.questions[round.index];
   if (!checked) {
-    if (!picked.quality || !picked.degree) return;
+    const isCh = q.kind === 'chord';
+    if (isCh ? !picked.name : !picked.quality || !picked.degree) return;
     checked = true;
-    const ok = L.isCorrect(q, picked.quality, picked.degree);
+    const ok = isCh ? picked.name === q.answer.name : L.isCorrect(q, picked.quality, picked.degree);
     if (ok) {
       round.score++;
-      if (round.mode === 'review') wrongs = L.removeWrong(wrongs, q);
+      if (round.mode === 'review') setWrongs(isCh ? C.removeChordWrong(chordWrongs, q) : L.removeWrong(wrongs, q));
     } else {
-      wrongs = L.addWrong(wrongs, q, { ...picked });
+      setWrongs(isCh ? C.addChordWrong(chordWrongs, q, picked.name) : L.addWrong(wrongs, q, { quality: picked.quality, degree: picked.degree }));
     }
-    save(WRONGS_KEY, wrongs);
+    const answerText = isCh ? q.answer.name : `${q.answer.quality}${q.answer.degree}도`;
     $('feedback').replaceChildren(
-      el('b', { className: ok ? 'ok' : 'bad', textContent: ok ? '정답!' : `틀렸어요 · 정답은 ${q.answer.quality}${q.answer.degree}도` }),
-      el('span', { textContent: L.explain(q) }),
+      el('b', { className: ok ? 'ok' : 'bad', textContent: ok ? '정답!' : `틀렸어요 · 정답은 ${answerText}` }),
+      el('span', { textContent: isCh ? C.explainChord(q) : L.explain(q) }),
     );
     $('quiz-bar').style.width = ((round.index + 1) / round.questions.length) * 100 + '%';
     refreshChoices();
@@ -606,17 +748,18 @@ function synthTone(ctx, p, delay, dur) {
   }
 }
 
+// 음정은 악보 왼쪽 음부터, 화음은 아래 음부터
+const notesOf = q => (q.kind === 'chord' ? q.notes : [q.a, q.b]);
 $('play-together').onclick = () => {
   const q = round?.questions[round.index];
   if (!q) return;
-  tone(L.pitch(q.a));
-  tone(L.pitch(q.b));
+  for (const n of notesOf(q)) tone(L.pitch(n), 0, q.kind === 'chord' ? 2 : 1.6);
 };
 $('play-apart').onclick = () => {
   const q = round?.questions[round.index];
   if (!q) return;
-  tone(L.pitch(q.a), 0, 1.2);
-  tone(L.pitch(q.b), 0.75, 1.4);
+  const gap = q.kind === 'chord' ? 0.5 : 0.75;
+  notesOf(q).forEach((n, i, all) => tone(L.pitch(n), i * gap, i === all.length - 1 ? 1.4 : 1.2));
 };
 
 // ── 건반 (가운데 도 ~ 높은 도) ──
@@ -659,6 +802,8 @@ function markKeys(q) {
   for (const { e } of Object.values(keyEls)) e.classList.remove('m1', 'm2');
   const labels = $('kb-labels');
   labels.replaceChildren();
+  labels.classList.toggle('two', q.kind === 'chord');
+  if (q.kind === 'chord') return markChordKeys(q, labels);
   const pa = L.pitch(q.a), pb = L.pitch(q.b);
   keyEls[pa]?.e.classList.add('m1');
   keyEls[pb]?.e.classList.add('m2');
@@ -672,6 +817,24 @@ function markKeys(q) {
     if (!keyEls[p]) continue;
     const side = close ? (p < other ? ' left' : ' right') : '';
     labels.append(label(L.noteName(n), m + side, keyEls[p].x));
+  }
+}
+
+// 화음: 모든 음을 노랑으로 칠하고, 이름표가 붙으면 두 줄로 엇갈려 단다
+function markChordKeys(q, labels) {
+  const byKey = new Map();
+  for (const n of q.notes) {
+    const p = L.pitch(n);
+    if (!keyEls[p]) continue;
+    keyEls[p].e.classList.add('m1');
+    byKey.set(p, [...(byKey.get(p) ?? []), C.enName(n)]);
+  }
+  let lastX = [-1, -1];
+  for (const [p, nameList] of [...byKey].sort((a, b) => a[0] - b[0])) {
+    const x = keyEls[p].x;
+    const row = x - lastX[0] < 0.09 && x - lastX[1] >= 0.09 ? 1 : 0;
+    lastX[row] = x;
+    labels.append(label(nameList.join('·'), 'm1' + (row ? ' row2' : ''), x));
   }
 }
 
@@ -701,20 +864,21 @@ function finish() {
   const buttons = [];
   if (mode === 'review') {
     $('result-title').textContent = '오답 다시 풀기';
-    $('result-msg').textContent = wrongs.length ? `오답 노트에 ${wrongs.length}문제 남았어요` : '오답 노트를 모두 비웠어요!';
-    if (wrongs.length) buttons.push(['한 번 더', true, () => startRound('review')]);
+    const left = wrongList().length;
+    $('result-msg').textContent = left ? `오답 노트에 ${left}문제 남았어요` : '오답 노트를 모두 비웠어요!';
+    if (left) buttons.push(['한 번 더', true, () => startRound('review')]);
   } else if (mode === 'free') {
-    $('result-title').textContent = '자유연습';
+    $('result-title').textContent = `자유연습 · ${isChord() ? '코드' : '음정'}`;
     $('result-msg').textContent = `${Math.round(score / total * 100)}% 맞혔어요`;
     buttons.push(['같은 설정으로 다시', true, () => startRound('free')]);
     buttons.push(['설정 바꾸기', false, freeScreen]);
   } else {
-    const wasUnlocked = L.isUnlocked(progress, mode + 1);
-    progress = L.recordRound(progress, mode, score);
-    save(PROGRESS_KEY, progress);
+    const wasUnlocked = L.isUnlocked(prog(), mode + 1);
+    if (isChord()) save(CHORD_PROGRESS_KEY, chordProgress = L.recordRound(chordProgress, mode, score));
+    else save(PROGRESS_KEY, progress = L.recordRound(progress, mode, score));
     const passed = score >= L.PASS_SCORE;
-    const hasNext = mode + 1 < L.STAGES.length;
-    $('result-title').textContent = `${mode + 1}단계 · ${L.STAGES[mode].name}`;
+    const hasNext = mode + 1 < stages().length;
+    $('result-title').textContent = `${isChord() ? '코드' : '음정'} ${mode + 1}단계 · ${stages()[mode].name}`;
     $('result-msg').textContent = !passed ? `${L.PASS_SCORE}개 이상 맞히면 통과예요`
       : !hasNext ? '모든 단계를 통과했어요!'
       : wasUnlocked ? '통과!' : `통과! ${mode + 2}단계가 열렸어요`;
@@ -736,19 +900,22 @@ function finish() {
 function openWrongs() {
   const list = $('wrong-list');
   list.replaceChildren();
-  if (!wrongs.length) list.append(el('p', { className: 'empty', textContent: '아직 틀린 문제가 없어요' }));
-  for (const w of wrongs) {
+  const items = wrongList();
+  $('wrongs-title').textContent = `오답 노트 · ${isChord() ? '코드' : '음정'}`;
+  if (!items.length) list.append(el('p', { className: 'empty', textContent: '아직 틀린 문제가 없어요' }));
+  for (const w of items) {
     const paper = el('div', { className: 'paper' });
     paper.append(drawStaff(w));
+    const isCh = w.kind === 'chord';
     const txt = el('div', { className: 'txt' }, [
-      el('div', { textContent: `${L.noteName(w.a)} → ${L.noteName(w.b)}` }),
-      el('div', {}, ['정답 ', el('b', { textContent: `${w.answer.quality}${w.answer.degree}도` })]),
-      el('div', {}, ['내 답 ', el('s', { textContent: `${w.picked.quality}${w.picked.degree}도` })]),
+      el('div', { textContent: isCh ? w.notes.map(C.enName).join(' ') : `${L.noteName(w.a)} → ${L.noteName(w.b)}` }),
+      el('div', {}, ['정답 ', el('b', { textContent: isCh ? w.answer.name : `${w.answer.quality}${w.answer.degree}도` })]),
+      el('div', {}, ['내 답 ', el('s', { textContent: isCh ? w.picked : `${w.picked.quality}${w.picked.degree}도` })]),
     ]);
     list.append(el('div', { className: 'wrong-item' }, [paper, txt]));
   }
-  $('wrongs-count').textContent = `${wrongs.length}문제`;
-  $('retry-wrongs').disabled = !wrongs.length;
+  $('wrongs-count').textContent = `${items.length}문제`;
+  $('retry-wrongs').disabled = !items.length;
   show('wrongs');
 }
 $('wrongs-back').onclick = home;
