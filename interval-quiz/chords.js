@@ -72,9 +72,9 @@ function soundKey(notes) {
 }
 
 // ---------- 단계 ----------
-const TRIADS = ['maj', 'min', 'aug', 'dim'];
-const SEVENTHS = ['M7', '7', 'm7', 'm7b5', 'dim7', 'mM7'];
-const SUS = ['sus2', 'sus4', '7sus4', '6', 'm6', 'add9'];
+export const TRIADS = ['maj', 'min', 'aug', 'dim'];
+export const SEVENTHS = ['M7', '7', 'm7', 'm7b5', 'dim7', 'mM7'];
+export const SUS = ['sus2', 'sus4', '7sus4', '6', 'm6', 'add9'];
 export const CHORD_STAGES = [
   { name: '장·단 3화음', desc: 'C, Cm', types: ['maj', 'min'], inversions: false, maxAcc: 1 },
   { name: '증·감 3화음', desc: 'Caug, Cdim까지', types: TRIADS, inversions: false, maxAcc: 1 },
@@ -108,7 +108,7 @@ function inRange(notes) {
 }
 
 // 화음 전체를 옥타브 단위로 옮겨 건반·오선 안에 들어오는 자리 중 하나를 고른다
-function place(notes, rng) {
+export function place(notes, rng) {
   const fits = [-1, 0, 1].map(k => notes.map(n => ({ ...n, o: n.o + k }))).filter(inRange);
   return fits.length ? pick(rng, fits) : null;
 }
