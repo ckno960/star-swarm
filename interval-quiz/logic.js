@@ -171,10 +171,13 @@ export function makeRound(stageIndex, rng = Math.random) {
 function collect(make, count) {
   const qs = [];
   const seen = new Set();
+  let misses = 0;
   while (qs.length < count) {
     const q = make();
     const key = questionKey(q);
-    if (seen.has(key) && seen.size < 40) continue;
+    // 고를 수 있는 문제가 적으면(예: 장3화음만) 같은 문제가 계속 나오므로, 연달아 겹치면 겹쳐도 넣는다
+    if (seen.has(key) && seen.size < 40 && ++misses < 30) continue;
+    misses = 0;
     seen.add(key);
     qs.push(q);
   }
