@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>스나이퍼</title>
+<style>
+  :root { --gold: #ffcf4a; --red: #e0483a; --ink: #0e1014; --card: #1c2028; --line: #3a4252; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: #eef2f6; font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  body { display: flex; justify-content: center; }
+  #app { position: relative; width: 100%; max-width: 480px; height: 100%; height: 100dvh; overflow: hidden; background: #000; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  .sh { text-shadow: 0 1px 0 #000, 0 0 3px #000, 1px 0 0 #000, -1px 0 0 #000; }
+
+  #hud { position: absolute; left: 0; right: 0; top: 0; padding: calc(8px + env(safe-area-inset-top)) 10px 10px; background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0)); pointer-events: none; }
+  #hudTop { display: flex; justify-content: space-between; align-items: center; font: 900 14px system-ui, sans-serif; }
+  #ammo { letter-spacing: 2px; color: var(--gold); }
+  #mission { margin-top: 5px; font: 800 13.5px system-ui, sans-serif; }
+  #mission b { color: var(--gold); }
+  #meta { margin-top: 4px; display: flex; gap: 12px; font: 800 12.5px system-ui, sans-serif; opacity: 0.95; }
+  #timer.low { color: #ff7a6a; }
+  #msg { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); padding: 7px 14px; border-radius: 10px; background: rgba(0,0,0,0.75); font: 900 15px system-ui, sans-serif; white-space: nowrap; pointer-events: none; transition: opacity 0.3s; }
+  #msg.hide { opacity: 0; }
+
+  #overBar { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 10px calc(12px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: center; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.7)); }
+  #overBar .hint { flex: 1; font: 800 13.5px system-ui, sans-serif; }
+  .sbtn { min-height: 42px; padding: 0 12px; border: none; border-radius: 10px; background: rgba(30,36,46,0.92); color: #fff; font: 900 13.5px system-ui, sans-serif; box-shadow: 0 0 0 1px rgba(255,255,255,0.15); }
+
+  #scopeUI { position: absolute; inset: 0; pointer-events: none; }
+  #scopeInfo { position: absolute; left: 0; right: 0; text-align: center; font: 800 12.5px/1.5 system-ui, sans-serif; }
+  #scopeInfo b { color: var(--gold); }
+  #breathBar { position: absolute; left: 50%; width: 150px; height: 6px; transform: translateX(-50%); border-radius: 3px; background: rgba(255,255,255,0.15); overflow: hidden; }
+  #breathBar i { display: block; height: 100%; background: #8ad0ff; }
+  #breathBar.ex i { background: #ff6a5a; }
+  .cbtn { position: absolute; pointer-events: auto; border: none; border-radius: 50%; color: #fff; font: 900 13px/1.1 system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 0 0 2px rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.5); }
+  .cbtn b { font-size: 24px; }
+  .cbtn:active, .cbtn.on { transform: scale(0.94); }
+  #fire { right: 16px; width: 92px; height: 92px; background: rgba(190,40,30,0.88); }
+  #fire:disabled { background: rgba(80,40,36,0.85); color: #b8a8a4; }
+  #breath { left: 16px; width: 84px; height: 84px; background: rgba(40,90,140,0.85); }
+  #breath.on { background: rgba(70,150,220,0.95); }
+  #zoom { right: 120px; width: 58px; height: 58px; background: rgba(30,36,46,0.9); }
+  #exit { right: 12px; width: 46px; height: 46px; background: rgba(30,36,46,0.9); font-size: 18px; }
+
+  .screen { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,0.78); }
+  .card { width: 100%; max-width: 340px; max-height: 92%; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+  .card h1 { margin: 0; font: 900 30px system-ui, sans-serif; letter-spacing: 2px; }
+  .card h2 { margin: 0; font: 900 21px system-ui, sans-serif; text-align: center; }
+  .card p { margin: 0; text-align: center; line-height: 1.55; font-size: 14px; opacity: 0.92; }
+  .card .stats { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14px; }
+  .card .stats b { text-align: right; }
+  .card ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; align-self: stretch; }
+  .btn { width: 100%; min-height: 46px; padding: 6px 10px; border: none; border-radius: 10px; background: #2c3442; color: #fff; font: 900 15px system-ui, sans-serif; }
+  .btn.main { background: var(--gold); color: #1a1406; }
+  .btn small { display: block; font-size: 12px; font-weight: 700; opacity: 0.8; }
+  .grid { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stg { aspect-ratio: 1; border: none; border-radius: 10px; background: #2c3442; color: #fff; font: 900 18px system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .stg small { font-size: 10px; color: var(--gold); letter-spacing: 1px; }
+  .stg:disabled { opacity: 0.35; }
+  .stg.cur { box-shadow: 0 0 0 2px var(--gold); }
+  #portrait { width: 96px; height: 120px; image-rendering: pixelated; background: #2a3140; border-radius: 10px; }
+  .stars { font-size: 30px; letter-spacing: 4px; }
+  .row { display: flex; gap: 8px; width: 100%; }
+  #reload { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 9; }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv"></canvas>
+  <div id="hud" class="sh" hidden>
+    <div id="hudTop"><span id="stageName"></span><span id="ammo"></span></div>
+    <div id="mission"></div>
+    <div id="meta"><span id="wind"></span><span id="timer"></span></div>
+  </div>
+  <div id="msg" class="hide sh"></div>
+  <div id="overBar" hidden>
+    <div class="hint sh">🎯 화면을 눌러 조준경을 들어요</div>
+    <button class="sbtn" id="briefBtn">📋 표적</button>
+    <button class="sbtn" id="menuBtn">☰</button>
+  </div>
+  <div id="scopeUI" hidden>
+    <div id="scopeInfo" class="sh"></div>
+    <div id="breathBar"><i></i></div>
+    <button class="cbtn" id="exit" aria-label="조준경 내리기">✕</button>
+    <button class="cbtn" id="zoom"><b>🔍</b><span id="zoomTxt">×4</span></button>
+    <button class="cbtn" id="breath"><b>😮‍💨</b>숨 참기</button>
+    <button class="cbtn" id="fire"><b>🎯</b><span id="fireTxt">발사</span></button>
+  </div>
+  <div id="modal" class="screen"><div class="card" id="card"></div></div>
+  <button id="reload" class="btn main" style="width:auto" hidden onclick="location.reload()">다시 불러오기</button>
+</div>
+<script>setTimeout(function () { if (!window.sniperReady) document.getElementById('reload').hidden = false; }, 4000);</script>
+<script type="module">
+import * as L from './logic.js?v=1';
+import { buildWorld, personSprite, carSprite, personTint, portrait } from './art.js?v=1';
+
+const $ = (id) => document.getElementById(id);
+const save = L.loadSave(localStorage);
+const persist = () => L.storeSave(localStorage, save);
+
+// ---------- 화면 ----------
+const AW = 360;
+const cv = $('cv'), app = $('app');
+let ctx, CW = 390, CH = 780, DPR = 1, AH = 720, K0 = 1;
+let LAY = null, world = null, wctx = null, layers = null;
+function resize() {
+  CW = app.clientWidth; CH = app.clientHeight; DPR = Math.min(3, window.devicePixelRatio || 1);
+  cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
+  ctx = cv.getContext('2d');
+  const ah = Math.round(AW * CH / CW);
+  if (ah !== AH || !LAY) { AH = ah; if (game) startStage(game.cfg.n, true); }
+  K0 = CW / AW;
+  layoutScopeUI();
+}
+window.addEventListener('resize', resize);
+
+// ---------- 소리 ----------
+let ac = null;
+function audio() { if (!save.sound) return null; try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch { return null; } return ac; }
+function tone(freq, dur, { type = 'sine', vol = 0.05, to = null, delay = 0 } = {}) {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t0); if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + Math.min(0.03, dur / 3)); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+}
+function noise(dur, { vol = 0.1, from = 2000, to = 200, delay = 0 } = {}) {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime + delay, n = Math.floor(a.sampleRate * dur), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = b; f.type = 'lowpass'; f.frequency.setValueAtTime(from, t0); f.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(f).connect(g).connect(a.destination); src.start(t0);
+}
+const sfx = {
+  shot() { noise(0.45, { vol: 0.4, from: 4000, to: 120 }); tone(70, 0.35, { type: 'triangle', vol: 0.2, to: 35 }); },
+  bolt() { noise(0.05, { vol: 0.1, from: 3000, to: 1500, delay: 0.55 }); noise(0.05, { vol: 0.1, from: 2500, to: 1200, delay: 0.85 }); },
+  beat() { tone(58, 0.12, { vol: 0.12 }); tone(52, 0.1, { vol: 0.1, delay: 0.16 }); },
+  whoosh() { noise(1.5, { vol: 0.07, from: 300, to: 3000 }); },
+  thud() { tone(90, 0.25, { type: 'triangle', vol: 0.14, to: 50 }); noise(0.2, { vol: 0.08, from: 800, to: 100 }); },
+  ping() { noise(0.12, { vol: 0.08, from: 3000, to: 600 }); },
+  win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, { type: 'square', vol: 0.03, delay: i * 0.1 })); },
+  fail() { [392, 330, 262].forEach((f, i) => tone(f, 0.4, { type: 'triangle', vol: 0.05, delay: i * 0.25 })); },
+  click() { tone(600, 0.04, { type: 'square', vol: 0.02 }); },
+};
+const buzz = (p) => { if (save.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch { /* 없음 */ } };
+
+// ---------- 게임 상태 ----------
+let game = null;   // { cfg, st, mode, view, zoom, breath, flight, cam, recoil, reload, puffs, t }
+function startStage(n, keepMode = false) {
+  LAY = L.layout(AW, AH, 11 + n);
+  const st = L.buildStage(n, LAY);
+  layers = buildWorld(LAY, st.cfg.time, 5 + n);
+  world = document.createElement('canvas'); world.width = AW; world.height = AH; wctx = world.getContext('2d');
+  const prev = game;
+  game = { cfg: st.cfg, st, mode: keepMode && prev ? prev.mode : 'brief', view: { x: AW / 2, y: AH * 0.6 }, zoom: 4, breath: L.newBreath(), flight: null, cam: null, recoil: 0, reload: 0, puffs: [], t: 0, beatT: 0, endT: 0 };
+  updateHud();
+}
+function msg(text, ms = 1600) { const m = $('msg'); m.textContent = text; m.classList.remove('hide'); clearTimeout(msg.t); msg.t = setTimeout(() => m.classList.add('hide'), ms); }
+
+// ---------- 세계 그리기(아트 픽셀) ----------
+function drawPerson(g, p) {
+  if (p.state === 'hidden' || p.state === 'gone') return;
+  const walking = p.speed > 0 && p.state !== 'down';
+  const spr = personSprite(p.traits, p.h, p.frame, personTint(p, LAY, game.cfg.time), walking);
+  const top = spr.height - p.h - 1;
+  if (p.state === 'down') {
+    g.save(); g.translate(Math.round(p.x), Math.round(p.y)); g.rotate((p.dir > 0 ? 1 : -1) * p.fall * Math.PI / 2);
+    g.drawImage(spr, -Math.floor(spr.width / 2), -spr.height + 1); g.restore();
+  } else {
+    if (p.dir < 0 && walking) { g.save(); g.translate(Math.round(p.x), 0); g.scale(-1, 1); g.drawImage(spr, -Math.floor(spr.width / 2), Math.round(p.y - p.h - top)); g.restore(); }
+    else g.drawImage(spr, Math.round(p.x - Math.floor(spr.width / 2)), Math.round(p.y - p.h - top));
+  }
+}
+function composeWorld() {
+  const g = wctx, st = game.st;
+  g.imageSmoothingEnabled = false;
+  g.clearRect(0, 0, AW, AH);
+  g.drawImage(layers.back, 0, 0);
+  for (const p of st.people) if (p.zone === 'roof') drawPerson(g, p);
+  g.drawImage(layers.mid, 0, 0);
+  for (const p of st.people) if (p.zone === 'window') {
+    const b = LAY.mid[p.b];
+    for (const w of b.wins) if (w.floor === p.floor && p.x > w.x - 6 && p.x < w.x + w.w + 6) { g.save(); g.beginPath(); g.rect(w.x, w.y, w.w, w.h); g.clip(); drawPerson(g, p); g.restore(); }
+  }
+  g.drawImage(layers.frames, 0, 0);
+  g.drawImage(layers.street, 0, 0);
+  const tint = layers.pal.light < 0.6 ? 0.55 : layers.pal.light;
+  const ground = st.people.filter((p) => p.zone === 'street').sort((a, b) => a.y - b.y);
+  for (const p of ground) if (p.y < LAY.road0) drawPerson(g, p);
+  for (const c of [...st.cars].sort((a, b) => a.y - b.y)) { const s = carSprite(c.color, c.d, c.dir, tint); g.drawImage(s, Math.round(c.x - s.width / 2), Math.round(c.y - s.height + 1)); }
+  for (const p of ground) if (p.y >= LAY.road0) drawPerson(g, p);
+  g.drawImage(layers.front, 0, 0);
+  for (const f of game.puffs) { g.fillStyle = `rgba(220,210,190,${1 - f.t})`; for (let i = 0; i < 6; i++) { const a = i * 1.05 + f.t * 2; g.fillRect(Math.round(f.x + Math.cos(a) * f.t * 6), Math.round(f.y + Math.sin(a) * f.t * 4 - f.t * 3), 1, 1); } }
+}
+
+// ---------- 화면 그리기 ----------
+const scopeGeo = () => ({ cx: CW / 2, cy: CH * 0.44, r: Math.min(CW * 0.48, CH * 0.33) });
+function aimPoint() { const s = L.sway(game.t, game.breath); return { x: game.view.x + s.x, y: game.view.y + s.y - game.recoil }; }
+function render() {
+  const c = ctx;
+  c.setTransform(DPR, 0, 0, DPR, 0, 0); c.imageSmoothingEnabled = false;
+  c.fillStyle = '#000'; c.fillRect(0, 0, CW, CH);
+  if (!game) return;
+  composeWorld();
+  if (game.mode === 'cam') return drawCam();
+  if (game.mode === 'scope' || game.mode === 'flight') return drawScope();
+  c.drawImage(world, 0, 0, AW, AH, 0, 0, CW, CH);
+}
+function drawScope() {
+  const c = ctx, { cx, cy, r } = scopeGeo(), s = K0 * game.zoom, a = aimPoint();
+  c.save();
+  c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.clip();
+  c.setTransform(DPR * s, 0, 0, DPR * s, DPR * (cx - a.x * s), DPR * (cy - a.y * s));
+  c.drawImage(world, 0, 0);
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (game.cfg.time === 'night') {   // 야간 투시경
+    c.globalCompositeOperation = 'multiply'; c.fillStyle = '#5aff7a'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
+    c.globalCompositeOperation = 'screen'; c.fillStyle = 'rgba(20,90,30,0.55)'; c.fillRect(cx - r, cy - r, r * 2, r * 2);
+    c.globalCompositeOperation = 'source-over'; c.fillStyle = 'rgba(0,0,0,0.12)'; for (let y = cy - r; y < cy + r; y += 3) c.fillRect(cx - r, y, r * 2, 1);
+  }
+  // 가장자리 어둡게
+  const vg = c.createRadialGradient(cx, cy, r * 0.7, cx, cy, r);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.75)'); c.fillStyle = vg; c.fillRect(cx - r, cy - r, r * 2, r * 2);
+  // 조준선과 밀 점(1밀 = 1/1000 라디안)
+  const milPx = (0.001 / L.THETA) * s;
+  c.strokeStyle = 'rgba(10,10,10,0.9)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(cx - r, cy); c.lineTo(cx - 8, cy); c.moveTo(cx + 8, cy); c.lineTo(cx + r, cy); c.moveTo(cx, cy - r); c.lineTo(cx, cy - 8); c.moveTo(cx, cy + 8); c.lineTo(cx, cy + r); c.stroke();
+  c.lineWidth = 3; c.beginPath(); c.moveTo(cx - r, cy); c.lineTo(cx - r * 0.72, cy); c.moveTo(cx + r * 0.72, cy); c.lineTo(cx + r, cy); c.moveTo(cx, cy + r * 0.72); c.lineTo(cx, cy + r); c.stroke();
+  c.fillStyle = 'rgba(10,10,10,0.9)';
+  for (let i = 1; i <= 8; i++) { if (milPx * i > r * 0.7) break; for (const [dx, dy] of [[i, 0], [-i, 0], [0, i], [0, -i]]) { c.beginPath(); c.arc(cx + dx * milPx, cy + dy * milPx, i % 5 === 0 ? 2.6 : 1.8, 0, Math.PI * 2); c.fill(); } }
+  c.fillStyle = '#ff3a2a'; c.beginPath(); c.arc(cx, cy, 1.6, 0, Math.PI * 2); c.fill();
+  // 연습 스테이지: 예상 탄착점
+  if (game.cfg.guide && game.mode === 'scope') {
+    const sol = L.aimSolution(game.st, LAY, a.x, a.y);
+    if (isFinite(sol.d)) { c.strokeStyle = 'rgba(255,60,40,0.95)'; c.lineWidth = 2; c.beginPath(); c.arc(cx + (sol.x - a.x) * s, cy + (sol.y - a.y) * s, 5, 0, Math.PI * 2); c.stroke(); }
+  }
+  // 날아가는 탄의 궤적(작은 점)
+  if (game.flight) {
+    const f = game.flight, k = Math.min(1, f.t / f.T), px = cx + (f.x - a.x) * s * k, py = cy + (f.y - a.y) * s * k;
+    c.fillStyle = 'rgba(255,230,160,0.9)'; c.beginPath(); c.arc(px, py, Math.max(1, 3 * (1 - k)), 0, Math.PI * 2); c.fill();
+  }
+  c.restore();
+  // 테두리
+  c.strokeStyle = '#000'; c.lineWidth = 6; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+  c.fillStyle = '#000';
+  c.beginPath(); c.rect(0, 0, CW, CH); c.arc(cx, cy, r + 2, 0, Math.PI * 2, true); c.fill('evenodd');
+  if (game.flash > 0) { c.fillStyle = `rgba(255,230,180,${game.flash * 0.5})`; c.fillRect(0, 0, CW, CH); }
+}
+// 총알 카메라: 총알 뒤를 따라가며 슬로모션으로 표적에 다가간다
+function drawCam() {
+  const c = ctx, cam = game.cam, k = Math.min(1, cam.t / cam.dur), e = k < 0.85 ? (k / 0.85) ** 1.6 : 1;
+  const x = cam.ax + (cam.tx - cam.ax) * e, y = cam.ay + (cam.ty - cam.ay) * e, s = K0 * Math.min(cam.zoom * (1 + 0.9 * e), 6 * 1.9);
+  c.setTransform(DPR * s, 0, 0, DPR * s, DPR * (CW / 2 - x * s), DPR * (CH / 2 - y * s));
+  c.drawImage(world, 0, 0);
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (k < 0.92) {
+    c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 1.5;
+    for (let i = 0; i < 26; i++) { const a = i * 0.83 + cam.t * 3, r0 = 40 + ((cam.t * 600 + i * 47) % 220); c.beginPath(); c.moveTo(CW / 2 + Math.cos(a) * r0, CH / 2 + Math.sin(a) * r0); c.lineTo(CW / 2 + Math.cos(a) * (r0 + 30), CH / 2 + Math.sin(a) * (r0 + 30)); c.stroke(); }
+    const bs = 14 * (1 - e * 0.6);   // 총알(뒤에서 본 모습)
+    c.fillStyle = '#7a5a2a'; c.beginPath(); c.arc(CW / 2, CH / 2, bs, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#d8a84a'; c.beginPath(); c.arc(CW / 2 - bs * 0.2, CH / 2 - bs * 0.2, bs * 0.7, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fff2c8'; c.beginPath(); c.arc(CW / 2 - bs * 0.35, CH / 2 - bs * 0.35, bs * 0.25, 0, Math.PI * 2); c.fill();
+  }
+  c.fillStyle = '#000'; c.fillRect(0, 0, CW, CH * 0.1); c.fillRect(0, CH * 0.9, CW, CH * 0.1);
+  c.font = '900 13px system-ui, sans-serif'; c.fillStyle = '#ffcf4a'; c.textAlign = 'center'; c.fillText(cam.head ? 'HEADSHOT' : 'BULLET CAM', CW / 2, CH * 0.07);
+}
+
+// ---------- 화면 글자 ----------
+const ZONE = { street: '거리', window: '맞은편 건물 창가', roof: '먼 빌딩 옥상' };
+const windText = (w) => (w === 0 ? '바람 없음' : `🌬️ ${w > 0 ? '→' : '←'} ${Math.abs(w).toFixed(0)}m/s`);
+function updateHud() {
+  if (!game) return;
+  const st = game.st;
+  $('stageName').textContent = `스테이지 ${game.cfg.n}`;
+  $('ammo').textContent = '●'.repeat(st.shots) + '○'.repeat(3 - st.shots);
+  $('mission').innerHTML = `표적: <b>${st.desc}</b> · ${ZONE[game.cfg.zone]}`;
+  $('wind').textContent = windText(game.cfg.wind);
+  const left = game.cfg.limit ? Math.max(0, game.cfg.limit - st.time) : null;
+  $('timer').textContent = left == null ? '' : `⏱ ${Math.ceil(left)}초`;
+  $('timer').classList.toggle('low', left != null && left < 8);
+  const m = game.mode, inGame = ['overview', 'scope', 'flight'].includes(m);
+  $('hud').hidden = !inGame; $('overBar').hidden = m !== 'overview'; $('scopeUI').hidden = !(m === 'scope' || m === 'flight');
+  if (m === 'scope' || m === 'flight') {
+    const a = aimPoint(), sol = L.aimSolution(st, LAY, a.x, a.y);
+    $('scopeInfo').innerHTML = isFinite(sol.d)
+      ? `거리 <b>${Math.round(sol.d)}m</b> · 낙차 <b>${sol.dropM >= 0 ? '↓' : '↑'}${Math.abs(sol.dropM).toFixed(1)}m</b> (${Math.abs(L.mil(sol.dropM, sol.d)).toFixed(1)}밀)` + (game.cfg.wind ? `<br>편류 <b>${sol.driftM >= 0 ? '→' : '←'}${Math.abs(sol.driftM).toFixed(1)}m</b> (${Math.abs(L.mil(sol.driftM, sol.d)).toFixed(1)}밀)` : '')
+      : '거리 측정 불가(하늘)';
+    $('breathBar').querySelector('i').style.width = `${game.breath.stamina * 100}%`;
+    $('breathBar').classList.toggle('ex', game.breath.exhaust > 0);
+    $('fire').disabled = game.reload > 0 || st.shots <= 0 || !!game.flight;
+    $('fireTxt').textContent = game.reload > 0 ? '장전 중' : '발사';
+    $('zoomTxt').textContent = `×${game.zoom}`;
+  }
+}
+function layoutScopeUI() {
+  const { cy, r } = scopeGeo(), bot = CH - 22 - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0);
+  $('scopeInfo').style.top = `${cy + r + 10}px`;
+  $('breathBar').style.top = `${cy + r + 52}px`;
+  $('fire').style.bottom = '28px'; $('breath').style.bottom = '32px'; $('zoom').style.bottom = '44px';
+  $('exit').style.top = `${cy - r - 6}px`;
+  void bot;
+}
+
+// ---------- 입력 ----------
+let drag = null;
+cv.addEventListener('pointerdown', (e) => {
+  if (!game) return;
+  audio();
+  if (game.mode === 'overview') {
+    game.view = { x: (e.clientX - app.getBoundingClientRect().left) / K0, y: (e.clientY - app.getBoundingClientRect().top) / K0 };
+    game.mode = 'scope'; sfx.click(); updateHud(); return;
+  }
+  if (game.mode === 'scope' || game.mode === 'flight') { drag = { x: e.clientX, y: e.clientY, id: e.pointerId }; cv.setPointerCapture(e.pointerId); }
+});
+cv.addEventListener('pointermove', (e) => {
+  if (!drag || drag.id !== e.pointerId) return;
+  const s = K0 * game.zoom, k = 1.15 / s;
+  game.view.x = Math.max(0, Math.min(AW, game.view.x + (e.clientX - drag.x) * k));
+  game.view.y = Math.max(0, Math.min(AH, game.view.y + (e.clientY - drag.y) * k));
+  drag.x = e.clientX; drag.y = e.clientY;
+});
+const endDrag = (e) => { if (drag && drag.id === e.pointerId) drag = null; };
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+let holding = false;
+const bh = $('breath');
+bh.addEventListener('pointerdown', (e) => { e.preventDefault(); holding = true; bh.classList.add('on'); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) bh.addEventListener(ev, () => { holding = false; bh.classList.remove('on'); });
+$('zoom').onclick = () => { game.zoom = game.zoom === 4 ? 8 : 4; sfx.click(); updateHud(); };
+$('exit').onclick = () => { if (game.flight) return; game.mode = 'overview'; holding = false; bh.classList.remove('on'); updateHud(); };
+$('briefBtn').onclick = () => brief(false);
+$('menuBtn').onclick = () => menu();
+$('fire').onclick = () => fire();
+
+function fire() {
+  const g = game, st = g.st;
+  if (g.mode !== 'scope' || g.flight || g.reload > 0 || st.shots <= 0) return;
+  const a = aimPoint(), sol = L.aimSolution(st, LAY, a.x, a.y);
+  g.flight = { t: 0, T: isFinite(sol.d) ? sol.t : 0.6, x: sol.x, y: sol.y, ax: a.x, ay: a.y, d: sol.d };
+  g.mode = 'flight'; g.recoil = 6 / g.zoom * 4; g.flash = 1; g.reload = 1.3;
+  sfx.shot(); sfx.bolt(); buzz(40);
+}
+function land() {
+  const g = game, f = g.flight, st = g.st;
+  g.flight = null; g.mode = 'scope';
+  if (!isFinite(f.d)) { L.resolveShot(st, LAY, -999, -999); msg('빗나갔어요! 사람들이 흩어져요'); }
+  else {
+    const res = L.resolveShot(st, LAY, f.x, f.y);
+    if (res.kind === 'target') { g.cam = { t: 0, dur: 1.7, ax: f.ax, ay: f.ay, tx: st.target.x, ty: st.target.y - st.target.h * 0.55, zoom: g.zoom, head: res.head }; g.mode = 'cam'; sfx.whoosh(); updateHud(); return; }
+    if (res.kind === 'civilian') { sfx.thud(); msg('민간인이 맞았어요!', 2000); }
+    else { g.puffs.push({ x: f.x, y: f.y, t: 0 }); sfx.ping(); msg(st.target.zone === 'window' ? '빗나갔어요! 표적이 숨었어요' : '빗나갔어요! 표적이 달아나요', 1800); }
+  }
+  updateHud();
+}
+
+// ---------- 화면들 ----------
+function modal(html, buttons) {
+  const card = $('card'); card.innerHTML = html;
+  for (const [label, cls, fn] of buttons) { const b = document.createElement('button'); b.className = `btn ${cls || ''}`; b.innerHTML = label; b.onclick = () => { sfx.click(); fn(); }; card.appendChild(b); }
+  $('modal').hidden = false;
+}
+const close = () => { $('modal').hidden = true; };
+function menu() {
+  if (game) game.mode = 'menu';
+  updateHud();
+  const maxN = Math.max(L.STAGE_COUNT, ...Object.keys(save.stars).map(Number).map((n) => n + 1));
+  let grid = '<div class="grid">';
+  for (let n = 1; n <= maxN; n++) { const s = save.stars[n] || 0, ok = L.unlocked(save, n); grid += `<button class="stg" data-n="${n}" ${ok ? '' : 'disabled'}>${ok ? n : '🔒'}<small>${'★'.repeat(s)}${'☆'.repeat(ok ? 3 - s : 0)}</small></button>`; }
+  grid += '</div>';
+  modal(`<h1>🎯 스나이퍼</h1><p>인상착의로 표적을 찾아 한 발에 끝내세요.</p>${grid}`, [
+    [`소리 ${save.sound ? '켬 🔊' : '끔 🔇'}`, '', () => { save.sound = !save.sound; persist(); menu(); }],
+    ['❓ 하는 법', '', () => help()],
+  ]);
+  for (const b of document.querySelectorAll('.stg')) b.onclick = () => { sfx.click(); startStage(Number(b.dataset.n)); brief(true); };
+}
+function help() {
+  modal(`<h2>❓ 하는 법</h2><ul>
+    <li>📋 브리핑의 <b>인상착의</b>와 같은 사람을 찾아요. 닮은 사람이 섞여 있어요</li>
+    <li>🎯 화면을 누르면 조준경. 끌어서 조준, 🔍로 ×4/×8</li>
+    <li>😮‍💨 <b>숨 참기</b>를 누르고 있으면 흔들림이 멈춰요(약 3초)</li>
+    <li>📏 멀수록 총알이 <b>떨어지고</b>, <b>바람</b>에 밀려요. 아래 숫자만큼 위·반대로 겨누세요. 조준선의 점 한 칸 = 1밀</li>
+    <li>🚶 걷는 표적은 총알이 날아가는 동안 움직여요. 조금 앞을 겨누세요</li>
+    <li>❌ 놓치면 사람들이 흩어지고, 민간인을 맞히면 실패예요. 총알은 3발</li>
+  </ul>`, [['돌아가기', 'main', () => menu()]]);
+}
+function brief(first) {
+  const g = game, cfg = g.cfg, st = g.st;
+  if (first) g.mode = 'brief';
+  modal(`<h2>스테이지 ${cfg.n} 브리핑</h2><canvas id="portrait" width="48" height="60"></canvas>
+    <p>표적: <b style="color:var(--gold)">${st.desc}</b></p>
+    <div class="stats"><span>위치</span><b>${ZONE[cfg.zone]}</b><span>시간</span><b>${{ day: '낮', dusk: '해질녘', night: '밤(야간 투시경)' }[cfg.time]}</b><span>바람</span><b>${windText(cfg.wind)}</b>${cfg.limit ? `<span>제한 시간</span><b>${cfg.limit}초</b>` : ''}</div>
+    ${cfg.guide ? '<p style="font-size:12.5px;opacity:.8">연습 작전: 조준경에 빨간 원(예상 탄착점)이 보여요.</p>' : ''}`,
+  [[first ? '작전 시작' : '계속', 'main', () => { close(); g.mode = g.mode === 'brief' || g.mode === 'menu' ? 'overview' : g.mode; updateHud(); }], ...(first ? [['메뉴', '', () => menu()]] : [])]);
+  const pc = $('portrait').getContext('2d'), sp = portrait(st.target.traits);
+  pc.imageSmoothingEnabled = false; pc.fillStyle = '#2a3140'; pc.fillRect(0, 0, 48, 60);
+  pc.drawImage(sp, Math.round((48 - sp.width) / 2), Math.round(58 - sp.height));
+}
+const WHY = { civilian: '민간인이 맞았어요.', ammo: '총알을 다 썼어요.', escaped: '표적이 달아났어요.', time: '시간이 다 됐어요. 표적이 떠났어요.' };
+function result() {
+  const g = game, over = g.st.over, n = g.cfg.n;
+  g.mode = 'result'; updateHud();
+  if (over.win) {
+    const s = L.stars(over); save.stars[n] = Math.max(save.stars[n] || 0, s); persist(); sfx.win();
+    modal(`<h2>${over.head ? '🎯 헤드샷!' : '✅ 표적 제거'}</h2><div class="stars">${'★'.repeat(s)}${'☆'.repeat(3 - s)}</div>
+      <div class="stats"><span>쓴 총알</span><b>${over.shotsUsed}발</b><span>걸린 시간</span><b>${g.st.time.toFixed(1)}초</b></div>
+      <p style="font-size:12.5px;opacity:.8">★ 성공 · ★ 첫 발 또는 머리 · ★ 첫 발 머리</p>`, [
+      ['다음 스테이지', 'main', () => { startStage(n + 1); brief(true); }], ['다시 하기', '', () => { startStage(n); brief(true); }], ['메뉴', '', () => menu()]]);
+  } else {
+    sfx.fail();
+    modal(`<h2>❌ 작전 실패</h2><p>${WHY[over.why]}</p>`, [['다시 하기', 'main', () => { startStage(n); brief(true); }], ['메뉴', '', () => menu()]]);
+  }
+}
+
+// ---------- 루프 ----------
+let last = performance.now(), hudT = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const g = game;
+  if (g && ['overview', 'scope', 'flight', 'cam'].includes(g.mode)) {
+    const slow = g.mode === 'cam' ? 0.04 : 1;
+    g.t += dt;
+    L.stepPeople(g.st, LAY, dt * slow);
+    if (g.mode === 'cam') g.st.target.fall = g.cam.t < g.cam.dur ? 0 : Math.min(1, (g.cam.t - g.cam.dur) * 2.5);   // 총알이 닿은 뒤에 쓰러진다
+    L.breathStep(g.breath, dt, holding && g.mode !== 'overview');
+    if (g.breath.holding) { g.beatT -= dt; if (g.beatT <= 0) { g.beatT = 0.85; sfx.beat(); } }
+    g.recoil *= Math.pow(0.02, dt); g.flash = Math.max(0, (g.flash || 0) - dt * 5); g.reload = Math.max(0, g.reload - dt);
+    for (const f of g.puffs) f.t += dt * 1.5; g.puffs = g.puffs.filter((f) => f.t < 1);
+    if (g.flight) { g.flight.t += dt; if (g.flight.t >= g.flight.T) land(); }
+    if (g.mode === 'cam') { g.cam.t += dt; if (g.cam.t >= g.cam.dur + 1.1) result(); else if (g.cam.t >= g.cam.dur && !g.cam.hit) { g.cam.hit = true; sfx.thud(); buzz([30, 30, 60]); } }
+    else if (!g.flight) {
+      const over = L.checkOver(g.st, dt);
+      if (over) { g.endT += dt; if (g.endT > 1.2) result(); }
+    }
+  }
+  render();
+  hudT -= dt; if (hudT <= 0) { hudT = 0.1; updateHud(); }
+  requestAnimationFrame(frame);
+}
+resize();
+menu();
+requestAnimationFrame(frame);
+window.__sn = { L, get game() { return game; }, save, fire, startStage, brief, get LAY() { return LAY; } };
+window.sniperReady = true;
+</script>
+</body>
+</html>
