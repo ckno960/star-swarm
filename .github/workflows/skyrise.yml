@@ -1,5 +1,5 @@
 # Skyrise 플러그인을 맥용(VST3 + AU, 인텔·애플 실리콘 겸용)으로 빌드하고 테스트한다.
-# 결과 zip은 이 실행의 Artifacts에서 받는다.
+# 결과 zip은 Releases의 skyrise-latest에 올려서 로그인 없이 받을 수 있게 한다.
 name: Skyrise plugin (macOS)
 
 on:
@@ -8,6 +8,10 @@ on:
       - 'skyrise-plugin/**'
       - '.github/workflows/skyrise.yml'
   workflow_dispatch:
+
+# 릴리스에 zip을 올리려면 저장소 쓰기 권한이 필요하다
+permissions:
+  contents: write
 
 jobs:
   build-mac:
@@ -51,7 +55,19 @@ jobs:
           cp skyrise-plugin/INSTALL-mac.txt dist/
           cd dist && zip -r -y ../Skyrise-mac.zip .
 
+      # Artifacts는 GitHub에 로그인해야 받을 수 있어서, 같은 zip을 릴리스에도 올린다 (매번 최신 빌드로 교체)
+      - name: Publish to Releases (skyrise-latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete skyrise-latest --yes --cleanup-tag || true
+          gh release create skyrise-latest Skyrise-mac.zip \
+            --target "${{ github.sha }}" --prerelease \
+            --title "Skyrise (mac, 최신 빌드)" \
+            --notes "맥용 Skyrise 플러그인 (VST3 + AU, 인텔·애플 실리콘 겸용). zip 안의 INSTALL-mac.txt 순서대로 설치하세요. 빌드: ${{ github.sha }}"
+
+      # Artifacts에는 zip을 또 감싸지 않도록 폴더째 올린다
       - uses: actions/upload-artifact@v4
         with:
           name: Skyrise-mac
-          path: Skyrise-mac.zip
+          path: dist/

@@ -22,7 +22,9 @@
 
 ## 맥에 설치
 
-GitHub 저장소의 **Actions → Skyrise plugin (macOS)** 에서 가장 최근 실행을 열고, 아래 **Artifacts**의 `Skyrise-mac`을 받습니다(GitHub 로그인 필요). 압축을 풀면 나오는 `INSTALL-mac.txt` 순서대로 설치합니다. 요약:
+최신 빌드: **https://github.com/ckno960/star-swarm/releases/download/skyrise-latest/Skyrise-mac.zip** (로그인 없이 받을 수 있음. `skyrise-plugin/`을 고칠 때마다 새 빌드로 바뀝니다)
+
+압축을 풀면 나오는 `INSTALL-mac.txt` 순서대로 설치합니다. 요약:
 
 1. `Skyrise.vst3` → `~/Library/Audio/Plug-Ins/VST3/`, `Skyrise.component` → `~/Library/Audio/Plug-Ins/Components/`
 2. 터미널에서 `xattr -dr com.apple.quarantine <복사한 파일>` (인터넷에서 받은 파일의 실행 막힘 풀기)
@@ -40,7 +42,7 @@ cmake --build build --target Skyrise_VST3 SkyriseTests
 
 맥에서는 AU(`Skyrise_AU`)도, 그 밖의 운영체제에서는 테스트용 단독 실행 앱(`Skyrise_Standalone`)도 만듭니다. 리눅스에서는 `libfreetype6-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxext-dev libasound2-dev`가 필요합니다.
 
-`.github/workflows/skyrise.yml`이 `skyrise-plugin/`을 고칠 때마다 맥 빌드 → 테스트 → 임시 서명 → AU 검사(auval) → zip을 자동으로 합니다.
+`.github/workflows/skyrise.yml`이 `skyrise-plugin/`을 고칠 때마다 맥 빌드 → 테스트 → 임시 서명 → AU 검사(auval) → zip → 릴리스(`skyrise-latest`) 교체를 자동으로 합니다.
 
 ## 테스트 (`Tests/EngineTests.cpp`)
 
