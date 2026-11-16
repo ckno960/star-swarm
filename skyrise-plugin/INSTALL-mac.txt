@@ -1,0 +1,16 @@
+Skyrise 설치 방법 (맥)
+
+1. 이 폴더의 두 파일을 아래 위치로 복사합니다. (Finder에서 Shift+Cmd+G 를 누르고 경로를 붙여 넣으면 바로 열립니다)
+   - Skyrise.vst3       →  ~/Library/Audio/Plug-Ins/VST3/
+   - Skyrise.component  →  ~/Library/Audio/Plug-Ins/Components/
+
+2. 인터넷에서 받은 파일이라 맥이 실행을 막을 수 있습니다. 터미널에서 아래 두 줄을 실행해 막힘을 풉니다.
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Skyrise.vst3
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/Skyrise.component
+
+3. DAW에서 플러그인을 다시 검색합니다.
+   - REAPER: Settings(설정) → Plug-ins → VST → "Re-scan" (AU는 Plug-ins → AU)
+   - Logic: 다시 실행하면 자동으로 검사합니다
+
+4. 트랙이나 버스에 Skyrise를 걸고, RISE 슬라이더에 오토메이션을 그립니다.
+   빌드업 동안 0% → 100%로 올리고, 드롭 순간 0%로 떨어뜨리면 됩니다.

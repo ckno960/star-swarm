@@ -1,0 +1,57 @@
+# Skyrise 플러그인을 맥용(VST3 + AU, 인텔·애플 실리콘 겸용)으로 빌드하고 테스트한다.
+# 결과 zip은 이 실행의 Artifacts에서 받는다.
+name: Skyrise plugin (macOS)
+
+on:
+  push:
+    paths:
+      - 'skyrise-plugin/**'
+      - '.github/workflows/skyrise.yml'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: >
+          cmake -S skyrise-plugin -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build --config Release -j 4 --target Skyrise_VST3 Skyrise_AU SkyriseTests
+
+      - name: Engine tests
+        run: ./build/SkyriseTests_artefacts/Release/SkyriseTests
+
+      # 서명이 없으면 최신 맥에서 플러그인을 아예 불러오지 못하므로 임시(ad-hoc) 서명을 한다
+      - name: Ad-hoc sign
+        run: |
+          codesign --force --deep --sign - build/Skyrise_artefacts/Release/VST3/Skyrise.vst3
+          codesign --force --deep --sign - build/Skyrise_artefacts/Release/AU/Skyrise.component
+
+      # 애플의 AU 검사 도구로 로직·REAPER 등에서 불러올 수 있는지 확인한다
+      - name: Validate AU (auval)
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R build/Skyrise_artefacts/Release/AU/Skyrise.component ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          sleep 2
+          auval -v aufx Skyr Stsw
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp -R build/Skyrise_artefacts/Release/VST3/Skyrise.vst3 dist/
+          cp -R build/Skyrise_artefacts/Release/AU/Skyrise.component dist/
+          cp skyrise-plugin/INSTALL-mac.txt dist/
+          cd dist && zip -r -y ../Skyrise-mac.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Skyrise-mac
+          path: Skyrise-mac.zip
